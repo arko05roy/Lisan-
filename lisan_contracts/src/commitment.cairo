@@ -67,3 +67,18 @@ pub fn verify_bet_commitment(
 ) -> bool {
     commitment == compute_bet_commitment(outcome, amount, secret, nullifier_secret)
 }
+
+/// Compute a Poseidon commitment for a private vote.
+/// commitment = Poseidon(choice, secret, nullifier_secret)
+pub fn compute_vote_commitment(
+    choice: felt252, secret: felt252, nullifier_secret: felt252,
+) -> felt252 {
+    PoseidonTrait::new().update(choice).update(secret).update(nullifier_secret).finalize()
+}
+
+/// Verify that a vote commitment matches the given inputs.
+pub fn verify_vote_commitment(
+    commitment: felt252, choice: felt252, secret: felt252, nullifier_secret: felt252,
+) -> bool {
+    commitment == compute_vote_commitment(choice, secret, nullifier_secret)
+}
