@@ -1,5 +1,5 @@
 # RE{DEFINE} HACKATHON BUILD PLAN
-## Project: Instant Private BTC Transfers on Starknet
+## Project: Lisan — Private Bitcoin DeFi Platform on Starknet
 
 **Hackathon:** RE{DEFINE} Hackathon | Starknet
 **Platform:** DoraHacks (Online Async)
@@ -7,17 +7,27 @@
 **Track:** Bitcoin (with strong Privacy implementation)
 **Prize Pool:** $21,500+
 
+**Narrative:** "Every DeFi primitive leaks your intent. We made them all private."
+
+**One-Liner:** "Every DeFi primitive leaks your intent. We made them all private. Transfers, swaps, predictions, votes — all instant, all private, all on Starknet."
+
 ---
 
 ## CURRENT STATUS (Updated Jan 29, 2026)
 
 | Phase | Status | Details |
 |-------|--------|---------|
-| Phase 1: Foundation | ✅ COMPLETE | MockBTC, Commitment, Deposit — 16 tests passing |
-| Phase 2: ZK Transfer | ✅ COMPLETE | Verifier, Transfer — 10 more tests, 26 total passing |
-| Phase 3: Withdraw | ⬜ NOT STARTED | Withdraw circuit + contract |
-| Phase 4: Frontend | ⬜ NOT STARTED | React/Next.js UI |
-| Phase 5: Submission | ⬜ NOT STARTED | Video, README, DoraHacks |
+| Phase 1: Foundation | ✅ COMPLETE (Day 1) | MockBTC, Commitment, Deposit — 16 tests passing |
+| Phase 2: ZK Transfer | ✅ COMPLETE (Day 1) | Verifier, Transfer — 10 more tests, 26 total passing |
+| Phase 3: Withdraw | 🔄 IN PROGRESS (Day 1) | Withdraw circuit + contract |
+| Phase 4: Private Swap | ⏳ PENDING (Day 2) | Atomic shielded swap between two users |
+| Phase 5: Prediction Market | ⏳ PENDING (Day 3) | Oracle-resolved hidden predictions |
+| Phase 6: Private Voting | ⏳ PENDING (Day 4) | Time-locked trustless voting |
+| Phase 7: Frontend | ⏳ PENDING (Days 5-19) | Unified UI for ALL flows |
+| Phase 8: Video | ⏳ PENDING (Days 20-25) | Script, recording, editing |
+| Phase 9: Submission | ⏳ PENDING (Days 26-30) | README, GitHub, DoraHacks |
+
+**Pace:** Phase 1 + 2 completed in Day 1 (originally planned for 14 days). Scope expanded to match pace.
 
 ### Implemented Contract Files
 ```
@@ -28,14 +38,22 @@ lisan_contracts/
 │   ├── commitment.cairo          # Poseidon: compute_commitment, compute_nullifier_hash, verify_commitment
 │   ├── mock_btc.cairo            # ERC20 + Ownable (OZ components), owner-only mint
 │   ├── shielded_pool.cairo       # deposit() + transfer(), events, views
-│   └── verifier.cairo            # verify_transfer_proof() — 6 inline constraints
+│   ├── verifier.cairo            # verify_transfer_proof() — 6 inline constraints
+│   ├── private_swap.cairo        # (Day 2) Atomic shielded swaps
+│   ├── prediction_market.cairo   # (Day 3) Oracle-resolved predictions
+│   ├── mock_pragma_oracle.cairo  # (Day 3) Pragma-interface mock oracle
+│   └── private_voting.cairo      # (Day 4) Time-locked voting
 └── tests/
     ├── lib.cairo
     ├── test_commitment.cairo     # 6 tests
     ├── test_mock_btc.cairo       # 5 tests
     ├── test_deposit.cairo        # 5 tests
     ├── test_transfer.cairo       # 7 tests
-    └── test_integration.cairo    # 3 tests
+    ├── test_integration.cairo    # 3 tests
+    ├── test_withdraw.cairo       # (Day 1) Withdraw tests
+    ├── test_private_swap.cairo   # (Day 2) Swap tests
+    ├── test_prediction_market.cairo # (Day 3) Prediction market tests
+    └── test_private_voting.cairo # (Day 4) Voting tests
 ```
 
 ### Key Design Decisions Made
@@ -44,84 +62,101 @@ lisan_contracts/
 - **Proof approach:** Inline Cairo constraint checks (Starknet execution is STARK-proven)
 - **ERC20:** OpenZeppelin Cairo components (git main branch, Cairo 2.15.0 compatible)
 - **Amounts:** felt252 for Poseidon compatibility, u256 for ERC20 amounts
+- **Architecture:** ShieldedPool is the core (octopus body), arms extend it for specific DeFi primitives
+- **Oracle:** Pragma interface (mock data on testnet, real integration pattern)
+- **Voting reveal:** Time-locked by block number, trustless — anyone can trigger tally after threshold
 
 ---
 
 ## PROJECT OVERVIEW
 
-### One-Liner
-"Instant private Bitcoin transfers on Starknet. No batching. No waiting. Mempool blind."
-
 ### The Problem
-Current privacy solutions suck:
-- Tornado Cash: Wait hours/days for anonymity set
-- Mixers: Need batching, other participants, delays
-- Most solutions: Mempool can see transactions during submission
+Every DeFi action leaks information:
+- **Transfers:** Everyone sees sender, receiver, amount
+- **Swaps:** Front-runners see your trade intent, MEV bots exploit you
+- **Predictions:** Others can copy your bet or manipulate the market
+- **Votes:** Vote-buying and coercion are possible when votes are public
+- **All of it:** The mempool sees everything before confirmation
+
+Current privacy solutions (Tornado Cash, mixers) require batching, waiting, and other participants. They're slow, fragmented, and only cover transfers.
 
 ### The Solution
-- Deposit BTC (wrapped) ONCE into shielded pool
-- Transfer INSTANTLY inside the pool (no batching)
-- Mempool sees NOTHING (encrypted state transitions)
-- Withdraw whenever to any address
+One shielded pool. Four private DeFi primitives. All instant. All mempool-blind.
+
+- **Private Transfers:** Deposit BTC once, send privately in seconds. No batching.
+- **Private Swaps:** Atomic shielded exchange between two users. No front-running.
+- **Private Predictions:** Hidden bets resolved by oracle. No copying.
+- **Private Voting:** Hidden votes, time-locked reveal. No coercion.
+
+All built on one commitment scheme. One nullifier registry. One privacy layer for all of Bitcoin DeFi.
 
 ### Why It Wins
-1. **Simple concept** - Everyone understands "send money privately, fast"
-2. **Clear demo** - Deposit → Send (instant) → Verify privacy
-3. **Fits narrative** - "Bitcoin DeFi Layer" needs private BTC transfers
-4. **Technical depth** - ZK proofs, commitment schemes, encrypted state
-5. **Differentiated** - "Instant" is the killer feature vs existing solutions
+1. **Platform, not feature** — Four primitives show this is a privacy LAYER, not a one-trick demo
+2. **Clear demos** — Prediction market and voting are Tier 1 (judges interact). Swap and transfer are Tier 2.
+3. **Fits narrative** — "Bitcoin DeFi Layer" needs privacy. We provide it for EVERYTHING.
+4. **Technical depth** — ZK proofs, commitment schemes, oracle integration, time-locks
+5. **Breadth** — Covers most of the "Private BTC DeFi" problem statements from the hackathon
+6. **Real logic** — Only tokens are mocked (testnet). All DeFi logic (swaps, predictions, voting) is real.
 
 ---
 
 ## TECHNICAL ARCHITECTURE
 
-### System Components
+### System Components — The Octopus
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    FRONTEND (React/Next.js)                  │
-│  - Wallet connection (Argent/Braavos)                       │
-│  - Deposit UI                                                │
-│  - Transfer UI (recipient + amount)                         │
-│  - Balance viewer (encrypted)                               │
-│  - Withdraw UI                                               │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                 STARKNET CONTRACTS (Cairo)                   │
-│                                                              │
-│  ┌─────────────────┐  ┌─────────────────┐                  │
-│  │  ShieldedPool   │  │  Verifier       │                  │
-│  │  - deposit()    │  │  - verify_      │                  │
-│  │  - transfer()   │  │    transfer()   │                  │
-│  │  - withdraw()   │  │  - verify_      │                  │
-│  │  - commitments  │  │    withdraw()   │                  │
-│  └─────────────────┘  └─────────────────┘                  │
-│                                                              │
-│  ┌─────────────────┐  ┌─────────────────┐                  │
-│  │  MockBTC Token  │  │  Nullifier      │                  │
-│  │  (ERC20)        │  │  Registry       │                  │
-│  └─────────────────┘  └─────────────────┘                  │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                    ZK CIRCUITS                               │
-│  - Transfer proof (prove valid balance update)              │
-│  - Withdraw proof (prove ownership without revealing)       │
-│  - Commitment scheme (Pedersen or Poseidon)                 │
-└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                      FRONTEND (React/Next.js)                    │
+│  - Wallet connection (Argent/Braavos)                           │
+│  - Unified dashboard for all private DeFi flows                 │
+│  - Deposit / Transfer / Withdraw / Swap / Predict / Vote        │
+└─────────────────────────────────────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                   STARKNET CONTRACTS (Cairo)                     │
+│                                                                  │
+│  ┌───────────────────────────────────────────────────┐          │
+│  │              ShieldedPool (CORE)                   │          │
+│  │  - deposit()     - commitments Map                 │          │
+│  │  - transfer()    - nullifiers Map                  │          │
+│  │  - withdraw()    - commitment_count                │          │
+│  │  - verifier      - total_deposited                 │          │
+│  └──────────┬────────────┬────────────┬──────────────┘          │
+│             │            │            │                           │
+│    ┌────────▼───┐ ┌──────▼──────┐ ┌──▼───────────┐             │
+│    │PrivateSwap │ │Prediction   │ │PrivateVoting │             │
+│    │(Arm 1)     │ │Market       │ │(Arm 3)       │             │
+│    │            │ │(Arm 2)      │ │              │             │
+│    │- create    │ │- create     │ │- create      │             │
+│    │  swap()    │ │  market()   │ │  proposal()  │             │
+│    │- accept    │ │- place_bet()│ │- cast_vote() │             │
+│    │  swap()    │ │- resolve()  │ │- tally()     │             │
+│    │- cancel    │ │- claim()    │ │- reveal()    │             │
+│    │  swap()    │ │             │ │              │             │
+│    └────────────┘ └──────┬──────┘ └──────────────┘             │
+│                          │                                       │
+│                   ┌──────▼──────┐                               │
+│                   │MockPragma   │                               │
+│                   │Oracle       │                               │
+│                   │(Pragma IF)  │                               │
+│                   └─────────────┘                               │
+│                                                                  │
+│  ┌─────────────────┐  ┌─────────────────┐                      │
+│  │  MockBTC Token  │  │  Commitment     │                      │
+│  │  (ERC20)        │  │  Library        │                      │
+│  └─────────────────┘  └─────────────────┘                      │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ### Core Data Structures (As Implemented)
 
 ```cairo
-// commitment.cairo — Pure functions, no structs needed
+// commitment.cairo — Pure functions, shared by all contracts
 // commitment = Poseidon(amount, secret, nullifier_secret)  → felt252
 // nullifier_hash = Poseidon(nullifier_secret)              → felt252
 
-// shielded_pool.cairo — Storage
+// shielded_pool.cairo — Storage (CORE)
 struct Storage {
     btc_token: ContractAddress,         // ERC20 token address
     commitments: Map<felt252, bool>,    // Flat map (MVP, no Merkle tree)
@@ -132,6 +167,7 @@ struct Storage {
 
 // verifier.cairo — Pure function, checks 6 constraints inline
 // verify_transfer_proof(...) -> bool
+// verify_withdraw_proof(...) -> bool
 ```
 
 ### Flow Diagrams
@@ -160,7 +196,7 @@ User                    Contract                    State
   │   - amount              │                         │
 ```
 
-#### Transfer Flow (THE MAGIC - Instant & Private)
+#### Transfer Flow (Instant & Private)
 ```
 Sender                  Contract                    State
   │                         │                         │
@@ -224,337 +260,399 @@ User                    Contract                    State
   │<── BTC received ────────│                         │
 ```
 
----
-
-## WEEK-BY-WEEK BUILD PLAN
-
-### WEEK 1: Foundation (Feb 1-7)
-**Goal:** Core contracts working, commitment scheme implemented
-
-#### Day 1-2: Environment Setup + MockBTC
-- [x] Set up Starknet development environment
-  - Installed `scarb` v2.15.1 (Cairo 2.15.0)
-  - Installed Starknet Foundry v0.55.0 (`snforge` + `sncast`)
-  - Initialized project with `snforge new lisan_contracts`
-- [x] Create project structure
-- [x] Implement MockBTC ERC20 token (OpenZeppelin components)
-- [x] Write basic tests for MockBTC (5 tests: constructor, mint, transfer, approve, owner-only)
-
-**Test:** `snforge test` passes for MockBTC ✅
-
-**Actual project setup:**
-```bash
-# Scarb v2.15.1 + snforge v0.55.0
-# Dependencies: openzeppelin_token, openzeppelin_access, openzeppelin_interfaces (git main branch)
-snforge new lisan_contracts
+#### Private Swap Flow (Arm 1)
+```
+Alice                   PrivateSwap              ShieldedPool
+  │                         │                         │
+  │   [Alice wants to swap  │                         │
+  │    X BTC for Y from Bob]│                         │
+  │                         │                         │
+  │── create_swap(          │                         │
+  │   commitment_alice,     │                         │
+  │   offer_amount,         │                         │
+  │   request_amount) ─────>│                         │
+  │                         │── verify commitment ───>│
+  │                         │── lock Alice's funds    │
+  │                         │                         │
+  │<── swap_id ─────────────│                         │
+  │                         │                         │
+Bob                         │                         │
+  │── accept_swap(          │                         │
+  │   swap_id,              │                         │
+  │   commitment_bob,       │                         │
+  │   proof) ──────────────>│                         │
+  │                         │── verify Bob's commit ─>│
+  │                         │── atomic exchange:      │
+  │                         │   nullify old commits   │
+  │                         │   create new commits    │
+  │                         │   Alice gets Y          │
+  │                         │   Bob gets X            │
+  │                         │                         │
+  │<── swap complete ───────│                         │
+  │                         │                         │
+  [Mempool sees: swap_id, proofs, new commitments]
+  [Mempool CANNOT see: amounts, who got what]
 ```
 
-#### Day 3-4: Commitment Scheme
-- [x] Implement Poseidon hash (native to Starknet) — `PoseidonTrait` from core
-- [x] Create commitment: `compute_commitment(amount, secret, nullifier_secret) -> felt252`
-- [x] Create nullifier hash: `compute_nullifier_hash(nullifier_secret) -> felt252`
-- [x] Verify commitment: `verify_commitment(commitment, amount, secret, nullifier_secret) -> bool`
-- [x] Test commitment creation and verification (6 tests: determinism, uniqueness, verify valid/invalid)
+#### Prediction Market Flow (Arm 2)
+```
+Creator                 PredictionMarket         Oracle
+  │                         │                      │
+  │── create_market(        │                      │
+  │   question,             │                      │
+  │   options,              │                      │
+  │   resolution_time) ────>│                      │
+  │                         │                      │
+  │<── market_id ───────────│                      │
+  │                         │                      │
+Bettor                      │                      │
+  │   [Generates:]          │                      │
+  │   bet_commitment =      │                      │
+  │   Poseidon(outcome,     │                      │
+  │   amount, secret)       │                      │
+  │                         │                      │
+  │── place_bet(            │                      │
+  │   market_id,            │                      │
+  │   bet_commitment,       │                      │
+  │   amount) ─────────────>│                      │
+  │                         │── lock funds via ────>│
+  │                         │   ShieldedPool        │
+  │                         │                      │
+  │<── bet placed ──────────│                      │
+  │                         │                      │
+  [After resolution_time:]  │                      │
+  │                         │── query_result() ───>│
+  │                         │<── outcome ──────────│
+  │                         │                      │
+Winner                      │                      │
+  │── claim(                │                      │
+  │   market_id,            │                      │
+  │   proof_of_winning_bet) │                      │
+  │                         │── verify bet was for  │
+  │                         │   winning outcome     │
+  │                         │── release funds ─────>│
+  │                         │                      │
+  │<── winnings ────────────│                      │
+  │                         │                      │
+  [Mempool sees: market_id, commitment, proof]
+  [Mempool CANNOT see: which outcome you bet on, amount]
+```
 
-**Test:** All commitment tests pass ✅
-
-#### Day 5-6: ShieldedPool Contract - Deposit
-- [x] Create ShieldedPool contract
-- [x] Implement `deposit(amount, commitment)` function
-- [x] Store commitments in flat `Map<felt252, bool>` (simple for MVP)
-- [x] Emit `Deposit` events
-- [x] View functions: `is_commitment_valid`, `get_commitment_count`, `get_total_deposited`
-- [x] Write deposit tests (5 tests: basic, zero amount, duplicate, multiple, insufficient balance)
-
-**Test:** All deposit tests pass ✅
-
-#### Day 7: Integration + Buffer
-- [x] Integration test: Full deposit flow
-- [x] Fix bugs from Week 1
-- [x] All Phase 1 tests passing
-
-**Week 1 Deliverable:** Can deposit MockBTC and create shielded commitments ✅
+#### Private Voting Flow (Arm 3)
+```
+Creator                 PrivateVoting            Blockchain
+  │                         │                      │
+  │── create_proposal(      │                      │
+  │   description,          │                      │
+  │   options,              │                      │
+  │   end_block) ──────────>│                      │
+  │                         │                      │
+  │<── proposal_id ─────────│                      │
+  │                         │                      │
+Voter                       │                      │
+  │   [Generates:]          │                      │
+  │   vote_commitment =     │                      │
+  │   Poseidon(choice,      │                      │
+  │   secret, nullifier)    │                      │
+  │                         │                      │
+  │── cast_vote(            │                      │
+  │   proposal_id,          │                      │
+  │   vote_commitment) ────>│                      │
+  │                         │── check: block <      │
+  │                         │   end_block          │
+  │                         │── store commitment    │
+  │                         │                      │
+  │<── vote recorded ───────│                      │
+  │                         │                      │
+  [After end_block:]        │                      │
+  │                         │── check: current     │
+  │                         │   block >= end_block │
+  │                         │                      │
+Anyone                      │                      │
+  │── tally(                │                      │
+  │   proposal_id,          │                      │
+  │   revealed_votes[]) ───>│                      │
+  │                         │── verify each vote    │
+  │                         │   commitment matches  │
+  │                         │── count votes         │
+  │                         │── emit result         │
+  │                         │                      │
+  │<── final tally ─────────│                      │
+  │                         │                      │
+  [During voting: NO ONE can see votes]
+  [After tally: results are public, individual votes remain private]
+```
 
 ---
 
-### WEEK 2: ZK Proofs + Transfer (Feb 8-14)
-**Goal:** Private transfers working with ZK proofs
+## REVISED BUILD PLAN (30 Days from Jan 29)
 
-#### Day 8-9: ZK Circuit Design
-- [x] Design transfer circuit logic
-- [x] Define public inputs vs private inputs
-- [x] **Chosen approach: Cairo native inline constraint checks** (Option A)
-  - Starknet execution is STARK-proven, so Cairo constraint checks are inherently ZK-verified
-  - No external ZK circuit framework needed for MVP
-  - All private inputs passed to contract, verified on-chain, STARK proof covers execution
-- [x] Implemented `verifier.cairo` with 6 constraints
+### DAY 1 (Jan 29) — Foundation + Transfer + Withdraw ✅🔄
+**Goal:** Complete core shielded pool with all three base operations
 
-**Implemented Constraint Spec (verifier.cairo):**
+**COMPLETED:**
+- [x] Phase 1: MockBTC + Commitment + Deposit (16 tests)
+- [x] Phase 2: Verifier + Transfer (10 more tests, 26 total)
+
+**IN PROGRESS:**
+- [ ] Phase 3: Withdraw
+  - [ ] Implement `verify_withdraw_proof()` in verifier.cairo
+  - [ ] Implement `withdraw()` in shielded_pool.cairo
+  - [ ] Write withdraw tests (minimum: valid withdraw, double-spend, wrong secret, wrong amount, nonexistent commitment)
+
+**Withdraw Constraint Spec:**
 ```
-TRANSFER VERIFICATION (verify_transfer_proof)
+WITHDRAW VERIFICATION (verify_withdraw_proof)
 
-Inputs (all passed to contract):
-- old_commitment, old_amount, old_secret, old_nullifier_secret
+Inputs:
+- commitment, amount, secret, nullifier_secret
 - nullifier_hash
-- new_commitment_sender, new_commitment_recipient
-- change_amount, transfer_amount
-- new_secret_sender, new_nullifier_secret_sender
-- new_secret_recipient, new_nullifier_secret_recipient
-
-Constraints Checked:
-1. old_commitment == Poseidon(old_amount, old_secret, old_nullifier_secret)
-2. nullifier_hash == Poseidon(old_nullifier_secret)
-3. old_amount == change_amount + transfer_amount (value conservation)
-4. transfer_amount > 0
-5. new_commitment_sender == Poseidon(change_amount, new_secret_sender, new_nullifier_secret_sender)
-6. new_commitment_recipient == Poseidon(transfer_amount, new_secret_recipient, new_nullifier_secret_recipient)
-```
-Note: Merkle root constraint deferred — using flat Map<felt252, bool> for MVP.
-
-#### Day 10-11: Implement Transfer Circuit
-- [x] Implemented inline verification in `verifier.cairo`
-- [x] All 6 constraints tested with valid and invalid inputs
-- [x] Proof verification integrated into ShieldedPool.transfer()
-
-#### Day 12-13: Transfer Contract Function
-- [x] Implemented `transfer()` in ShieldedPool with full parameter list
-- [x] Nullifier registry: `Map<felt252, bool>` prevents double-spend
-- [x] Calls `verify_transfer_proof()` — rejects invalid proofs
-- [x] Invalidates old commitment, marks nullifier, adds 2 new commitments
-- [x] Emits `Transfer` event
-- [x] Transfer tests (7 tests): valid transfer, double-spend, wrong secret, value not conserved, zero amount, nonexistent commitment, wrong nullifier
-
-**Test results — all pass ✅:**
-- Valid transfer: old commitment invalidated, 2 new created, count updated
-- Double-spend: blocked ("Commitment does not exist" — commitment invalidated after first transfer)
-- Wrong secret: blocked ("Invalid transfer proof")
-- Value not conserved: blocked ("Invalid transfer proof")
-- Zero transfer: blocked ("Invalid transfer proof")
-- Nonexistent commitment: blocked ("Commitment does not exist")
-- Wrong nullifier: blocked ("Invalid transfer proof")
-
-#### Day 14: Integration + Buffer
-- [x] End-to-end integration tests (3 tests): full deposit→transfer flow, chained transfers, multiple users
-- [x] All 26 tests passing
-- [x] ZK approach documented
-
-**Week 2 Deliverable:** Private transfers working (deposit → transfer → verify) ✅
-
----
-
-### WEEK 3: Withdraw + Frontend (Feb 15-21)
-**Goal:** Full flow working with UI
-
-#### Day 15-16: Withdraw Circuit + Contract
-- [ ] Design withdraw circuit (simpler than transfer)
-- [ ] Implement circuit
-- [ ] Implement `withdraw(proof, nullifier, recipient, amount)` in contract
-- [ ] Write withdraw tests
-
-**Withdraw Circuit:**
-```
-Private Inputs:
-- commitment_secret
-- commitment_nullifier
-- commitment_amount
-
-Public Inputs:
-- commitment_hash
-- nullifier_hash
-- withdraw_amount (must equal commitment_amount for full withdraw)
-- recipient_address
+- withdraw_amount
 
 Constraints:
-1. commitment_hash == Hash(commitment_amount, secret, nullifier)
-2. nullifier_hash == Hash(nullifier)
-3. withdraw_amount == commitment_amount (or <= for partial)
-4. merkle_proof valid
+1. commitment == Poseidon(amount, secret, nullifier_secret)
+2. nullifier_hash == Poseidon(nullifier_secret)
+3. withdraw_amount == amount (full withdraw for MVP)
 ```
 
-**Test:**
-- Deposit 100 → Transfer 30 to self (creates new commitment of 100) → Withdraw 100
-- Verify: MockBTC returned to user
-- Verify: Commitment removed
-- Verify: Nullifier used
+**Day 1 Deliverable:** Complete privacy loop — deposit → transfer → withdraw
 
-#### Day 17-19: Frontend Development
-- [ ] Set up Next.js project
-- [ ] Integrate Starknet.js
-- [ ] Wallet connection (Argent/Braavos)
-- [ ] Build Deposit UI
-  - Input amount
-  - Generate commitment client-side
-  - Submit transaction
-  - Store secret locally (localStorage or download)
-- [ ] Build Transfer UI
-  - Input recipient (public key or generate for them)
-  - Input amount
-  - Generate proof client-side
-  - Submit transaction
-- [ ] Build Balance Viewer
-  - Show shielded balance (decrypted client-side)
-- [ ] Build Withdraw UI
-  - Input amount and recipient address
-  - Generate proof
-  - Submit transaction
+---
+
+### DAY 2 (Jan 30) — Private Swap
+**Goal:** Atomic shielded swap between two users
+
+**Tasks:**
+- [ ] Create `private_swap.cairo` contract
+- [ ] Implement swap lifecycle:
+  - `create_swap(commitment, offer_amount, request_amount) → swap_id`
+  - `accept_swap(swap_id, commitment, proof)`
+  - `cancel_swap(swap_id, proof)` — only creator can cancel
+- [ ] Swap interacts with ShieldedPool for commitment verification
+- [ ] Atomic execution: both sides exchange or neither does
+- [ ] Write tests:
+  - Valid swap (create + accept)
+  - Cancel swap (only creator)
+  - Accept with wrong amount (rejected)
+  - Double-accept prevention
+  - Swap with nonexistent commitment
+
+**Design Notes:**
+- Swap contract holds references to ShieldedPool commitments
+- On accept: old commitments nullified, new commitments created for both parties
+- Amounts hidden — swap terms committed via Poseidon hash
+- Mempool sees: swap_id, proofs, new commitments. Cannot see: amounts, who got what.
+
+**Day 2 Deliverable:** Private atomic swaps working with tests
+
+---
+
+### DAY 3 (Jan 31) — Prediction Market
+**Goal:** Hidden bets with oracle resolution
+
+**Tasks:**
+- [ ] Create `mock_pragma_oracle.cairo` — implements Pragma oracle interface, admin can set results
+- [ ] Create `prediction_market.cairo` contract
+- [ ] Implement market lifecycle:
+  - `create_market(question_hash, num_outcomes, resolution_time) → market_id`
+  - `place_bet(market_id, bet_commitment, amount)` — commitment hides which outcome
+  - `resolve(market_id)` — queries oracle for result
+  - `claim(market_id, proof_of_winning_bet)` — prove you bet on winner without revealing bet
+- [ ] Bet commitment: `Poseidon(outcome, amount, secret, nullifier)`
+- [ ] Write tests:
+  - Create market
+  - Place hidden bet
+  - Oracle resolve
+  - Claim winnings (valid proof)
+  - Claim with wrong outcome (rejected)
+  - Bet after resolution time (rejected)
+  - Double-claim prevention
+
+**Design Notes:**
+- Oracle uses Pragma interface so it's production-ready pattern (mock data, real interface)
+- Bets are commitments — no one knows which outcome you picked until claim
+- Winners prove their bet matched the winning outcome via ZK proof
+- Losers' bets stay hidden forever
+
+**Day 3 Deliverable:** Private prediction market working with mock oracle and tests
+
+---
+
+### DAY 4 (Feb 1) — Private Voting
+**Goal:** Hidden votes with time-locked trustless tally
+
+**Tasks:**
+- [ ] Create `private_voting.cairo` contract
+- [ ] Implement voting lifecycle:
+  - `create_proposal(description_hash, num_options, end_block) → proposal_id`
+  - `cast_vote(proposal_id, vote_commitment)` — commitment hides vote choice
+  - `tally(proposal_id, revealed_votes[])` — anyone can trigger after end_block
+- [ ] Vote commitment: `Poseidon(choice, secret, nullifier)`
+- [ ] Time-lock: `cast_vote` rejected if `current_block >= end_block`
+- [ ] Tally: verify each revealed vote matches its commitment, count results
+- [ ] Write tests:
+  - Create proposal
+  - Cast hidden vote
+  - Cast vote after deadline (rejected)
+  - Tally before deadline (rejected)
+  - Tally after deadline (succeeds)
+  - Double-vote prevention (same nullifier)
+  - Tally with invalid reveal (rejected)
+
+**Design Notes:**
+- Time-lock uses block number, not timestamp (more reliable on Starknet)
+- Anyone can trigger tally after end_block — trustless
+- Individual vote choices remain hidden even after tally (only aggregate result is public)
+- Nullifiers prevent double-voting
+
+**Day 4 Deliverable:** Private voting working with time-lock and tests
+
+---
+
+### DAYS 5-19 (Feb 2-16) — Frontend
+**Goal:** Unified UI for ALL private DeFi flows
 
 **Frontend Structure:**
 ```
 /app
-  /page.tsx           # Landing
-  /deposit/page.tsx   # Deposit flow
-  /transfer/page.tsx  # Transfer flow
-  /withdraw/page.tsx  # Withdraw flow
-  /balance/page.tsx   # View balance
+  /page.tsx                 # Landing — "Every DeFi primitive leaks your intent"
+  /dashboard/page.tsx       # Unified dashboard showing all primitives
+  /deposit/page.tsx         # Deposit BTC into shielded pool
+  /transfer/page.tsx        # Private transfer
+  /withdraw/page.tsx        # Withdraw from pool
+  /swap/page.tsx            # Private swap — create/accept/view
+  /predict/page.tsx         # Prediction market — create/bet/claim
+  /vote/page.tsx            # Private voting — create/cast/tally
 /components
   /WalletConnect.tsx
+  /ShieldedBalance.tsx
   /DepositForm.tsx
   /TransferForm.tsx
   /WithdrawForm.tsx
-  /ShieldedBalance.tsx
+  /SwapCreate.tsx
+  /SwapAccept.tsx
+  /MarketCreate.tsx
+  /PlaceBet.tsx
+  /ClaimWinnings.tsx
+  /CreateProposal.tsx
+  /CastVote.tsx
+  /TallyResults.tsx
 /lib
-  /starknet.ts        # Contract interactions
-  /crypto.ts          # Commitment generation, proof generation
-  /storage.ts         # Local secret storage
+  /starknet.ts              # Contract interactions
+  /crypto.ts                # Commitment generation, proof generation
+  /storage.ts               # Local secret storage (commitments, nullifiers)
+  /contracts.ts             # Contract addresses and ABIs
 ```
 
-#### Day 20-21: Integration + Polish
-- [ ] Connect frontend to deployed testnet contracts
-- [ ] End-to-end flow testing
-- [ ] UI polish
-- [ ] Fix bugs
+**Frontend Schedule:**
+- Days 5-7: Starknet.js setup, wallet connection, deposit/transfer/withdraw flows
+- Days 8-10: Swap UI (create swap, browse swaps, accept)
+- Days 11-13: Prediction market UI (create market, place bet, view results, claim)
+- Days 14-16: Voting UI (create proposal, cast vote, view tally)
+- Days 17-19: Polish, responsive design, loading states, error handling
 
-**Week 3 Deliverable:** Full working demo (deposit → transfer → withdraw) with UI
+**Deploy:** Contracts to Starknet Sepolia testnet before frontend work begins
 
 ---
 
-### WEEK 4: Video + Submission (Feb 22-28)
-**Goal:** Polished submission with killer video
+### DAYS 20-25 (Feb 17-22) — Video Production
+**Goal:** Killer demo video that shows the platform narrative
 
-#### Day 22-23: Demo Polish
-- [ ] Fix any remaining bugs
-- [ ] Improve UI/UX
-- [ ] Add loading states, error handling
-- [ ] Test on multiple browsers
-- [ ] Deploy to Starknet Sepolia testnet (final deploy)
+**Day 20 (Feb 17): Video script LOCKED**
 
-#### Day 24-25: Video Production
-- [ ] Write video script (see below)
-- [ ] Record screen capture of demo
-- [ ] Record voiceover
-- [ ] Edit video (keep under 3 minutes)
-- [ ] Add text overlays for key points
-
-**Video Script:**
+**Video Script (Revised for Platform):**
 ```
 [0:00-0:05] HOOK
-"What if you could send Bitcoin privately, instantly, without any waiting?"
+"Every time you swap, trade, or vote on-chain — everyone sees it.
+Your wallet. Your amount. Your intent. We fixed that."
 
 [0:05-0:15] PROBLEM
-"Current privacy solutions make you wait. Tornado Cash needs batching.
-Mixers need other participants. And the mempool sees everything."
+"Front-runners exploit your swaps. Copycats mirror your bets.
+Vote-buyers see your governance choices. The mempool sees EVERYTHING.
+Privacy solutions like Tornado Cash? They make you wait hours. Days."
 
-[0:15-0:25] SOLUTION
-"I built instant private Bitcoin transfers on Starknet.
-Deposit once, then send BTC privately in seconds.
-No batching. No waiting. The mempool sees nothing."
+[0:15-0:30] SOLUTION
+"We built Lisan — a complete private Bitcoin DeFi platform on Starknet.
+One shielded pool. Four private primitives.
+Transfers. Swaps. Predictions. Votes.
+All instant. All mempool-blind."
 
-[0:25-0:45] DEMO - Deposit
-"Here's how it works. I deposit 1 BTC into the shielded pool."
-[Show deposit transaction]
-"My balance is now private. No one can see how much I have."
+[0:30-0:50] DEMO 1 — Private Transfer
+"Deposit BTC into the shielded pool."
+[Show deposit]
+"Send 0.3 BTC privately."
+[Show transfer — instant]
+"Check the mempool. Nothing. No amount. No sender. No recipient."
 
-[0:45-1:15] DEMO - Transfer (THE MAGIC)
-"Now I send 0.3 BTC to my friend."
-[Click send]
-"Done. Two seconds. Let's check what the mempool saw."
-[Show explorer - just proof hash, no amounts]
-"Nothing. No amount. No sender. No recipient. Just a proof."
+[0:50-1:10] DEMO 2 — Private Swap
+"Alice and Bob want to swap privately."
+[Show swap creation and acceptance]
+"Atomic exchange. Neither party sees the other's full position.
+No front-running possible."
 
-[1:15-1:30] DEMO - Recipient
-"My friend checks their balance."
-[Show recipient's shielded balance updated]
-"Received. Instantly. Privately."
+[1:10-1:35] DEMO 3 — Private Prediction Market
+"Create a market: Will BTC hit 100k?"
+[Show market creation]
+"Place a hidden bet."
+[Show bet placement — commitment only]
+"Oracle resolves. Winner claims."
+[Show claim]
+"No one ever knew which side you were on."
 
-[1:30-1:50] TECHNICAL DEPTH
-"Under the hood: Commitments hide balances. ZK proofs verify transfers
-without revealing amounts. Nullifiers prevent double-spending.
-All powered by Starknet's native STARK proofs."
+[1:35-1:55] DEMO 4 — Private Voting
+"Create a governance proposal."
+[Show proposal]
+"Cast a hidden vote."
+[Show vote — commitment only]
+"Time-lock expires. Tally triggered."
+[Show tally result]
+"Democracy without coercion."
 
-[1:50-2:10] WHY IT MATTERS
-"Starknet wants to be the Bitcoin DeFi Layer.
-But Bitcoin DeFi needs privacy.
-This is the foundational primitive - instant private transfers.
-Ready for WBTC today. Ready for native Bitcoin bridges tomorrow."
+[1:55-2:15] TECHNICAL DEPTH
+"Under the hood: Poseidon commitments hide all state.
+Inline Cairo constraints verify every operation.
+Starknet's native STARKs prove execution automatically.
+Nullifiers prevent double-spending across all primitives.
+One commitment scheme. Four DeFi primitives. Zero information leakage."
 
-[2:10-2:20] CLOSE
-"Instant. Private. No waiting.
-The future of Bitcoin transfers on Starknet."
+[2:15-2:30] WHY STARKNET
+"Starknet is the Bitcoin DeFi Layer. But Bitcoin DeFi needs privacy.
+Lisan is the privacy layer for ALL of it.
+Every DeFi primitive. Made private. Made instant."
 
-[2:20-2:30] END CARD
-Project name, your name, GitHub link
+[2:30-2:40] CLOSE
+"Lisan — Private Bitcoin DeFi on Starknet."
+
+[2:40-2:50] END CARD
+Project name, GitHub link, your name
 ```
 
-#### Day 26: GitHub + Documentation
+**Days 21-23:** Record screen captures, voiceover, edit
+**Days 24-25:** Final cut, review, polish
+
+---
+
+### DAYS 26-30 (Feb 23-28) — Submission
+**Goal:** Polished submission package
+
+**Day 26-27: GitHub Theater + Documentation**
 - [ ] Clean up code
 - [ ] Write comprehensive README
 - [ ] Add architecture diagrams
-- [ ] Add setup instructions
-- [ ] Add test instructions
-- [ ] Space out commits (GitHub theater)
+- [ ] Add setup instructions + test instructions
+- [ ] Space out commits during hackathon period
 
-**README Structure:**
-```markdown
-# [Project Name] - Instant Private Bitcoin Transfers
-
-## The Problem
-[One paragraph]
-
-## The Solution
-[One paragraph + diagram]
-
-## How It Works
-[Technical explanation with diagrams]
-
-## Demo
-[Link to video, screenshots]
-
-## Tech Stack
-- Starknet (Cairo)
-- ZK Proofs (STARKs)
-- Next.js Frontend
-
-## Run Locally
-[Setup instructions]
-
-## Test
-[Test instructions]
-
-## Architecture
-[Diagrams]
-
-## Future Work
-- Native Bitcoin integration when bridges ship
-- Mobile app
-- SDK for other dApps
-
-## Team
-[Your info]
-```
-
-#### Day 27: DoraHacks Submission
+**Day 28: DoraHacks Submission**
 - [ ] Fill out all submission fields
 - [ ] Upload video
 - [ ] Link GitHub
 - [ ] Write compelling description
 - [ ] Select track (Bitcoin)
-- [ ] Submit before deadline
+- [ ] Submit
 
-#### Day 28: Buffer
+**Days 29-30: Buffer**
 - [ ] Handle any submission issues
 - [ ] Final polish if time permits
-
-**Week 4 Deliverable:** Submitted project with video, GitHub, documentation
 
 ---
 
@@ -565,26 +663,28 @@ Project name, your name, GitHub link
 - [x] Commitment: deterministic hashing, different inputs → different hashes, nullifier hash, verify valid/invalid (6 tests)
 - [x] Verifier: tested via transfer tests (constraint enforcement)
 
-### Integration Tests
+### Core Contract Tests
 - [x] Deposit: basic deposit, zero amount fails, duplicate fails, multiple deposits, insufficient balance (5 tests)
 - [x] Transfer: valid transfer, double-spend, wrong secret, value not conserved, zero amount, nonexistent, wrong nullifier (7 tests)
-- [ ] Withdraw: proof verified, tokens returned, commitment removed *(Phase 3)*
-- [x] Double-spend prevention: commitment invalidated + nullifier marked
+- [ ] Withdraw: valid withdraw, double-spend, wrong secret, wrong amount, nonexistent commitment *(Day 1)*
+
+### Arm Contract Tests
+- [ ] Private Swap: valid swap, cancel, wrong amount, double-accept, nonexistent commitment *(Day 2)*
+- [ ] Prediction Market: create, place bet, resolve, claim, wrong outcome, expired, double-claim *(Day 3)*
+- [ ] Private Voting: create, cast vote, after deadline, tally before/after, double-vote, invalid reveal *(Day 4)*
 
 ### End-to-End Tests
 - [x] Full flow: deposit → transfer (test_full_deposit_transfer_flow)
 - [x] Chained transfers: deposit → transfer → transfer from change (test_chained_transfers)
 - [x] Multiple users: Alice & Bob deposit, Alice transfers to Bob (test_multiple_users)
 - [x] Edge cases: zero amount, insufficient balance, nonexistent commitment
+- [ ] Full loop: deposit → transfer → withdraw *(Day 1)*
+- [ ] Cross-arm: deposit → swap → withdraw *(Day 2)*
+- [ ] Full prediction: deposit → bet → resolve → claim → withdraw *(Day 3)*
+- [ ] Full voting: deposit → vote → tally *(Day 4)*
 
-**Total: 26 tests, 26 passing ✅**
-
-### Frontend Tests
-- [ ] Wallet connects *(Phase 3)*
-- [ ] Deposit transaction submits *(Phase 3)*
-- [ ] Transfer transaction submits *(Phase 3)*
-- [ ] Balance displays correctly *(Phase 3)*
-- [ ] Withdraw transaction submits *(Phase 3)*
+**Current: 26 tests, 26 passing ✅**
+**Target: ~55-65 tests across all contracts**
 
 ---
 
@@ -592,25 +692,38 @@ Project name, your name, GitHub link
 
 | Risk | Mitigation |
 |------|------------|
-| ZK circuits too complex | Start with simpler approach, iterate |
-| Cairo learning curve | Use existing examples, Starknet docs |
-| Time crunch | Prioritize core flow over features |
-| Proof generation slow | Client-side generation, optimize later |
-| Frontend issues | Use templates, keep UI simple |
+| Pace slows after Day 1 | MVP = core pool + 2 arms. All 3 arms = winning submission. |
+| Swap atomicity complex | Start simple: lock → accept → execute. No partial fills. |
+| Oracle integration | Use Pragma interface with mock data. Real pattern, mock values. |
+| Time-lock testing | Use Starknet Foundry block manipulation in tests. |
+| Frontend for 6 flows | Unified dashboard, shared components. Don't over-design. |
+| Video too long | Keep under 3 minutes. 30 seconds per primitive max. |
 
-### MVP vs Nice-to-Have
+### MVP vs Winning
 
-**MVP (Must Have):**
-- Deposit working
-- Transfer working with ZK proof
-- Basic frontend
-- Demo video
+**MVP (Must Ship):**
+- ShieldedPool: deposit + transfer + withdraw
+- At least 2 arms working (swap + prediction OR swap + voting)
+- Basic frontend showing flows
+- Video under 3 minutes
+- GitHub with README
 
-**Nice-to-Have (If Time):**
-- Withdraw (can demo without)
-- Polished UI
-- Mobile responsive
-- Multiple token support
+**Winning Submission (Full Platform):**
+- All 3 arms working (swap + prediction + voting)
+- Polished unified UI
+- Compelling platform narrative in video
+- All demos smooth (no bugs during recording)
+- Clean GitHub with architecture docs
+
+---
+
+## DISCORD DROP (Updated)
+
+> "Built a full private Bitcoin DeFi platform on Starknet. Private transfers. Private swaps. Private prediction markets. Private voting. One shielded pool. All instant. All mempool-blind.
+>
+> Every DeFi primitive leaks your intent. We made them all private.
+>
+> [Video link] | [GitHub link]"
 
 ---
 
@@ -626,6 +739,9 @@ Project name, your name, GitHub link
 - [Garaga (proof verification)](https://github.com/keep-starknet-strange/garaga)
 - [Tongo (private payments)](https://docs.tongo.xyz/) - if available
 - [StarkWare SDK](https://docs.starkware.co/)
+
+### Oracle
+- [Pragma Oracle](https://docs.pragma.build/) — Starknet native oracle, interface reference
 
 ### Privacy Implementations (Reference)
 - [Tornado Cash (concept)](https://tornado.ws/)
@@ -647,6 +763,10 @@ Project name, your name, GitHub link
 - [ ] Task 1
 - [ ] Task 2
 
+### Tests
+- Total passing: X
+- New tests added: Y
+
 ### Blockers
 - Issue 1: [description]
 
@@ -654,12 +774,9 @@ Project name, your name, GitHub link
 - [ ] Task 1
 - [ ] Task 2
 
-### Hours Spent
-- X hours
-
 ### Confidence Level (1-10)
 - Overall: X
-- On track for Week goal: Y/N
+- On track for submission: Y/N
 ```
 
 ---
@@ -669,27 +786,19 @@ Project name, your name, GitHub link
 ### Minimum Viable Submission
 - [x] Deposit works (contracts complete, 26 tests passing)
 - [x] Transfer works with privacy (inline constraint verification, STARK-proven)
-- [ ] Video under 3 minutes showing the flow
+- [ ] Withdraw works
+- [ ] At least 2 arms working
+- [ ] Video under 3 minutes showing the platform
 - [ ] GitHub with README
 - [ ] DoraHacks submission complete
 
 ### Winning Submission
 - [ ] All of above PLUS
-- [ ] Withdraw works
-- [ ] Clean, intuitive UI
+- [ ] All 3 arms working (swap + prediction + voting)
+- [ ] Clean, intuitive unified UI
 - [ ] Clear technical documentation
-- [ ] Compelling narrative in video
-- [ ] Demo is smooth (no bugs during recording)
-
----
-
-## DISCORD DROP (Ready to Use)
-
-> "Built instant private Bitcoin transfers on Starknet. No batching. No waiting. Deposit once, send BTC privately in seconds. The mempool doesn't see shit.
->
-> Tornado Cash made you wait. This doesn't.
->
-> [Video link] | [GitHub link]"
+- [ ] Compelling platform narrative in video
+- [ ] All demos smooth (no bugs during recording)
 
 ---
 

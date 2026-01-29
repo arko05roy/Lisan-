@@ -63,3 +63,38 @@ pub fn verify_transfer_proof(
 
     true
 }
+
+/// Verify all withdraw constraints.
+/// Returns true if all constraints pass.
+pub fn verify_withdraw_proof(
+    commitment: felt252,
+    amount: felt252,
+    secret: felt252,
+    nullifier_secret: felt252,
+    nullifier_hash: felt252,
+    withdraw_amount: felt252,
+) -> bool {
+    // Constraint 1: Commitment hash matches private inputs
+    let computed = compute_commitment(amount, secret, nullifier_secret);
+    if computed != commitment {
+        return false;
+    }
+
+    // Constraint 2: Nullifier hash matches nullifier_secret
+    let computed_nullifier = compute_nullifier_hash(nullifier_secret);
+    if computed_nullifier != nullifier_hash {
+        return false;
+    }
+
+    // Constraint 3: Withdraw amount equals commitment amount (full withdraw)
+    if withdraw_amount != amount {
+        return false;
+    }
+
+    // Constraint 4: Withdraw amount > 0
+    if withdraw_amount == 0 {
+        return false;
+    }
+
+    true
+}

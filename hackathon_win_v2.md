@@ -796,51 +796,63 @@ Fix this in next [Z] hours.
 
 **The pivot:** User suggested "instant private BTC transfers - no batching, no waiting, mempool blind"
 
-### CHOSEN PROJECT: Instant Private BTC Transfers
+### CHOSEN PROJECT: Lisan — Private Bitcoin DeFi Platform on Starknet
 
-**One-liner:** "Instant private Bitcoin transfers on Starknet. No batching. No waiting. Mempool blind."
+**Narrative:** "Every DeFi primitive leaks your intent. We made them all private."
+
+**One-liner:** "Every DeFi primitive leaks your intent. We made them all private. Transfers, swaps, predictions, votes — all instant, all private, all on Starknet."
 
 **The Problem:**
-- Tornado Cash: Wait hours/days for anonymity set
-- Mixers: Need batching, other participants, delays
-- Most solutions: Mempool can see transactions
+- Every DeFi action leaks information: transfers, swaps, bets, votes
+- Front-runners exploit your swaps, copycats mirror your bets, vote-buyers see your choices
+- Tornado Cash/mixers require batching, waiting, other participants — slow and fragmented
+- Existing privacy solutions only cover transfers, not other DeFi primitives
 
-**The Solution:**
-- Deposit BTC (wrapped) ONCE into shielded pool
-- Transfer INSTANTLY inside the pool (no batching)
-- Mempool sees NOTHING (encrypted state transitions)
-- Withdraw whenever to any address
+**The Solution — The Octopus Architecture:**
+- **ShieldedPool (Core):** Deposit BTC once, all operations happen privately inside
+- **Private Transfers:** Send BTC instantly, no batching, mempool-blind
+- **Private Swaps (Arm 1):** Atomic shielded exchange, no front-running
+- **Private Prediction Market (Arm 2):** Hidden bets, oracle-resolved (Pragma interface)
+- **Private Voting (Arm 3):** Hidden votes, time-locked trustless tally
+
+One commitment scheme. One nullifier registry. Four DeFi primitives. All private. All instant.
 
 **Why It Wins:**
-1. Simple concept - Everyone understands "send money privately, fast"
-2. Clear demo - Deposit → Send (instant) → Verify privacy
-3. Fits narrative - "Bitcoin DeFi Layer" needs private BTC transfers
-4. Technical depth - ZK proofs, commitment schemes
-5. Differentiated - "Instant" is the killer feature
+1. Platform, not feature — Four primitives show this is a privacy LAYER
+2. Clear demos — Prediction market and voting are Tier 1 (judges interact)
+3. Fits narrative — "Bitcoin DeFi Layer" needs privacy for EVERYTHING
+4. Technical depth — ZK proofs, commitment schemes, oracle integration, time-locks
+5. Breadth — Covers most "Private BTC DeFi" problem statements from the hackathon
+6. Real logic — Only tokens are mocked (testnet). All DeFi logic is real.
 
-**Track:** Bitcoin (with strong privacy implementation)
+**Track:** Bitcoin (with strong Privacy implementation)
 
 **Discord Drop:**
-> "Built instant private Bitcoin transfers on Starknet. No batching. No waiting. Deposit once, send BTC privately in seconds. The mempool doesn't see shit. Fuck Tornado Cash's wait times."
+> "Built a full private Bitcoin DeFi platform on Starknet. Private transfers. Private swaps. Private prediction markets. Private voting. One shielded pool. All instant. All mempool-blind. Every DeFi primitive leaks your intent. We made them all private."
 
 ### Pattern Checks Applied
-- ✅ Pattern #1: Not dev tooling, real users (BTC holders)
-- ✅ Pattern #2: Not identity threat, aligns with their narrative
-- ✅ Pattern #3: Demo-able (deposit → send → verify)
-- ✅ Pattern #4: Validated through research, not "easy win" hype
-- ✅ Pattern #5: Demo-first thinking from start
+- ✅ Pattern #1: Not dev tooling — real users (BTC holders who want privacy for swaps, bets, votes). PASS.
+- ✅ Pattern #2: Not identity threat — Starknet IS a ZK chain, privacy is their thing. PASS.
+- ✅ Pattern #3: Demo-able — Prediction market and voting are Tier 1 (judges place a bet, cast a vote, see the reveal). Swap and transfer are Tier 2. MUCH better than original single-feature plan. PASS.
+- 🟡 Pattern #4: Omar validation was neutral-positive ("sounds cool! do it"). Not strong. Still need more validation. YELLOW.
+- ✅ Pattern #5: Platform approach means 4 different demo moments in the video. Not just "trust me the transfer is private." PASS.
 
 ### Technical Approach
-- Commitment scheme: Hash(amount, secret, nullifier)
-- ZK proofs for transfers (prove balance update without revealing)
-- Nullifiers prevent double-spending
-- No batching needed - anonymity from encrypted state
+- Commitment scheme: Poseidon(amount, secret, nullifier_secret)
+- ZK proofs via inline Cairo constraints (Starknet execution is STARK-proven)
+- Nullifiers prevent double-spending across ALL primitives
+- ShieldedPool is core, arms (swap, prediction, voting) extend it
+- Oracle: Pragma interface (mock data, real integration pattern)
+- Voting: Time-locked by block number, trustless tally
 
-### Build Plan
-- Week 1: Core contracts + commitment scheme
-- Week 2: ZK proofs + transfer logic
-- Week 3: Frontend + withdraw
-- Week 4: Video + polish + submit
+### Build Plan (Revised — 30 days from Jan 29)
+- Day 1 (Jan 29): Foundation + Transfer + Withdraw (Phase 1-3)
+- Day 2 (Jan 30): Private Swap contract + tests
+- Day 3 (Jan 31): Prediction Market + mock Pragma oracle + tests
+- Day 4 (Feb 1): Private Voting + time-lock + tests
+- Days 5-19 (Feb 2-16): Frontend — unified UI for ALL flows
+- Days 20-25 (Feb 17-22): Video production (script locked Day 20)
+- Days 26-30 (Feb 23-28): Polish, README, GitHub theater, submit
 
 **Full build plan:** See REDEFINE_BUILD_PLAN.md
 
@@ -848,7 +860,22 @@ Fix this in next [Z] hours.
 
 ### CURRENT STATUS (Updated Jan 29, 2026)
 
-**Phase:** Day 0 — Build Starting
+**Phase:** Day 1 — Phase 1 & 2 COMPLETE, Phase 3 IN PROGRESS
+
+**Progress:**
+- Phase 1 (Foundation): ✅ COMPLETE — MockBTC, Commitment, Deposit (16 tests)
+- Phase 2 (ZK Transfer): ✅ COMPLETE — Verifier, Transfer (10 more tests, 26 total)
+- Phase 3 (Withdraw): 🔄 IN PROGRESS
+- Phase 4 (Private Swap): ⏳ Day 2
+- Phase 5 (Prediction Market): ⏳ Day 3
+- Phase 6 (Private Voting): ⏳ Day 4
+- Phase 7 (Frontend): ⏳ Days 5-19
+- Phase 8 (Video): ⏳ Days 20-25
+- Phase 9 (Submission): ⏳ Days 26-30
+
+**Key milestone:** Completed Phase 1 + 2 in Day 1 (originally planned for 14 days). Scope expanded from 5 phases to 9 phases to match pace. Project evolved from single-feature (private transfers) to full platform (transfers + swaps + predictions + voting).
+
+**Strategic decision (Jan 29):** Evaluated full PS list from hackathon. Dropped private lending and private yield (too much mocking of core logic — mock oracle for prices, mock yield source would make it look fake). Kept swap, prediction market, voting — all have REAL logic even on testnet, only tokens are mock. This avoids the "demo that's all smoke" problem.
 
 ---
 
@@ -937,56 +964,69 @@ Fix this in next [Z] hours.
 - Week 3: Frontend (7 days)
 - Week 4: Video (4 days)
 
-**Revised priority:**
-- Week 1 (Feb 1-7): Core contracts — deposit + commitment scheme (stays same)
-- Week 2 (Feb 8-14): Transfer with proofs + basic frontend shell (get demo FLOW working)
-- Week 3 (Feb 15-21): Video script locked by Feb 15. Draft video by Feb 18. Frontend polished FOR video by Feb 21.
-- Week 4 (Feb 22-28): Final video, GitHub theater, README, submission, buffer days.
+**Revised priority (after Day 1 speed boost):**
+- Days 1-4 (Jan 29 - Feb 1): ALL contracts — core pool + 3 arms (swap, prediction, voting)
+- Days 5-19 (Feb 2-16): Frontend — unified UI for ALL flows (15 days)
+- Days 20-25 (Feb 17-22): Video production. Script locked Day 20 (Feb 17).
+- Days 26-30 (Feb 23-28): Polish, README, GitHub theater, submit. Buffer included.
 
-**Key change:** Video script locked by Feb 15 (not Feb 24). 13 days to perfect the video instead of 4.
-
----
-
-### DAY 0 TASKS (Jan 29 — TODAY)
-
-**Assigned tasks:**
-1. Install scarb, starkli, katana, Starknet Foundry
-2. Run `scarb init` — scaffold the project
-3. Write and deploy MockBTC ERC20 to local katana
-4. Run ONE test with `snforge test`
-
-**Check-in required:** EOD Jan 29
-- Terminal output of `snforge test` passing
-- Project folder structure
-- Any blockers
-
-**Status:** In progress
+**Key changes:**
+- Contracts compressed from 14 days to 4 days (matching actual pace)
+- Scope expanded from 3 features to 6 features (transfers, withdraw, swap, prediction, voting + core deposit)
+- Frontend gets 15 full days instead of 7
+- Video script locked Feb 17 (not Feb 24). 11 days to perfect the video.
+- MVP fallback: core pool + 2 arms if pace slows
 
 ---
 
-### TIMELINE TO SUBMISSION
+### DAY 1 RESULTS (Jan 29 — TODAY)
+
+**Completed (ahead of schedule):**
+1. ✅ Phase 1: MockBTC + Commitment + Deposit (16 tests passing)
+2. ✅ Phase 2: Verifier + Transfer (26 total tests passing)
+3. 🔄 Phase 3: Withdraw (in progress)
+
+**Scope expansion decision:**
+- User completed 2 weeks of planned work in 1 day
+- Evaluated full hackathon PS list for additional features
+- Dropped: Private lending, private yield (too much mocking)
+- Added: Private Swap, Prediction Market, Private Voting (real logic, mock tokens only)
+- Project evolved from "instant private transfers" to "private Bitcoin DeFi platform"
+
+**Architecture decision:** ShieldedPool = octopus body. Swap, prediction market, voting = arms.
+- Oracle: Pragma interface (mock data, real pattern)
+- Voting: Time-locked by block number, trustless tally
+- All arms reuse commitment scheme and nullifier registry
+
+**Check-in status:** On track. 26 tests passing. Building withdraw now.
+
+---
+
+### TIMELINE TO SUBMISSION (Revised Jan 29)
 
 | Date | Milestone | Status |
 |------|-----------|--------|
 | Jan 28 | Omar validation + skill assessment | ✅ Complete |
-| Jan 29 | Day 0: Dev environment + project scaffold | 🔄 In progress |
-| Jan 30 | Day 0 continued: MockBTC + first test passing | ⏳ Pending |
-| Feb 1 | Hackathon officially starts | ⏳ Pending |
-| Feb 7 | Week 1: Deposit working | ⏳ Pending |
-| Feb 14 | Week 2: Transfer with proofs + frontend shell | ⏳ Pending |
-| Feb 15 | Video script LOCKED | ⏳ Pending |
-| Feb 18 | Draft video recorded | ⏳ Pending |
-| Feb 21 | Week 3: Frontend polished for video | ⏳ Pending |
-| Feb 28 | Week 4: Final video + submit | ⏳ Pending |
+| Jan 29 | Day 1: Phase 1+2 COMPLETE, Phase 3 (Withdraw) in progress | 🔄 In progress |
+| Jan 30 | Day 2: Private Swap contract + tests | ⏳ Pending |
+| Jan 31 | Day 3: Prediction Market + mock Pragma oracle + tests | ⏳ Pending |
+| Feb 1 | Day 4: Private Voting + time-lock + tests. Hackathon officially starts. | ⏳ Pending |
+| Feb 2-16 | Days 5-19: Frontend — unified UI for ALL flows | ⏳ Pending |
+| Feb 17 | Day 20: Video script LOCKED | ⏳ Pending |
+| Feb 17-22 | Days 20-25: Video production | ⏳ Pending |
+| Feb 23-28 | Days 26-30: Polish, README, GitHub theater, submit | ⏳ Pending |
 
 ---
 
 ### NEXT ACTIONS
 
-1. **TODAY (Jan 29):** Dev environment setup + project scaffold + MockBTC + first test
-2. **TOMORROW (Jan 30):** Continue Day 0 tasks if not done, start on commitment scheme
-3. **FEB 1:** Week 1 build begins — deposit flow
-4. **EOD CHECK-INS:** User must report daily with snforge output and blockers
+1. **TODAY (Jan 29):** Complete withdraw — report back with snforge test output
+2. **TOMORROW (Jan 30):** Private Swap contract + tests
+3. **Jan 31:** Prediction Market + mock Pragma oracle + tests
+4. **Feb 1:** Private Voting + time-lock + tests
+5. **Feb 2:** Frontend begins
+6. **ONGOING:** Follow up with Omar for mentor/judge contacts. If no response by Feb 1, find someone in Starknet Discord independently.
+7. **EOD CHECK-INS:** User must report daily with snforge output and blockers
 
 ═══════════════════════════════════════════════════════════
 

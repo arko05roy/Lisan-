@@ -17,9 +17,21 @@ pub trait IShieldedPool<TContractState> {
         new_secret_recipient: felt252,
         new_nullifier_secret_recipient: felt252,
     );
+    fn withdraw(
+        ref self: TContractState,
+        commitment: felt252,
+        nullifier_hash: felt252,
+        amount: felt252,
+        secret: felt252,
+        nullifier_secret: felt252,
+        recipient: starknet::ContractAddress,
+        withdraw_amount: u256,
+    );
     fn is_commitment_valid(self: @TContractState, commitment: felt252) -> bool;
+    fn is_nullifier_used(self: @TContractState, nullifier_hash: felt252) -> bool;
     fn get_commitment_count(self: @TContractState) -> u64;
     fn get_total_deposited(self: @TContractState) -> u256;
+    fn get_btc_token(self: @TContractState) -> starknet::ContractAddress;
 }
 
 #[starknet::contract]
@@ -30,7 +42,7 @@ pub mod ShieldedPool {
         StorageMapWriteAccess,
     };
     use openzeppelin_interfaces::token::erc20::{IERC20Dispatcher, IERC20DispatcherTrait};
-    use lisan_contracts::verifier::verify_transfer_proof;
+    use lisan_contracts::verifier::{verify_transfer_proof, verify_withdraw_proof};
 
     #[storage]
     struct Storage {
@@ -46,6 +58,7 @@ pub mod ShieldedPool {
     pub enum Event {
         Deposit: Deposit,
         Transfer: Transfer,
+        Withdraw: Withdraw,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -61,6 +74,13 @@ pub mod ShieldedPool {
         pub nullifier_hash: felt252,
         pub new_commitment_sender: felt252,
         pub new_commitment_recipient: felt252,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    pub struct Withdraw {
+        pub nullifier_hash: felt252,
+        pub recipient: ContractAddress,
+        pub amount: u256,
     }
 
     #[constructor]
@@ -145,8 +165,54 @@ pub mod ShieldedPool {
                 );
         }
 
+        fn withdraw(
+            ref self: ContractState,
+            commitment: felt252,
+            nullifier_hash: felt252,
+            amount: felt252,
+            secret: felt252,
+            nullifier_secret: felt252,
+            recipient: ContractAddress,
+            withdraw_amount: u256,
+        ) {
+            // Check commitment exists in pool
+            assert(self.commitments.read(commitment), 'Commitment does not exist');
+
+            // Check nullifier not already used (double-spend prevention)
+            assert(!self.nullifiers.read(nullifier_hash), 'Nullifier already used');
+
+            // Verify withdraw proof constraints
+            let valid = verify_withdraw_proof(
+                commitment, amount, secret, nullifier_secret, nullifier_hash, amount,
+            );
+            assert(valid, 'Invalid withdraw proof');
+
+            // Invalidate commitment
+            self.commitments.write(commitment, false);
+
+            // Mark nullifier as used
+            self.nullifiers.write(nullifier_hash, true);
+
+            // Transfer tokens from pool to recipient
+            let token = IERC20Dispatcher { contract_address: self.btc_token.read() };
+            let success = token.transfer(recipient, withdraw_amount);
+            assert(success, 'Token transfer failed');
+
+            // Decrement commitment count
+            self.commitment_count.write(self.commitment_count.read() - 1);
+
+            // Decrement total deposited
+            self.total_deposited.write(self.total_deposited.read() - withdraw_amount);
+
+            self.emit(Withdraw { nullifier_hash, recipient, amount: withdraw_amount });
+        }
+
         fn is_commitment_valid(self: @ContractState, commitment: felt252) -> bool {
             self.commitments.read(commitment)
+        }
+
+        fn is_nullifier_used(self: @ContractState, nullifier_hash: felt252) -> bool {
+            self.nullifiers.read(nullifier_hash)
         }
 
         fn get_commitment_count(self: @ContractState) -> u64 {
@@ -155,6 +221,10 @@ pub mod ShieldedPool {
 
         fn get_total_deposited(self: @ContractState) -> u256 {
             self.total_deposited.read()
+        }
+
+        fn get_btc_token(self: @ContractState) -> ContractAddress {
+            self.btc_token.read()
         }
     }
 }
