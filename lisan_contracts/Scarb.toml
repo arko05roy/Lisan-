@@ -1,0 +1,29 @@
+[package]
+name = "lisan_contracts"
+version = "0.1.0"
+edition = "2024_07"
+
+[dependencies]
+starknet = "2.15.0"
+openzeppelin_token = { git = "https://github.com/OpenZeppelin/cairo-contracts.git", branch = "main" }
+openzeppelin_access = { git = "https://github.com/OpenZeppelin/cairo-contracts.git", branch = "main" }
+openzeppelin_interfaces = { git = "https://github.com/OpenZeppelin/cairo-contracts.git", branch = "main" }
+
+[dev-dependencies]
+snforge_std = "0.55.0"
+assert_macros = "2.15.0"
+
+[[target.starknet-contract]]
+sierra = true
+
+[scripts]
+test = "snforge test"
+
+[tool.scarb]
+allow-prebuilt-plugins = ["snforge_std"]
+
+[tool.snforge]
+build-external-contracts = [
+    "lisan_contracts::mock_btc::MockBTC",
+    "lisan_contracts::shielded_pool::ShieldedPool",
+]
