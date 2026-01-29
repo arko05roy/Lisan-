@@ -862,26 +862,26 @@ Two commitment schemes (core pool + AMM pool). Shared nullifier pattern. Four De
 
 ---
 
-### CURRENT STATUS (Updated Jan 29, 2026 — Late EOD)
+### CURRENT STATUS (Updated Jan 29, 2026 — Evening, Day 1 COMPLETE)
 
-**Phase:** Day 1 COMPLETE. Phase 1-4 ALL done. Day 2: Prediction Market + Voting.
+**Phase:** Day 1 COMPLETE. ALL 6 contract phases done. Day 2: Deploy + Frontend begins.
 
 **Progress:**
 - Phase 1 (Foundation): ✅ COMPLETE — MockBTC, Commitment, Deposit (16 tests)
 - Phase 2 (ZK Transfer): ✅ COMPLETE — Verifier, Transfer (10 more tests, 26 total)
 - Phase 3 (Withdraw): ✅ COMPLETE — Withdraw with proof verification (18 more tests, 44 total)
 - Phase 4 (Shielded AMM): ✅ COMPLETE (Day 1) — MockSTRK + ShieldedAMM (seed, deposit, swap, withdraw) — 44 AMM tests, 88 total
-- Phase 5 (Prediction Market): ⏳ Day 2 (Jan 30)
-- Phase 6 (Private Voting): ⏳ Day 2 (Jan 30)
-- Phase 7 (Frontend): ⏳ Days 3-17
-- Phase 8 (Video): ⏳ Days 18-23
-- Phase 9 (Submission): ⏳ Days 24-30
+- Phase 5 (Prediction Market): ✅ COMPLETE (Day 1) — MockPragmaOracle + PredictionMarket (create, bet, resolve, claim) — 68 tests, 156 total
+- Phase 6 (Private Voting): ✅ COMPLETE (Day 1) — PrivateVoting (create, cast, tally) — 41 tests, 183 total
+- Phase 7 (Frontend): ⏳ Days 2-11 (Jan 30 - Feb 8)
+- Phase 8 (Video): ⏳ Days 18-23 (Feb 15-20)
+- Phase 9 (Submission): ⏳ Days 24-30 (Feb 21-28)
 
-**Total tests passing: 88 (verified via snforge — 88 passed, 0 failed)**
+**Total tests passing: 183 (verified via snforge — 183 passed, 0 failed)**
 
-**Codebase stats:** 960 lines contract code (7 files), 3,001 lines tests (9 files).
+**Codebase stats:** 1,808 lines contract code (10 files), 5,577 lines tests (11 files). 7,385 total.
 
-**Key milestone:** Completed Phase 1 + 2 + 3 + 4 ALL in Day 1 (originally planned for 14+ days). Full privacy loop AND shielded AMM operational. Scope compressed further — prediction market + voting moved to Day 2.
+**Key milestone:** Completed ALL 6 contract phases in Day 1 (originally planned for 14+ days). Full privacy loop, shielded AMM, prediction market, AND private voting all operational. "Winning Submission" contract scope achieved.
 
 **Strategic decision (Jan 29):** Evaluated full PS list from hackathon. Dropped private lending and private yield (too much mocking of core logic). Kept swap, prediction market, voting — all have REAL logic even on testnet, only tokens are mock.
 
@@ -895,6 +895,10 @@ Two commitment schemes (core pool + AMM pool). Shared nullifier pattern. Four De
 - ShieldedAMM is a separate contract from ShieldedPool. Own reserves, own commitments, own nullifiers. Clean separation.
 - Explorer shows txn hash with 0.00 amounts — the demo proof point.
 - BTC/ETH pair deferred to later if time permits.
+
+**Scope freeze decision (Jan 29 evening):** User wanted to add more contract features ("more tentacles"). Coached back — contracts are "Winning Submission" scope. Adding features judges see for 8 seconds in a video doesn't beat polished 4-feature demo. **Contract scope CONDITIONALLY FROZEN** — frontend for existing 4 primitives must be complete first. If frontend finishes fast AND user can defend a specific new feature's demo impact, new contract work may be unlocked. Video script lock date (Feb 15) is the hard cutoff — anything not in frontend by then doesn't ship.
+
+**Frontend skill confirmed (Jan 29 evening):** User confirmed experience with starknet.js/starknet-react, Argent/Braavos wallet connection, and calling Cairo contracts from frontend. Frontend is a claimed strength (not just "functional"). This changes timeline — frontend may take 10 days instead of 15.
 
 ---
 
@@ -951,20 +955,21 @@ Two commitment schemes (core pool + AMM pool). Shared nullifier pattern. Four De
 
 ---
 
-### SKILL GAP ASSESSMENT — UPDATED
+### SKILL GAP ASSESSMENT — UPDATED (Jan 29 Evening)
 
 | Skill | Status | Risk Level |
 |-------|--------|------------|
-| Cairo | VERIFIED — 44 tests passing, 5 contracts built in Day 1 | 🟢 LOW (proven) |
-| Poseidon commitments | Understands concept | 🟢 LOW |
+| Cairo | VERIFIED — 183 tests passing, 10 contracts built in Day 1 | 🟢 LOW (proven beyond doubt) |
+| Poseidon commitments | Implemented 4 variants (core, AMM, bet, vote) | 🟢 LOW (proven) |
 | STARK proofs client-side | Clarified — sequencer handles this | 🟢 LOW |
+| starknet.js / starknet-react | User confirms prior experience | 🟢 LOW (claimed) |
+| Argent/Braavos wallet | User confirms prior experience | 🟢 LOW (claimed) |
+| Cairo contract calls from frontend | User confirms prior experience | 🟢 LOW (claimed) |
+| Frontend/UI | User claims as strength — to be verified Day 2-3 | 🟡 MEDIUM (unverified claim) |
 
-**Cairo Sprint Results (claimed Jan 29):**
-- Starknet Book chapters 1-4: ✅ Done (claimed)
-- Deploy contract to Starknet Sepolia: ✅ Done (claimed)
-- Write ONE test using Starknet Foundry: ✅ Done (claimed)
+**Cairo skill: PROVEN.** 10 contracts, 183 tests, 7,385 lines in Day 1. No longer a concern.
 
-**Note:** User claimed all 3 done but did not provide screenshot or honest assessment as required. Taking at face value. Real test comes during Week 1 build.
+**Frontend skill: CLAIMED.** User says frontend is a strength, not just functional. Contradicts original profile ("UI/UX is functional, not beautiful"). Will be verified by Day 2-3 output. If screenshots show polished UI, risk drops to LOW.
 
 **Critical Clarification Given:**
 - Starknet proves ALL execution via STARKs automatically
@@ -974,7 +979,7 @@ Two commitment schemes (core pool + AMM pool). Shared nullifier pattern. Four De
 
 ---
 
-### BUILD PRIORITY REVISION (Jan 29)
+### BUILD PRIORITY REVISION (Jan 29 Evening — Rev 2)
 
 **Problem identified:** Original build plan ordered for offline hack (backend → frontend → video). This is an ONLINE ASYNC hack. Judges watch a video, not a live demo.
 
@@ -983,31 +988,52 @@ Two commitment schemes (core pool + AMM pool). Shared nullifier pattern. Four De
 - Week 3: Frontend (7 days)
 - Week 4: Video (4 days)
 
-**Revised priority (after Day 1 speed boost):**
-- Days 1-4 (Jan 29 - Feb 1): ALL contracts — core pool + 3 arms (swap, prediction, voting)
-- Days 5-19 (Feb 2-16): Frontend — unified UI for ALL flows (15 days)
-- Days 20-25 (Feb 17-22): Video production. Script locked Day 20 (Feb 17).
-- Days 26-30 (Feb 23-28): Polish, README, GitHub theater, submit. Buffer included.
+**Rev 1 (Jan 29 mid-day — obsolete):**
+- Days 1-4: Contracts
+- Days 5-19: Frontend (15 days)
+- Days 20-25: Video
+- Days 26-30: Polish + submit
 
-**Key changes:**
-- Contracts compressed from 14 days to 4 days (matching actual pace)
-- Scope expanded from 3 features to 6 features (transfers, withdraw, swap, prediction, voting + core deposit)
-- Frontend gets 15 full days instead of 7
-- Video script locked Feb 17 (not Feb 24). 11 days to perfect the video.
-- MVP fallback: core pool + 2 arms if pace slows
+**Rev 2 (Jan 29 evening — CURRENT):**
+- Day 1 (Jan 29): ALL contracts — DONE. All 6 phases complete. 183 tests.
+- Days 2-11 (Jan 30 - Feb 8): Deploy to Sepolia + Frontend (10 days). User claims frontend is a strength.
+- Days 12-14 (Feb 9-11): **CONDITIONAL** — New contract features IF frontend is done AND feature passes demo impact test. Otherwise: frontend polish.
+- Day 15-17 (Feb 12-14): Frontend for any new features + final polish
+- Day 18 (Feb 15): **VIDEO SCRIPT LOCKED — HARD CUTOFF.** Any feature not in frontend by this date does not ship.
+- Days 18-23 (Feb 15-20): Video production (script + record + edit)
+- Days 24-28 (Feb 21-25): README, GitHub theater, DoraHacks submission
+- Days 29-30 (Feb 26-28): Buffer
+
+**Key changes from Rev 1:**
+- Contracts done in 1 day instead of 4 — massive time savings
+- Frontend compressed from 15 days to 10 days (user claims frontend strength)
+- ~3 days conditionally unlocked for new features (Days 12-14) — ONLY if frontend is done
+- Video script locked Feb 15 — non-negotiable cutoff
+- 4-day buffer added at end
+- New feature gate: must have contract + frontend + video fit by Feb 15 or it doesn't ship
+
+**Conditional scope unlock rules:**
+1. Frontend for all 4 existing primitives must be COMPLETE (screenshots verified)
+2. User must pitch specific feature with: name, what it does, who uses it, demo impact, time cost
+3. Feature must clear all 3 gates by Feb 15: contract done, frontend done, fits video script
+4. Coach (Claude) must approve based on demo impact, not technical depth
 
 ---
 
-### DAY 1 RESULTS (Jan 29) — COMPLETE
+### DAY 1 RESULTS (Jan 29) — COMPLETE (ALL 6 PHASES)
 
-**Completed (ahead of schedule):**
+**Completed (massively ahead of schedule):**
 1. ✅ Phase 1: MockBTC + Commitment + Deposit (16 tests passing)
 2. ✅ Phase 2: Verifier + Transfer (26 total tests passing)
 3. ✅ Phase 3: Withdraw + proof verification (44 total tests passing)
 4. ✅ Phase 4: MockSTRK + ShieldedAMM (seed, deposit, swap, withdraw) — 88 total tests passing
+5. ✅ Phase 5: MockPragmaOracle + PredictionMarket (create, bet, resolve, claim) — 156 total tests passing
+6. ✅ Phase 6: PrivateVoting (create, cast, tally) — 183 total tests passing
 
 **Full privacy loop operational:** deposit → transfer → withdraw ALL working.
 **Shielded AMM operational:** deposit BTC → swap BTC↔STRK (x*y=k) → withdraw STRK ALL working.
+**Prediction market operational:** create → bet (hidden outcome) → oracle resolve → claim ALL working.
+**Private voting operational:** create → cast (hidden vote) → time-locked tally ALL working.
 
 **Scope expansion decision:**
 - User completed 2+ weeks of planned work in 1 day
@@ -1022,40 +1048,58 @@ Two commitment schemes (core pool + AMM pool). Shared nullifier pattern. Four De
 - Prediction Market = Arm 2 (oracle-resolved, Pragma interface)
 - Private Voting = Arm 3 (time-locked by block number, trustless tally)
 - AMM uses extended commitment: `Poseidon(amount, token_type, secret, nullifier_secret)`
+- Bet commitment: `Poseidon(outcome, amount, secret, nullifier_secret)` — 4-field
+- Vote commitment: `Poseidon(choice, secret, nullifier_secret)` — 3-field
 - Core pool commitment unchanged: `Poseidon(amount, secret, nullifier_secret)`
+- Per-proposal nullifiers: `Poseidon(proposal_id, nullifier_hash)` prevents cross-proposal double-voting
 - MockSTRK added for STRK side of AMM pair
+- MockPragmaOracle implements Pragma interface for prediction market resolution
 
-**Check-in status:** Day 1 COMPLETE. 88 tests passing (verified via snforge). Day 2: prediction market + voting.
+**Check-in status:** Day 1 COMPLETE. 183 tests passing (verified via snforge). Day 2: Deploy to Sepolia + Frontend begins.
 
-**Strategic wobble (late Day 1):** User questioned whether prediction market is worth building, suggested pivoting to Polymarket/Kalshi integration. Coached back to plan — prediction market is the differentiator (platform vs feature), Polymarket's existence validates the use case ("every bet on Polymarket is public — we made them private"). User confirmed proceeding with original plan.
+**Strategic wobble #1 (late Day 1):** User questioned whether prediction market is worth building, suggested pivoting to Polymarket/Kalshi integration. Coached back to plan — prediction market is the differentiator (platform vs feature), Polymarket's existence validates the use case ("every bet on Polymarket is public — we made them private"). User confirmed proceeding with original plan.
+
+**Strategic wobble #2 (evening Day 1):** User wanted to add more contract features ("more tentacles") since all 6 phases done. Coached back — contracts are at "Winning Submission" scope. The differentiator at 400+ participants is polish and presentation, not more breadth. Contract scope conditionally frozen — must complete frontend first, then can pitch specific new features if they pass demo impact test. User accepted after timeline math showed spare time exists but frontend + video + polish must come first.
 
 ---
 
-### TIMELINE TO SUBMISSION (Revised Jan 29)
+### TIMELINE TO SUBMISSION (Revised Jan 29 Evening — Rev 2)
 
 | Date | Milestone | Status |
 |------|-----------|--------|
 | Jan 28 | Omar validation + skill assessment | ✅ Complete |
-| Jan 29 | Day 1: Phase 1+2+3+4 COMPLETE. 88 tests. Full privacy loop + AMM. | ✅ Complete |
-| Jan 30 | Day 2: Prediction Market + mock Pragma oracle + Private Voting + tests | ⏳ Pending |
-| Jan 31 | Day 3: Frontend begins (contracts done) | ⏳ Pending |
-| Feb 1 | Hackathon officially starts. Frontend continues. | ⏳ Pending |
-| Feb 2-14 | Days 5-17: Frontend — unified UI for ALL flows | ⏳ Pending |
-| Feb 15 | Day 18: Video script LOCKED | ⏳ Pending |
-| Feb 15-20 | Days 18-23: Video production | ⏳ Pending |
-| Feb 21-28 | Days 24-30: Polish, README, GitHub theater, submit | ⏳ Pending |
+| Jan 29 | Day 1: ALL 6 contract phases COMPLETE. 183 tests. Full platform. | ✅ Complete |
+| Jan 30 | Day 2: Deploy to Sepolia + Frontend scaffold + Deposit/Transfer/Withdraw UI | ⏳ Tomorrow |
+| Jan 31 | Day 3: Swap UI + Prediction Market UI | ⏳ Pending |
+| Feb 1 | Day 4: Hackathon starts. Voting UI + Dashboard | ⏳ Pending |
+| Feb 2-8 | Days 5-11: Frontend polish, loading states, error handling, responsive | ⏳ Pending |
+| Feb 9-11 | Days 12-14: **CONDITIONAL** — New features if frontend done, else polish | ⏳ Conditional |
+| Feb 12-14 | Days 15-17: Frontend for new features (if any) + final polish | ⏳ Pending |
+| Feb 15 | Day 18: **VIDEO SCRIPT LOCKED — HARD CUTOFF** | ⏳ Pending |
+| Feb 15-20 | Days 18-23: Video production (script + record + edit) | ⏳ Pending |
+| Feb 21-25 | Days 24-28: README, GitHub theater, DoraHacks submission | ⏳ Pending |
+| Feb 26-28 | Days 29-30: Buffer | ⏳ Pending |
 
 ---
 
 ### NEXT ACTIONS
 
 1. ~~**Jan 29:** Complete withdraw~~ ✅ DONE — 44 tests passing
-2. ~~**Jan 29:** MockSTRK + Shielded AMM~~ ✅ DONE — 88 tests passing (completed same day)
-3. **TOMORROW (Jan 30):** Prediction Market (mock_pragma_oracle.cairo + prediction_market.cairo) + Private Voting (private_voting.cairo) + tests for both
-4. **Jan 31:** Frontend begins — ALL contracts complete
-5. **Feb 2:** Frontend continues
-6. **ONGOING:** Follow up with Omar for mentor/judge contacts. If no response by Feb 1, find someone in Starknet Discord independently.
-7. **EOD CHECK-INS:** User must report daily with snforge output and blockers
+2. ~~**Jan 29:** MockSTRK + Shielded AMM~~ ✅ DONE — 88 tests passing
+3. ~~**Jan 29:** Prediction Market + Private Voting~~ ✅ DONE — 183 tests passing (all completed Day 1)
+4. **TOMORROW (Jan 30):** Deploy ALL contracts to Starknet Sepolia. Frontend scaffold (Next.js + starknet-react + wallet). Deposit/Transfer/Withdraw UI working by EOD.
+5. **Jan 31:** Swap UI + Prediction Market UI
+6. **Feb 1:** Voting UI + Dashboard
+7. **Feb 2-8:** Frontend polish — loading states, error handling, responsive design, local secret management
+8. **Feb 9-11:** CONDITIONAL new contract features (only if frontend is done + feature passes demo impact test)
+9. **Feb 15:** Video script LOCKED. Feature cutoff. Anything not in frontend by now doesn't ship.
+10. **ONGOING:** Follow up with Omar for mentor/judge contacts. If no response by Feb 1, find someone in Starknet Discord independently.
+11. **EOD CHECK-INS:** User must report daily with screenshots and blockers
+
+**Day 2 check-in requirements:**
+- Deployment tx hashes (proof contracts are on Sepolia)
+- Screenshot of wallet connecting to app
+- Status of deposit flow UI
 
 ═══════════════════════════════════════════════════════════
 

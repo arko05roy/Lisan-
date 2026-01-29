@@ -13,21 +13,24 @@
 
 ---
 
-## CURRENT STATUS (Updated Jan 29, 2026 — End of Day 1+)
+## CURRENT STATUS (Updated Jan 29, 2026 — Evening, Day 1 COMPLETE)
 
 | Phase | Status | Details |
 |-------|--------|---------|
 | Phase 1: Foundation | ✅ COMPLETE (Day 1) | MockBTC, Commitment, Deposit — 16 tests passing |
 | Phase 2: ZK Transfer | ✅ COMPLETE (Day 1) | Verifier, Transfer — 10 more tests, 26 total passing |
 | Phase 3: Withdraw | ✅ COMPLETE (Day 1) | Withdraw proof verification + contract — 18 more tests, 44 total passing |
-| Phase 4: Shielded AMM | ✅ COMPLETE (Day 1) | MockSTRK + ShieldedAMM (seed, deposit, swap, withdraw) — 30+ AMM tests, 74+ total |
-| Phase 5: Prediction Market | ✅ COMPLETE (Day 1) | MockPragmaOracle + PredictionMarket (create, bet, resolve, claim) — 68 tests, 142 total |
+| Phase 4: Shielded AMM | ✅ COMPLETE (Day 1) | MockSTRK + ShieldedAMM (seed, deposit, swap, withdraw) — 44 AMM tests, 88 total |
+| Phase 5: Prediction Market | ✅ COMPLETE (Day 1) | MockPragmaOracle + PredictionMarket (create, bet, resolve, claim) — 68 tests, 156 total |
 | Phase 6: Private Voting | ✅ COMPLETE (Day 1) | PrivateVoting (create, cast, tally) — 41 tests, 183 total |
-| Phase 7: Frontend | ⏳ PENDING (Days 3-17) | Unified UI for ALL flows |
-| Phase 8: Video | ⏳ PENDING (Days 18-23) | Script, recording, editing |
-| Phase 9: Submission | ⏳ PENDING (Days 24-30) | README, GitHub, DoraHacks |
+| Phase 7: Deploy + Frontend | ⏳ STARTING Day 2 (Jan 30 - Feb 8) | Deploy to Sepolia + Unified UI for ALL flows |
+| Phase 7b: New Features | ⏳ CONDITIONAL (Feb 9-14) | Only if frontend done + feature passes demo impact test |
+| Phase 8: Video | ⏳ PENDING (Feb 15-20) | Script LOCKED Feb 15. Record + edit. |
+| Phase 9: Submission | ⏳ PENDING (Feb 21-28) | README, GitHub theater, DoraHacks, buffer |
 
 **Pace:** ALL 6 contract phases completed in Day 1 (originally planned for 14+ days). Full privacy loop (deposit → transfer → withdraw), shielded AMM (deposit → swap → withdraw), prediction market (create → bet → resolve → claim), AND private voting (create → vote → tally) all operational. 183 tests passing. All 3 arms complete — "Winning Submission" contract scope achieved.
+
+**Contract scope:** CONDITIONALLY FROZEN. Frontend for existing 4 primitives must be complete before any new contract work. New features must pass demo impact test and clear all gates (contract + frontend + video fit) by Feb 15.
 
 ### Implemented Contract Files
 ```
@@ -414,120 +417,73 @@ Anyone                      │                      │
 
 ---
 
-## REVISED BUILD PLAN (30 Days from Jan 29)
+## REVISED BUILD PLAN (30 Days from Jan 29) — Rev 2
 
-### DAY 1 (Jan 29) — Foundation + Transfer + Withdraw ✅ COMPLETE
-**Goal:** Complete core shielded pool with all three base operations
+### DAY 1 (Jan 29) — ALL CONTRACT PHASES ✅ COMPLETE
+**Goal:** ~~Complete core shielded pool~~ ALL 6 contract phases completed in one day.
 
 **COMPLETED:**
 - [x] Phase 1: MockBTC + Commitment + Deposit (16 tests)
 - [x] Phase 2: Verifier + Transfer (10 more tests, 26 total)
 - [x] Phase 3: Withdraw (18 more tests, 44 total)
-  - [x] Implemented `verify_withdraw_proof()` in verifier.cairo (commitment matching, nullifier validation, amount matching)
-  - [x] Implemented `withdraw()` in shielded_pool.cairo (proof verification, nullifier marking, token transfer to recipient)
-  - [x] 12 withdraw-specific tests (basic withdraw, multiple withdrawals, different recipients, double-spend prevention, wrong secret/amount/nullifier, nonexistent commitment, sequential operations)
-  - [x] 9 integration tests (full deposit→transfer→withdraw loops, chained transfers, multi-user flows, withdraw-after-transfer, edge cases)
+- [x] Phase 4: MockSTRK + ShieldedAMM (44 AMM tests, 88 total)
+- [x] Phase 5: MockPragmaOracle + PredictionMarket (68 tests, 156 total)
+- [x] Phase 6: PrivateVoting (41 tests, 183 total)
 
-**Day 1 Deliverable:** ✅ Complete privacy loop — deposit → transfer → withdraw — ALL OPERATIONAL
+**Day 1 Deliverable:** ✅ Complete platform — ALL 4 private DeFi primitives operational. 183 tests. "Winning Submission" contract scope.
 
 ---
 
-### DAY 2 (Jan 30) — Shielded AMM Swap ✅ COMPLETE (Done Day 1)
-**Goal:** Private AMM swap — user swaps BTC↔STRK inside a shielded pool with zero visible amounts
+### DAY 1 DETAILS — Shielded AMM (Phase 4) ✅ COMPLETE
 
 **Architecture Decision:** Separate ShieldedAMM contract (not modifying ShieldedPool). Own reserves, own commitments. Clean separation from core pool.
 
-**COMPLETED:**
-- [x] Create `mock_strk.cairo` — ERC20 token, same pattern as MockBTC
-- [x] Create `shielded_amm.cairo` contract (378 lines)
-- [x] Commitment scheme: `Poseidon(amount, token_type, secret, nullifier_secret)` — token_type distinguishes BTC (1) vs STRK (2)
-- [x] Liquidity: `seed_liquidity()` — owner-only, one-time initialization with BTC + STRK reserves
-- [x] Implement AMM functions:
-  - `deposit(token_type, amount, commitment)` — deposit BTC or STRK into AMM shielded pool
-  - `swap(nullifier, proof, amount_in, token_type_in, token_type_out, new_commitment)` — exact amount swap
-  - `withdraw(nullifier, proof, amount, token_type, recipient)` — withdraw from AMM pool
-- [x] Price calculation: Constant product formula (x * y = k)
-- [x] Exact amounts only — full commitment consumed per swap
-- [x] Separate commitment and nullifier maps (own state, not shared with ShieldedPool)
-- [x] Write tests (1266 lines, 30+ tests):
-  - MockSTRK basic tests
-  - Seed liquidity (success, owner-only, duplicate prevention)
-  - Deposit BTC/STRK into AMM
-  - Valid swap: BTC → STRK (price via x*y=k)
-  - Valid swap: STRK → BTC (reverse direction)
-  - Swap with wrong proof / used nullifier / nonexistent commitment (all rejected)
-  - Withdraw after swap
-  - Full flow: deposit BTC → swap to STRK → withdraw STRK
-  - Price impact: large swap moves price correctly
+**Completed:** MockSTRK + ShieldedAMM (377 lines) + 44 AMM tests (1266 lines). Commitment scheme: `Poseidon(amount, token_type, secret, nullifier_secret)`. Constant product formula (x*y=k). Pre-seeded liquidity. Exact amounts only.
 
-**Design Notes:**
-- ShieldedAMM is self-contained — does NOT call ShieldedPool
-- Token type encoded in commitment hash: `Poseidon(amount, token_type, secret, nullifier_secret)`
-- Two reserves: `btc_reserve` (u256) and `strk_reserve` (u256) for AMM pricing
-- Commitments stored in single map but token_type in hash prevents cross-token forgery
-- Nullifiers shared across both token types (one nullifier registry)
-- Pre-seeded liquidity means no `add_liquidity` function needed for MVP
-
-**Day 2 Deliverable:** ✅ Shielded AMM with BTC/STRK swaps, pre-seeded liquidity, exact-amount swaps, comprehensive test coverage
+**Design Notes:** ShieldedAMM is self-contained — does NOT call ShieldedPool. Token type encoded in commitment hash prevents cross-token forgery. Pre-seeded liquidity means no `add_liquidity` function needed for MVP.
 
 ---
 
-### DAY 2 (Jan 30) — Prediction Market + Private Voting ✅ COMPLETE (Done Day 1)
-**Goal:** Hidden bets with oracle resolution + Hidden votes with time-locked trustless tally
+### DAY 1 DETAILS — Prediction Market (Phase 5) ✅ COMPLETE
 
-**COMPLETED — Prediction Market:**
-- [x] Create `mock_pragma_oracle.cairo` — implements Pragma oracle interface, owner-only `set_result()`
-- [x] Create `prediction_market.cairo` contract (367 lines)
-- [x] Implement market lifecycle:
-  - `create_market(question_hash, num_outcomes, resolution_time) → market_id`
-  - `place_bet(market_id, bet_commitment, amount)` — commitment hides which outcome
-  - `resolve(market_id)` — queries oracle after resolution_time, trustless (anyone can trigger)
-  - `claim(market_id, bet_commitment, nullifier_hash, outcome, amount, secret, nullifier_secret, recipient)` — ZK proof verification
-- [x] Bet commitment: `Poseidon(outcome, amount, secret, nullifier_secret)` — 4-field
-- [x] Payout: `amount * num_outcomes` capped at remaining pool
-- [x] Verifier: `verify_bet_claim_proof()` — 4 constraints (commitment, nullifier, outcome match, positive amount)
-- [x] Write 68 tests (1466 lines):
-  - Market creation (6): valid, multiple, zero/one outcomes rejected, past resolution, any user
-  - Placing bets (9): valid, multiple bettors, nonexistent market, zero amount, duplicate, after time, after resolved, insufficient balance, cross-market, boundary
-  - Resolution (7): valid, before time, already resolved, no oracle, nonexistent, exact boundary, different outcomes
-  - Claims (15): valid, multiple winners payout, different recipient, wrong outcome/secret/amount/nullifier, before resolution, double claim, nullifier reuse, nonexistent bet, wrong market, capped payout, exact 2x
-  - Oracle (5): set/get, owner-only, nonexistent, update, multiple markets
-  - Integration (6+): full binary flow, multiple winners, no-bet market, independent markets, 5-outcome, commitment uniqueness, anyone can resolve/claim
+**Completed:** MockPragmaOracle + PredictionMarket (367 lines) + 68 tests (1466 lines). Bet commitment: `Poseidon(outcome, amount, secret, nullifier_secret)` — 4-field. Payout: `amount * num_outcomes` capped at remaining pool. Oracle uses Pragma interface (mock data, real integration pattern).
 
-**COMPLETED — Private Voting:**
-- [x] Create `private_voting.cairo` contract (267 lines)
-- [x] Implement voting lifecycle:
-  - `create_proposal(description_hash, num_options, end_time) → proposal_id` — permissionless
-  - `cast_vote(proposal_id, vote_commitment, nullifier_hash)` — commitment hides vote choice
-  - `tally(proposal_id, revealed_votes: Span<RevealedVote>)` — anyone can trigger after end_time
-- [x] Vote commitment: `Poseidon(choice, secret, nullifier_secret)` — 3-field
-- [x] Per-proposal nullifiers: `Poseidon(proposal_id, nullifier_hash)` — same voter across different proposals
-- [x] Nullifier mismatch detection: during tally, verifies `compute_nullifier_hash(nullifier_secret)` matches stored nullifier_hash
-- [x] Duplicate batch protection: `vote_tallied` map prevents counting same vote twice
-- [x] Time-lock: `cast_vote` rejected if `current_timestamp >= end_time`
-- [x] Tally: verify each revealed vote, count results, find winning option (ties → lowest index)
-- [x] Write 41 tests (1087 lines):
-  - Proposal creation (6): valid, multiple, zero/one options, past end time, any user
-  - Vote casting (10): valid, multiple voters, nonexistent, after deadline, at exact deadline, before deadline, after tallied, duplicate commitment, double-vote same proposal, same voter different proposals
-  - Tally (14): basic, before deadline, already tallied, invalid reveal (wrong secret/choice/nullifier), wrong proposal, invalid choice, empty, duplicate revealed, nonexistent proposal, partial reveal, at exact end time, nonexistent commitment, nullifier mismatch
-  - Integration (7+): full binary flow, multi-option, independent proposals, trustless tally, commitment privacy, view defaults, unrevealed votes, large voter count, single vote winner
-
-**Design Notes:**
-- Oracle uses Pragma interface — production-ready pattern (mock data, real interface)
-- Bets are commitments — no one knows which outcome you picked until claim
-- Winners prove their bet matched the winning outcome via inline constraint verification
-- Losers' bets stay hidden forever
-- Time-lock uses `get_block_timestamp()` (consistent with prediction market)
-- Anyone can trigger tally after end_time — trustless
-- Individual vote choices remain hidden during voting; aggregate results stored after tally
-- Partial reveals supported — unrevealed votes simply aren't counted
-
-**Deliverable:** ✅ Private prediction market + private voting with comprehensive test coverage (68 + 41 = 109 new tests)
+**Design Notes:** Bets are commitments — no one knows which outcome you picked until claim. Winners prove their bet matched via inline constraint verification. Losers' bets stay hidden forever.
 
 ---
 
-### DAYS 3-17 (Jan 31-Feb 14) — Frontend
-**Goal:** Unified UI for ALL private DeFi flows
+### DAY 1 DETAILS — Private Voting (Phase 6) ✅ COMPLETE
+
+**Completed:** PrivateVoting (340 lines) + 41 tests (1087 lines). Vote commitment: `Poseidon(choice, secret, nullifier_secret)` — 3-field. Per-proposal nullifiers: `Poseidon(proposal_id, nullifier_hash)`. Time-locked by `get_block_timestamp()`. Trustless tally — anyone can trigger after end_time.
+
+**Design Notes:** Individual vote choices remain hidden during voting; aggregate results stored after tally. Partial reveals supported — unrevealed votes simply aren't counted. Nullifier mismatch detection prevents fake nullifier bypass.
+
+---
+
+### DAYS 2-11 (Jan 30-Feb 8) — Deploy + Frontend
+**Goal:** Deploy contracts to Sepolia + Unified UI for ALL private DeFi flows
+
+**Day 2 (Jan 30): Deploy + Scaffold**
+- [ ] Deploy ALL contracts to Starknet Sepolia testnet
+- [ ] Frontend scaffold: Next.js + starknet-react + wallet connection (Argent/Braavos)
+- [ ] Deposit + Transfer + Withdraw UI working by EOD
+- [ ] Check-in: deployment tx hashes + wallet connection screenshot + deposit flow status
+
+**Day 3 (Jan 31): Swap + Prediction UI**
+- [ ] Swap UI (deposit into AMM, swap BTC↔STRK, withdraw)
+- [ ] Prediction market UI (create market, place bet, view results)
+
+**Day 4 (Feb 1): Voting + Dashboard**
+- [ ] Voting UI (create proposal, cast vote, tally)
+- [ ] Unified dashboard showing all primitives
+- [ ] Hackathon officially starts
+
+**Days 5-11 (Feb 2-8): Polish**
+- [ ] Loading states, error handling, responsive design
+- [ ] Local secret management (commitment/nullifier storage client-side)
+- [ ] Claim flow for prediction market
+- [ ] Polish all flows for video recording quality
+- [ ] Test all flows end-to-end on Sepolia
 
 **Frontend Structure:**
 ```
@@ -537,7 +493,7 @@ Anyone                      │                      │
   /deposit/page.tsx         # Deposit BTC into shielded pool
   /transfer/page.tsx        # Private transfer
   /withdraw/page.tsx        # Withdraw from pool
-  /swap/page.tsx            # Private swap — create/accept/view
+  /swap/page.tsx            # Private swap — deposit/swap/withdraw via AMM
   /predict/page.tsx         # Prediction market — create/bet/claim
   /vote/page.tsx            # Private voting — create/cast/tally
 /components
@@ -546,8 +502,7 @@ Anyone                      │                      │
   /DepositForm.tsx
   /TransferForm.tsx
   /WithdrawForm.tsx
-  /SwapCreate.tsx
-  /SwapAccept.tsx
+  /SwapForm.tsx
   /MarketCreate.tsx
   /PlaceBet.tsx
   /ClaimWinnings.tsx
@@ -561,21 +516,30 @@ Anyone                      │                      │
   /contracts.ts             # Contract addresses and ABIs
 ```
 
-**Frontend Schedule:**
-- Days 5-7: Starknet.js setup, wallet connection, deposit/transfer/withdraw flows
-- Days 8-10: Swap UI (create swap, browse swaps, accept)
-- Days 11-13: Prediction market UI (create market, place bet, view results, claim)
-- Days 14-16: Voting UI (create proposal, cast vote, view tally)
-- Days 17-19: Polish, responsive design, loading states, error handling
+---
 
-**Deploy:** Contracts to Starknet Sepolia testnet before frontend work begins
+### DAYS 12-14 (Feb 9-11) — CONDITIONAL: New Features
+**Goal:** Add new contract features IF frontend is done
+
+**Gate requirements (ALL must be met):**
+1. Frontend for all 4 existing primitives is COMPLETE (screenshots verified by coach)
+2. User pitches specific feature with: name, what it does, who uses it, demo impact, time cost
+3. Coach approves based on demo impact (not technical depth)
+4. Feature must have contract + frontend + video fit by Feb 15
+
+**If gates NOT met:** These days become frontend polish + video prep.
+
+---
+
+### DAYS 15-17 (Feb 12-14) — Frontend for New Features + Final Polish
+**Goal:** If new features were approved, build their frontend. Otherwise, final polish pass.
 
 ---
 
 ### DAYS 18-23 (Feb 15-20) — Video Production
 **Goal:** Killer demo video that shows the platform narrative
 
-**Day 18 (Feb 15): Video script LOCKED**
+**Day 18 (Feb 15): VIDEO SCRIPT LOCKED — HARD CUTOFF. Features not in frontend by now don't ship.**
 
 **Video Script (Revised for Platform):**
 ```
@@ -649,7 +613,7 @@ Project name, GitHub link, your name
 
 ---
 
-### DAYS 24-30 (Feb 21-28) — Submission
+### DAYS 24-28 (Feb 21-25) — Submission
 **Goal:** Polished submission package
 
 **Day 24-25: GitHub Theater + Documentation**
@@ -667,9 +631,10 @@ Project name, GitHub link, your name
 - [ ] Select track (Bitcoin)
 - [ ] Submit
 
-**Days 27-30: Buffer**
+**Days 27-28: Buffer**
 - [ ] Handle any submission issues
 - [ ] Final polish if time permits
+- [ ] Feb 28 = deadline
 
 ---
 
@@ -712,28 +677,35 @@ Project name, GitHub link, your name
 
 | Risk | Mitigation |
 |------|------------|
-| Pace slows after Day 1 | MVP = core pool + 2 arms. All 3 arms = winning submission. |
-| Swap atomicity complex | Start simple: lock → accept → execute. No partial fills. |
-| Oracle integration | Use Pragma interface with mock data. Real pattern, mock values. |
-| Time-lock testing | Use Starknet Foundry block manipulation in tests. |
-| Frontend for 6 flows | Unified dashboard, shared components. Don't over-design. |
+| ~~Pace slows after Day 1~~ | ~~MVP = core pool + 2 arms.~~ N/A — all 6 phases done Day 1. |
+| ~~Swap atomicity complex~~ | N/A — AMM approach, no atomic swaps needed. |
+| ~~Oracle integration~~ | N/A — Pragma interface implemented with mock data. |
+| ~~Time-lock testing~~ | N/A — block manipulation working in tests. |
+| Frontend for 6 flows | Unified dashboard, shared components. Don't over-design. User claims frontend is a strength — 10 days. |
 | Video too long | Keep under 3 minutes. 30 seconds per primitive max. |
+| Feature creep | Contract scope conditionally frozen. New features only after frontend is done + demo impact test passed. Hard cutoff Feb 15. |
+| Frontend slower than claimed | If Day 2-3 output is weak, reallocate conditional days (Feb 9-11) to frontend polish instead of new features. |
 
 ### MVP vs Winning
 
-**MVP (Must Ship):**
-- ShieldedPool: deposit + transfer + withdraw
-- At least 2 arms working (swap + prediction OR swap + voting)
-- Basic frontend showing flows
-- Video under 3 minutes
-- GitHub with README
+**MVP (Must Ship):** ✅ CONTRACT SCOPE ACHIEVED
+- ~~ShieldedPool: deposit + transfer + withdraw~~ ✅
+- ~~At least 2 arms working~~ ✅ All 3 arms done
+- Basic frontend showing flows — **NEXT**
+- Video under 3 minutes — **PENDING**
+- GitHub with README — **PENDING**
 
-**Winning Submission (Full Platform):**
-- All 3 arms working (swap + prediction + voting)
-- Polished unified UI
-- Compelling platform narrative in video
-- All demos smooth (no bugs during recording)
-- Clean GitHub with architecture docs
+**Winning Submission (Full Platform):** ✅ CONTRACT SCOPE ACHIEVED
+- ~~All 3 arms working (swap + prediction + voting)~~ ✅ 183 tests
+- Polished unified UI — **NEXT (Days 2-11)**
+- Compelling platform narrative in video — **PENDING (Days 18-23)**
+- All demos smooth (no bugs during recording) — **PENDING**
+- Clean GitHub with architecture docs — **PENDING (Days 24-28)**
+
+**Stretch (Conditional):**
+- New contract features (TBD, must pass demo impact test)
+- Frontend for new features
+- All must ship by Feb 15 or they don't exist
 
 ---
 
