@@ -1199,7 +1199,7 @@ Two commitment schemes (core pool + AMM pool). Shared nullifier pattern. Four De
 
 ---
 
-### CURRENT STATUS (Updated Jan 29, 2026 — Evening, Day 1 COMPLETE)
+### CURRENT STATUS (Updated Jan 30, 2026 — Day 2 START)
 
 **Phase:** Day 1 COMPLETE. ALL 6 contract phases done. Day 2: Deploy + Frontend begins.
 
@@ -1267,42 +1267,75 @@ Two commitment schemes (core pool + AMM pool). Shared nullifier pattern. Four De
 
 ---
 
-**Validation Attempt #2: Requesting Broader Mentor/Judge Access — IN PROGRESS**
+**Validation Attempt #2: RE{DEFINE} Office Hours — SCHEDULED (Feb 2-6)**
 
-**Date:** Jan 29, 2026 (updated Jan 30)
+**Date:** Jan 30, 2026
 
-**Action taken:** User messaged Omar asking for:
-- Telegram contacts of mentors/judges focused on **Bitcoin** and **Privacy** tracks
-- Any judges evaluating submissions
+**Source:** Omar shared Office Hours schedule. NOT an AMA — these are 30-min group Google Meet sessions with multiple builders. Format: mentors prepared with pre-submitted questions. Limited airtime per builder.
 
-**Goal:** Get 2+ additional data points beyond Omar's "sounds cool! do it." Current validation is weak (neutral-positive). Need strategic endorsement, not just polite enthusiasm.
+**Office Hours Schedule (IST = UTC + 5:30):**
 
-**Update (Jan 30):**
-- Omar informed user that **next week** there will be an **AMA with hackathon mentors**. Exact date/time TBD — user needs to confirm.
-- User messaged Omar about expanding scope to include prediction markets and swaps. **No reply yet.** Silence is neutral — not rejection, not endorsement.
-- AMA is now the primary validation opportunity. Public Q&A with actual mentors > 1 dev advocate's DM.
+| Date | Time (UTC) | Time (IST) | Mentor | Role | Relevance to Lisan |
+|------|-----------|------------|--------|------|---------------------|
+| Feb 2 | 16:00 | **9:30 PM** | @adrien_lacombe | Bitcoin Lead | **HIGH** — Lisan is Bitcoin track |
+| Feb 2 | 16:30 | **10:00 PM** | Rick (@scaffold_stark) | Scaffold-Stark | LOW — tooling, not our lane |
+| Feb 3 | 16:30 | **10:00 PM** | @franklyteddy (Privacy Lead) | Privacy Lead | **CRITICAL** — Lisan IS a privacy app |
+| Feb 4 | 16:00 | **9:30 PM** | @jyjonathan | Bitcoin Lead | **HIGH** — second BTC data point |
+| Feb 4 | 16:30 | **10:00 PM** | @bsturisky | DeFi Expert / Starknet Foundation | MEDIUM — strategic direction |
+| Feb 5 | 11:00 | **4:30 PM** | @akashneelesh (StarkWare) | Starknet tooling | LOW — tooling walkthrough |
 
-**AMA Prep (BEFORE the AMA happens):**
-- Get exact AMA date/time from Omar or Discord
-- Prepare 2 strategic questions (Claude to review before AMA):
-  1. "What separates a winning submission from a good one at 300+ participants?"
-  2. "Does breadth (platform with multiple primitives) or depth (one feature, polished) score better?"
-  3. "How much weight does the video vs the GitHub repo carry?"
-- Do NOT ask "is my project good?" in a public AMA — waste of a question
-- Listen for mentor language: what words do THEY use to describe winning projects?
+**Sessions to attend (MANDATORY):** Feb 2 (Adrien/BTC), Feb 3 (Teddy/Privacy), Feb 4 (Jonathan/BTC). Three sessions, three data points.
 
-**What to listen for when contacts respond:**
-| Response | Signal |
+**Format constraint:** Group GMeet with multiple builders. Expect 1-2 questions max before someone else jumps in. Questions must be binary/forced-choice — no open-ended rambles.
+
+**Pre-submitted questions (dropped in Discord chat Jan 30):**
+
+1. "What privacy primitive is missing on Starknet — is it private DeFi (swaps, predictions) or is the gap more on the identity/credential side?"
+2. "Is BTC yield feasible for a hackathon project, or is the infrastructure too early for that on Starknet?"
+
+These are technical builder questions — mentors answer honestly. Meta questions (breadth vs depth, video vs repo) saved for live sessions where tone/reaction is readable.
+
+**Live session questions (ONE per session — group format, limited airtime):**
+
+**Feb 2 — Bitcoin Lead #1 (Adrien):**
+"Does the Bitcoin track want to see BTC doing things it can't do on Bitcoin L1 — like private DeFi — or is it more about replicating existing DeFi with BTC as the asset?"
+→ Forced choice. "Can't do on L1" = privacy angle validated. "Replicating DeFi" = reframe pitch toward utility.
+
+**Feb 3 — Privacy Lead (Teddy):**
+"If someone builds private DeFi beyond just transfers — like private swaps, private predictions, private voting — all on Starknet, is that what you mean by 'finding value in privacy apps'?"
+→ Near-direct description of Lisan without naming it. Reaction = everything. Enthusiasm = green. "Depends" = yellow. Redirect = red.
+
+**Feb 4 — Bitcoin Lead #2 (Jonathan):**
+"For BTCfi on Starknet, is a platform covering multiple BTC primitives stronger than one deep feature — say a shielded AMM alone vs a full private DeFi suite?"
+→ Asked SECOND because by Feb 4 we have Adrien's answer (Feb 2). Stacks: if Adrien confirmed privacy matters, Jonathan tells us breadth vs depth.
+
+**Question sequencing logic:**
+- Feb 2: Is privacy the right ANGLE? (Adrien)
+- Feb 3: Is multi-primitive private DeFi what you WANT? (Teddy)
+- Feb 4: Breadth or DEPTH? (Jonathan)
+Each builds on the last. Three sessions, three dimensions.
+
+**Competitive intel opportunity:** Other builders' questions reveal what they're building. Note every project hint, every mentor reaction (excitement vs dismissal). This is the competitive landscape.
+
+**What to listen for in mentor answers:**
+| They say | Signal |
 |----------|--------|
-| "This is what we need" | 🟢 GREEN — strategic fit confirmed |
-| "Sounds cool" / "Interesting" | 🟡 YELLOW — polite, not committed |
-| "Have you considered X instead?" | 🔴 RED — they're redirecting you |
-| "How would this work with Y?" | 🟢 GREEN — engaging technically |
-| Questions about users/adoption | 🟡 YELLOW — "who would use this" concern |
+| "We want depth, one thing done well" | ⚠️ Scope risk — 4 primitives may look shallow |
+| "We want coverage / platform" | 🟢 GREEN — validates octopus architecture |
+| "Privacy is table stakes, we need more" | ⚠️ Need to emphasize DeFi layer, not just privacy |
+| "Privacy is the missing piece" | 🟢 GREEN — Lisan nails it |
+| "BTC yield/lending is what we want" | 🔴 RED — we dropped those, may need to reconsider |
+| "Can't do on L1 is the story" | 🟢 GREEN — privacy is impossible on BTC L1 |
+| "Replicating existing DeFi" | ⚠️ Reframe: utility-first, privacy-second |
+| Mentor gets excited, asks follow-ups | 🟢 GREEN — real interest |
+| Mentor gives generic "sounds good" | 🟡 YELLOW — polite, not strategic |
+| Mentor redirects to different topic | 🔴 RED — not what they want |
 
-**CRITICAL:** User must report **exact words** from any mentor/judge. No self-interpretation. Claude decodes.
+**CRITICAL:** Report **exact words** from mentors after each session. What other builders asked. What mentors got excited about. No self-interpretation. Claude decodes.
 
-**Status:** AMA next week = primary validation event. Omar silent on expansion message. No mentor/judge contacts received yet.
+**Post-session action:** After all 3 sessions (by Feb 4 evening), full synthesis. If 2+ green signals → proceed as planned. If 2+ red/yellow → evaluate pivot options before frontend polish phase.
+
+**Status:** Questions submitted in Discord. Three sessions scheduled Feb 2-4. Primary validation window.
 
 ---
 
@@ -1444,7 +1477,10 @@ Two commitment schemes (core pool + AMM pool). Shared nullifier pattern. Four De
 7. **Feb 2-8:** Frontend polish — loading states, error handling, responsive design, local secret management
 8. **Feb 9-11:** CONDITIONAL new contract features (only if frontend is done + feature passes demo impact test)
 9. **Feb 15:** Video script LOCKED. Feature cutoff. Anything not in frontend by now doesn't ship.
-10. **ONGOING:** Follow up with Omar for mentor/judge contacts. If no response by Feb 1, find someone in Starknet Discord independently.
+10. **Feb 2 (9:30 PM IST):** Office Hours — Bitcoin Lead (Adrien). Ask: "Does Bitcoin track want BTC doing things it can't on L1 — like private DeFi — or replicating existing DeFi?"
+11. **Feb 3 (10:00 PM IST):** Office Hours — Privacy Lead (Teddy). Ask: "If someone builds private DeFi beyond transfers — private swaps, predictions, voting — is that 'finding value in privacy apps'?"
+12. **Feb 4 (9:30 PM IST):** Office Hours — Bitcoin Lead #2 (Jonathan). Ask: "Platform covering multiple BTC primitives vs one deep feature — which is stronger?"
+13. **After each session:** Report exact mentor words + what other builders asked. No interpretation. Claude decodes.
 11. **EOD CHECK-INS:** User must report daily with screenshots and blockers
 
 **Day 2 check-in requirements:**
