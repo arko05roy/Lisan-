@@ -25,5 +25,7 @@ allow-prebuilt-plugins = ["snforge_std"]
 [tool.snforge]
 build-external-contracts = [
     "lisan_contracts::mock_btc::MockBTC",
+    "lisan_contracts::mock_strk::MockSTRK",
     "lisan_contracts::shielded_pool::ShieldedPool",
+    "lisan_contracts::shielded_amm::ShieldedAMM",
 ]

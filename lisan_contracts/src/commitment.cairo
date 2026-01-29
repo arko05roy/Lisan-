@@ -19,3 +19,27 @@ pub fn verify_commitment(
 ) -> bool {
     commitment == compute_commitment(amount, secret, nullifier_secret)
 }
+
+/// Compute a Poseidon commitment for AMM with token type.
+/// commitment = Poseidon(amount, token_type, secret, nullifier_secret)
+pub fn compute_amm_commitment(
+    amount: felt252, token_type: felt252, secret: felt252, nullifier_secret: felt252,
+) -> felt252 {
+    PoseidonTrait::new()
+        .update(amount)
+        .update(token_type)
+        .update(secret)
+        .update(nullifier_secret)
+        .finalize()
+}
+
+/// Verify that an AMM commitment matches the given inputs.
+pub fn verify_amm_commitment(
+    commitment: felt252,
+    amount: felt252,
+    token_type: felt252,
+    secret: felt252,
+    nullifier_secret: felt252,
+) -> bool {
+    commitment == compute_amm_commitment(amount, token_type, secret, nullifier_secret)
+}
