@@ -811,11 +811,11 @@ Fix this in next [Z] hours.
 **The Solution — The Octopus Architecture:**
 - **ShieldedPool (Core):** Deposit BTC once, all operations happen privately inside
 - **Private Transfers:** Send BTC instantly, no batching, mempool-blind
-- **Private Swaps (Arm 1):** Atomic shielded exchange, no front-running
+- **Private Swaps (Arm 1):** Shielded AMM — swap BTC↔STRK privately, no front-running (x*y=k)
 - **Private Prediction Market (Arm 2):** Hidden bets, oracle-resolved (Pragma interface)
 - **Private Voting (Arm 3):** Hidden votes, time-locked trustless tally
 
-One commitment scheme. One nullifier registry. Four DeFi primitives. All private. All instant.
+Two commitment schemes (core pool + AMM pool). Shared nullifier pattern. Four DeFi primitives. All private. All instant.
 
 **Why It Wins:**
 1. Platform, not feature — Four primitives show this is a privacy LAYER
@@ -838,16 +838,20 @@ One commitment scheme. One nullifier registry. Four DeFi primitives. All private
 - ✅ Pattern #5: Platform approach means 4 different demo moments in the video. Not just "trust me the transfer is private." PASS.
 
 ### Technical Approach
-- Commitment scheme: Poseidon(amount, secret, nullifier_secret)
+- **Core pool commitment:** `Poseidon(amount, secret, nullifier_secret)` — for transfers/withdrawals
+- **AMM commitment:** `Poseidon(amount, token_type, secret, nullifier_secret)` — token_type distinguishes BTC vs STRK
 - ZK proofs via inline Cairo constraints (Starknet execution is STARK-proven)
 - Nullifiers prevent double-spending across ALL primitives
-- ShieldedPool is core, arms (swap, prediction, voting) extend it
+- **ShieldedPool (Core):** deposit/transfer/withdraw for BTC
+- **ShieldedAMM (Arm 1):** Separate contract, own reserves, own commitments. BTC/STRK pair. Constant product (x*y=k). Pre-seeded liquidity. Exact amounts only (no change commitments).
+- **MockSTRK:** ERC20 token for STRK side of AMM (same pattern as MockBTC)
 - Oracle: Pragma interface (mock data, real integration pattern)
 - Voting: Time-locked by block number, trustless tally
+- **Architecture:** ShieldedAMM is self-contained — does NOT call ShieldedPool. Clean separation.
 
 ### Build Plan (Revised — 30 days from Jan 29)
 - Day 1 (Jan 29): Foundation + Transfer + Withdraw (Phase 1-3)
-- Day 2 (Jan 30): Private Swap contract + tests
+- Day 2 (Jan 30): MockSTRK + Shielded AMM (BTC/STRK, x*y=k) + tests
 - Day 3 (Jan 31): Prediction Market + mock Pragma oracle + tests
 - Day 4 (Feb 1): Private Voting + time-lock + tests
 - Days 5-19 (Feb 2-16): Frontend — unified UI for ALL flows
@@ -858,24 +862,37 @@ One commitment scheme. One nullifier registry. Four DeFi primitives. All private
 
 ---
 
-### CURRENT STATUS (Updated Jan 29, 2026)
+### CURRENT STATUS (Updated Jan 29, 2026 — EOD)
 
-**Phase:** Day 1 — Phase 1 & 2 COMPLETE, Phase 3 IN PROGRESS
+**Phase:** Day 1 COMPLETE. Day 2 spec locked.
 
 **Progress:**
 - Phase 1 (Foundation): ✅ COMPLETE — MockBTC, Commitment, Deposit (16 tests)
 - Phase 2 (ZK Transfer): ✅ COMPLETE — Verifier, Transfer (10 more tests, 26 total)
-- Phase 3 (Withdraw): 🔄 IN PROGRESS
-- Phase 4 (Private Swap): ⏳ Day 2
+- Phase 3 (Withdraw): ✅ COMPLETE — Withdraw with proof verification (18 more tests, 44 total)
+- Phase 4 (Shielded AMM): ⏳ Day 2 — MockSTRK + ShieldedAMM (BTC/STRK, x*y=k, pre-seeded liquidity)
 - Phase 5 (Prediction Market): ⏳ Day 3
 - Phase 6 (Private Voting): ⏳ Day 4
 - Phase 7 (Frontend): ⏳ Days 5-19
 - Phase 8 (Video): ⏳ Days 20-25
 - Phase 9 (Submission): ⏳ Days 26-30
 
-**Key milestone:** Completed Phase 1 + 2 in Day 1 (originally planned for 14 days). Scope expanded from 5 phases to 9 phases to match pace. Project evolved from single-feature (private transfers) to full platform (transfers + swaps + predictions + voting).
+**Total tests passing: 44 (verified via snforge)**
 
-**Strategic decision (Jan 29):** Evaluated full PS list from hackathon. Dropped private lending and private yield (too much mocking of core logic — mock oracle for prices, mock yield source would make it look fake). Kept swap, prediction market, voting — all have REAL logic even on testnet, only tokens are mock. This avoids the "demo that's all smoke" problem.
+**Key milestone:** Completed Phase 1 + 2 + 3 ALL in Day 1 (originally planned for 14 days). Full privacy loop operational: deposit → transfer → withdraw. Scope expanded from 5 phases to 9 phases to match pace.
+
+**Strategic decision (Jan 29):** Evaluated full PS list from hackathon. Dropped private lending and private yield (too much mocking of core logic). Kept swap, prediction market, voting — all have REAL logic even on testnet, only tokens are mock.
+
+**Swap architecture decision (Jan 29 EOD):** Pivoted from peer-to-peer order book swap to **Shielded AMM**. Reasons:
+- AMM is single-user demo-able (no counterparty needed). Judges can try it solo.
+- Constant product formula (x*y=k) is real DeFi logic, not mocked.
+- BTC/STRK pair uses Starknet-native token (STRK) — fits "Starknet native" narrative.
+- Pre-seeded liquidity — no setup friction for demo.
+- Exact amounts only (no change commitments) — simpler, safer.
+- AMM commitment scheme: `Poseidon(amount, token_type, secret, nullifier_secret)` — token_type in hash prevents cross-token forgery.
+- ShieldedAMM is a separate contract from ShieldedPool. Own reserves, own commitments, own nullifiers. Clean separation.
+- Explorer shows txn hash with 0.00 amounts — the demo proof point.
+- BTC/ETH pair deferred to later if time permits.
 
 ---
 
@@ -936,7 +953,7 @@ One commitment scheme. One nullifier registry. Four DeFi primitives. All private
 
 | Skill | Status | Risk Level |
 |-------|--------|------------|
-| Cairo | 48-hour sprint COMPLETE (user claims done) | 🟡 MEDIUM (unverified) |
+| Cairo | VERIFIED — 44 tests passing, 5 contracts built in Day 1 | 🟢 LOW (proven) |
 | Poseidon commitments | Understands concept | 🟢 LOW |
 | STARK proofs client-side | Clarified — sequencer handles this | 🟢 LOW |
 
@@ -979,26 +996,32 @@ One commitment scheme. One nullifier registry. Four DeFi primitives. All private
 
 ---
 
-### DAY 1 RESULTS (Jan 29 — TODAY)
+### DAY 1 RESULTS (Jan 29) — COMPLETE
 
 **Completed (ahead of schedule):**
 1. ✅ Phase 1: MockBTC + Commitment + Deposit (16 tests passing)
 2. ✅ Phase 2: Verifier + Transfer (26 total tests passing)
-3. 🔄 Phase 3: Withdraw (in progress)
+3. ✅ Phase 3: Withdraw + proof verification (44 total tests passing)
+
+**Full privacy loop operational:** deposit → transfer → withdraw ALL working.
 
 **Scope expansion decision:**
 - User completed 2 weeks of planned work in 1 day
 - Evaluated full hackathon PS list for additional features
 - Dropped: Private lending, private yield (too much mocking)
-- Added: Private Swap, Prediction Market, Private Voting (real logic, mock tokens only)
+- Added: Shielded AMM, Prediction Market, Private Voting (real logic, mock tokens only)
 - Project evolved from "instant private transfers" to "private Bitcoin DeFi platform"
 
-**Architecture decision:** ShieldedPool = octopus body. Swap, prediction market, voting = arms.
-- Oracle: Pragma interface (mock data, real pattern)
-- Voting: Time-locked by block number, trustless tally
-- All arms reuse commitment scheme and nullifier registry
+**Architecture decisions:**
+- ShieldedPool = octopus body (deposit/transfer/withdraw for BTC)
+- ShieldedAMM = Arm 1 (separate contract, BTC/STRK AMM, x*y=k, pre-seeded liquidity)
+- Prediction Market = Arm 2 (oracle-resolved, Pragma interface)
+- Private Voting = Arm 3 (time-locked by block number, trustless tally)
+- AMM uses extended commitment: `Poseidon(amount, token_type, secret, nullifier_secret)`
+- Core pool commitment unchanged: `Poseidon(amount, secret, nullifier_secret)`
+- MockSTRK added for STRK side of AMM pair
 
-**Check-in status:** On track. 26 tests passing. Building withdraw now.
+**Check-in status:** Day 1 COMPLETE. 44 tests passing (verified). Day 2 spec locked.
 
 ---
 
@@ -1007,8 +1030,8 @@ One commitment scheme. One nullifier registry. Four DeFi primitives. All private
 | Date | Milestone | Status |
 |------|-----------|--------|
 | Jan 28 | Omar validation + skill assessment | ✅ Complete |
-| Jan 29 | Day 1: Phase 1+2 COMPLETE, Phase 3 (Withdraw) in progress | 🔄 In progress |
-| Jan 30 | Day 2: Private Swap contract + tests | ⏳ Pending |
+| Jan 29 | Day 1: Phase 1+2+3 COMPLETE. 44 tests. Full privacy loop. Day 2 AMM spec locked. | ✅ Complete |
+| Jan 30 | Day 2: MockSTRK + Shielded AMM (BTC/STRK, x*y=k) + tests | ⏳ Pending |
 | Jan 31 | Day 3: Prediction Market + mock Pragma oracle + tests | ⏳ Pending |
 | Feb 1 | Day 4: Private Voting + time-lock + tests. Hackathon officially starts. | ⏳ Pending |
 | Feb 2-16 | Days 5-19: Frontend — unified UI for ALL flows | ⏳ Pending |
@@ -1020,8 +1043,8 @@ One commitment scheme. One nullifier registry. Four DeFi primitives. All private
 
 ### NEXT ACTIONS
 
-1. **TODAY (Jan 29):** Complete withdraw — report back with snforge test output
-2. **TOMORROW (Jan 30):** Private Swap contract + tests
+1. ~~**Jan 29:** Complete withdraw~~ ✅ DONE — 44 tests passing
+2. **TOMORROW (Jan 30):** MockSTRK + Shielded AMM contract (BTC/STRK, x*y=k, pre-seeded liquidity, exact amounts) + tests
 3. **Jan 31:** Prediction Market + mock Pragma oracle + tests
 4. **Feb 1:** Private Voting + time-lock + tests
 5. **Feb 2:** Frontend begins

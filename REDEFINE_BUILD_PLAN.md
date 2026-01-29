@@ -13,13 +13,13 @@
 
 ---
 
-## CURRENT STATUS (Updated Jan 29, 2026)
+## CURRENT STATUS (Updated Jan 29, 2026 — End of Day 1)
 
 | Phase | Status | Details |
 |-------|--------|---------|
 | Phase 1: Foundation | ✅ COMPLETE (Day 1) | MockBTC, Commitment, Deposit — 16 tests passing |
 | Phase 2: ZK Transfer | ✅ COMPLETE (Day 1) | Verifier, Transfer — 10 more tests, 26 total passing |
-| Phase 3: Withdraw | 🔄 IN PROGRESS (Day 1) | Withdraw circuit + contract |
+| Phase 3: Withdraw | ✅ COMPLETE (Day 1) | Withdraw proof verification + contract — 18 more tests, 44 total passing |
 | Phase 4: Private Swap | ⏳ PENDING (Day 2) | Atomic shielded swap between two users |
 | Phase 5: Prediction Market | ⏳ PENDING (Day 3) | Oracle-resolved hidden predictions |
 | Phase 6: Private Voting | ⏳ PENDING (Day 4) | Time-locked trustless voting |
@@ -27,33 +27,35 @@
 | Phase 8: Video | ⏳ PENDING (Days 20-25) | Script, recording, editing |
 | Phase 9: Submission | ⏳ PENDING (Days 26-30) | README, GitHub, DoraHacks |
 
-**Pace:** Phase 1 + 2 completed in Day 1 (originally planned for 14 days). Scope expanded to match pace.
+**Pace:** Phase 1 + 2 + 3 ALL completed in Day 1 (originally planned for 14 days). Full privacy loop (deposit → transfer → withdraw) operational. Scope expanded to match pace.
 
 ### Implemented Contract Files
 ```
 lisan_contracts/
 ├── Scarb.toml                    # scarb 2.15.1, snforge 0.55.0, OZ git main
 ├── src/
-│   ├── lib.cairo                 # Module declarations
+│   ├── lib.cairo                 # Module declarations (4 modules)
 │   ├── commitment.cairo          # Poseidon: compute_commitment, compute_nullifier_hash, verify_commitment
 │   ├── mock_btc.cairo            # ERC20 + Ownable (OZ components), owner-only mint
-│   ├── shielded_pool.cairo       # deposit() + transfer(), events, views
-│   ├── verifier.cairo            # verify_transfer_proof() — 6 inline constraints
-│   ├── private_swap.cairo        # (Day 2) Atomic shielded swaps
-│   ├── prediction_market.cairo   # (Day 3) Oracle-resolved predictions
-│   ├── mock_pragma_oracle.cairo  # (Day 3) Pragma-interface mock oracle
-│   └── private_voting.cairo      # (Day 4) Time-locked voting
+│   ├── shielded_pool.cairo       # deposit() + transfer() + withdraw(), events, views
+│   ├── verifier.cairo            # verify_transfer_proof() + verify_withdraw_proof() — inline constraints
+│   ├── mock_strk.cairo            # (Day 2) MockSTRK ERC20 token — NOT YET IMPLEMENTED
+│   ├── shielded_amm.cairo         # (Day 2) Shielded AMM swap (BTC/STRK, x*y=k) — NOT YET IMPLEMENTED
+│   ├── prediction_market.cairo   # (Day 3) Oracle-resolved predictions — NOT YET IMPLEMENTED
+│   ├── mock_pragma_oracle.cairo  # (Day 3) Pragma-interface mock oracle — NOT YET IMPLEMENTED
+│   └── private_voting.cairo      # (Day 4) Time-locked voting — NOT YET IMPLEMENTED
 └── tests/
     ├── lib.cairo
-    ├── test_commitment.cairo     # 6 tests
-    ├── test_mock_btc.cairo       # 5 tests
-    ├── test_deposit.cairo        # 5 tests
-    ├── test_transfer.cairo       # 7 tests
-    ├── test_integration.cairo    # 3 tests
-    ├── test_withdraw.cairo       # (Day 1) Withdraw tests
-    ├── test_private_swap.cairo   # (Day 2) Swap tests
-    ├── test_prediction_market.cairo # (Day 3) Prediction market tests
-    └── test_private_voting.cairo # (Day 4) Voting tests
+    ├── test_commitment.cairo     # 6 tests ✅
+    ├── test_mock_btc.cairo       # 5 tests ✅
+    ├── test_deposit.cairo        # 5 tests ✅
+    ├── test_transfer.cairo       # 7 tests ✅
+    ├── test_withdraw.cairo       # 12 tests ✅
+    ├── test_integration.cairo    # 9 tests ✅
+    ├── test_mock_strk.cairo      # (Day 2) MockSTRK tests — NOT YET IMPLEMENTED
+    ├── test_shielded_amm.cairo   # (Day 2) Shielded AMM tests — NOT YET IMPLEMENTED
+    ├── test_prediction_market.cairo # (Day 3) Prediction market tests — NOT YET IMPLEMENTED
+    └── test_private_voting.cairo # (Day 4) Voting tests — NOT YET IMPLEMENTED
 ```
 
 ### Key Design Decisions Made
@@ -84,7 +86,7 @@ Current privacy solutions (Tornado Cash, mixers) require batching, waiting, and 
 One shielded pool. Four private DeFi primitives. All instant. All mempool-blind.
 
 - **Private Transfers:** Deposit BTC once, send privately in seconds. No batching.
-- **Private Swaps:** Atomic shielded exchange between two users. No front-running.
+- **Private Swaps:** Shielded AMM — swap BTC↔STRK with zero visible amounts. No front-running.
 - **Private Predictions:** Hidden bets resolved by oracle. No copying.
 - **Private Voting:** Hidden votes, time-locked reveal. No coercion.
 
@@ -125,15 +127,15 @@ All built on one commitment scheme. One nullifier registry. One privacy layer fo
 │  └──────────┬────────────┬────────────┬──────────────┘          │
 │             │            │            │                           │
 │    ┌────────▼───┐ ┌──────▼──────┐ ┌──▼───────────┐             │
-│    │PrivateSwap │ │Prediction   │ │PrivateVoting │             │
+│    │ShieldedAMM │ │Prediction   │ │PrivateVoting │             │
 │    │(Arm 1)     │ │Market       │ │(Arm 3)       │             │
 │    │            │ │(Arm 2)      │ │              │             │
-│    │- create    │ │- create     │ │- create      │             │
-│    │  swap()    │ │  market()   │ │  proposal()  │             │
-│    │- accept    │ │- place_bet()│ │- cast_vote() │             │
-│    │  swap()    │ │- resolve()  │ │- tally()     │             │
-│    │- cancel    │ │- claim()    │ │- reveal()    │             │
-│    │  swap()    │ │             │ │              │             │
+│    │- deposit() │ │- create     │ │- create      │             │
+│    │- swap()    │ │  market()   │ │  proposal()  │             │
+│    │- withdraw()│ │- place_bet()│ │- cast_vote() │             │
+│    │- (x*y=k)  │ │- resolve()  │ │- tally()     │             │
+│    │- BTC/STRK  │ │- claim()    │ │- reveal()    │             │
+│    │            │ │             │ │              │             │
 │    └────────────┘ └──────┬──────┘ └──────────────┘             │
 │                          │                                       │
 │                   ┌──────▼──────┐                               │
@@ -260,38 +262,57 @@ User                    Contract                    State
   │<── BTC received ────────│                         │
 ```
 
-#### Private Swap Flow (Arm 1)
+#### Private AMM Swap Flow (Arm 1)
 ```
-Alice                   PrivateSwap              ShieldedPool
+User                    ShieldedAMM              Token Contracts
   │                         │                         │
-  │   [Alice wants to swap  │                         │
-  │    X BTC for Y from Bob]│                         │
+  │   [Pre-seeded pool:     │                         │
+  │    R_btc BTC +          │                         │
+  │    R_strk STRK]         │                         │
   │                         │                         │
-  │── create_swap(          │                         │
-  │   commitment_alice,     │                         │
-  │   offer_amount,         │                         │
-  │   request_amount) ─────>│                         │
-  │                         │── verify commitment ───>│
-  │                         │── lock Alice's funds    │
+  │   STEP 1: DEPOSIT       │                         │
+  │   [User generates:]     │                         │
+  │   commitment = Poseidon( │                        │
+  │     amount, token_type,  │                        │
+  │     secret, nullifier)   │                        │
   │                         │                         │
-  │<── swap_id ─────────────│                         │
+  │── deposit(BTC, amount,  │                         │
+  │   commitment) ─────────>│── transfer BTC from ───>│
+  │                         │   user to contract      │
+  │<── deposit receipt ─────│                         │
   │                         │                         │
-Bob                         │                         │
-  │── accept_swap(          │                         │
-  │   swap_id,              │                         │
-  │   commitment_bob,       │                         │
-  │   proof) ──────────────>│                         │
-  │                         │── verify Bob's commit ─>│
-  │                         │── atomic exchange:      │
-  │                         │   nullify old commits   │
-  │                         │   create new commits    │
-  │                         │   Alice gets Y          │
-  │                         │   Bob gets X            │
+  │   STEP 2: SWAP          │                         │
+  │   [User proves:]        │                         │
+  │   - Knows secret for    │                         │
+  │     BTC commitment      │                         │
+  │   - Nullifier valid     │                         │
+  │                         │                         │
+  │── swap(nullifier, proof,│                         │
+  │   amount_in, BTC→STRK,  │                        │
+  │   new_commitment) ─────>│                         │
+  │                         │── verify proof          │
+  │                         │── check nullifier fresh │
+  │                         │── mark nullifier used   │
+  │                         │── calc: amount_out =    │
+  │                         │   (R_strk * amount_in)  │
+  │                         │   / (R_btc + amount_in) │
+  │                         │── update reserves:      │
+  │                         │   R_btc += amount_in    │
+  │                         │   R_strk -= amount_out  │
+  │                         │── store new STRK        │
+  │                         │   commitment for user   │
   │                         │                         │
   │<── swap complete ───────│                         │
   │                         │                         │
-  [Mempool sees: swap_id, proofs, new commitments]
-  [Mempool CANNOT see: amounts, who got what]
+  │   STEP 3: WITHDRAW      │                         │
+  │── withdraw(nullifier,   │                         │
+  │   proof, amount,        │                         │
+  │   STRK, recipient) ────>│── transfer STRK to ───>│
+  │                         │   recipient             │
+  │<── STRK received ───────│                         │
+  │                         │                         │
+  [Explorer sees: txn hash, 0.00 amounts]
+  [Explorer CANNOT see: swap size, direction, user balance]
 ```
 
 #### Prediction Market Flow (Arm 2)
@@ -387,63 +408,63 @@ Anyone                      │                      │
 
 ## REVISED BUILD PLAN (30 Days from Jan 29)
 
-### DAY 1 (Jan 29) — Foundation + Transfer + Withdraw ✅🔄
+### DAY 1 (Jan 29) — Foundation + Transfer + Withdraw ✅ COMPLETE
 **Goal:** Complete core shielded pool with all three base operations
 
 **COMPLETED:**
 - [x] Phase 1: MockBTC + Commitment + Deposit (16 tests)
 - [x] Phase 2: Verifier + Transfer (10 more tests, 26 total)
+- [x] Phase 3: Withdraw (18 more tests, 44 total)
+  - [x] Implemented `verify_withdraw_proof()` in verifier.cairo (commitment matching, nullifier validation, amount matching)
+  - [x] Implemented `withdraw()` in shielded_pool.cairo (proof verification, nullifier marking, token transfer to recipient)
+  - [x] 12 withdraw-specific tests (basic withdraw, multiple withdrawals, different recipients, double-spend prevention, wrong secret/amount/nullifier, nonexistent commitment, sequential operations)
+  - [x] 9 integration tests (full deposit→transfer→withdraw loops, chained transfers, multi-user flows, withdraw-after-transfer, edge cases)
 
-**IN PROGRESS:**
-- [ ] Phase 3: Withdraw
-  - [ ] Implement `verify_withdraw_proof()` in verifier.cairo
-  - [ ] Implement `withdraw()` in shielded_pool.cairo
-  - [ ] Write withdraw tests (minimum: valid withdraw, double-spend, wrong secret, wrong amount, nonexistent commitment)
-
-**Withdraw Constraint Spec:**
-```
-WITHDRAW VERIFICATION (verify_withdraw_proof)
-
-Inputs:
-- commitment, amount, secret, nullifier_secret
-- nullifier_hash
-- withdraw_amount
-
-Constraints:
-1. commitment == Poseidon(amount, secret, nullifier_secret)
-2. nullifier_hash == Poseidon(nullifier_secret)
-3. withdraw_amount == amount (full withdraw for MVP)
-```
-
-**Day 1 Deliverable:** Complete privacy loop — deposit → transfer → withdraw
+**Day 1 Deliverable:** ✅ Complete privacy loop — deposit → transfer → withdraw — ALL OPERATIONAL
 
 ---
 
-### DAY 2 (Jan 30) — Private Swap
-**Goal:** Atomic shielded swap between two users
+### DAY 2 (Jan 30) — Shielded AMM Swap
+**Goal:** Private AMM swap — user swaps BTC↔STRK inside a shielded pool with zero visible amounts
+
+**Architecture Decision:** Separate ShieldedAMM contract (not modifying ShieldedPool). Own reserves, own commitments. Clean separation from core pool.
 
 **Tasks:**
-- [ ] Create `private_swap.cairo` contract
-- [ ] Implement swap lifecycle:
-  - `create_swap(commitment, offer_amount, request_amount) → swap_id`
-  - `accept_swap(swap_id, commitment, proof)`
-  - `cancel_swap(swap_id, proof)` — only creator can cancel
-- [ ] Swap interacts with ShieldedPool for commitment verification
-- [ ] Atomic execution: both sides exchange or neither does
+- [ ] Create `mock_strk.cairo` — ERC20 token, same pattern as MockBTC
+- [ ] Create `shielded_amm.cairo` contract
+- [ ] Commitment scheme: `Poseidon(amount, token_type, secret, nullifier_secret)` — token_type distinguishes BTC vs STRK
+- [ ] Liquidity: Pre-seeded in constructor (initial BTC + STRK reserves)
+- [ ] Implement AMM functions:
+  - `deposit(token_type, amount, commitment)` — deposit BTC or STRK into AMM shielded pool
+  - `swap(nullifier, proof, amount_in, token_type_in, token_type_out, new_commitment)` — exact amount swap, no change
+  - `withdraw(nullifier, proof, amount, token_type, recipient)` — withdraw from AMM pool
+- [ ] Price calculation: Constant product formula (x * y = k)
+- [ ] Exact amounts only — full commitment consumed per swap, no change commitments
+- [ ] Separate commitment and nullifier maps (own state, not shared with ShieldedPool)
 - [ ] Write tests:
-  - Valid swap (create + accept)
-  - Cancel swap (only creator)
-  - Accept with wrong amount (rejected)
-  - Double-accept prevention
-  - Swap with nonexistent commitment
+  - MockSTRK basic tests (mint, transfer, approve)
+  - Deposit BTC into AMM
+  - Deposit STRK into AMM
+  - Valid swap: BTC → STRK (price via x*y=k)
+  - Valid swap: STRK → BTC (reverse direction)
+  - Swap with wrong proof (rejected)
+  - Swap with used nullifier / double-spend (rejected)
+  - Swap with nonexistent commitment (rejected)
+  - Withdraw after swap (get output token out)
+  - Full flow: deposit BTC → swap to STRK → withdraw STRK
+  - Price impact: large swap moves price correctly
 
 **Design Notes:**
-- Swap contract holds references to ShieldedPool commitments
-- On accept: old commitments nullified, new commitments created for both parties
-- Amounts hidden — swap terms committed via Poseidon hash
-- Mempool sees: swap_id, proofs, new commitments. Cannot see: amounts, who got what.
+- ShieldedAMM is self-contained — does NOT call ShieldedPool
+- Token type encoded in commitment hash (option B): `Poseidon(amount, token_type, secret, nullifier_secret)`
+- Two token maps: `btc_reserve` (u256) and `strk_reserve` (u256) for AMM pricing
+- Commitments stored in single map but token_type in hash prevents cross-token forgery
+- Nullifiers shared across both token types (one nullifier registry)
+- Pre-seeded liquidity means no `add_liquidity` function needed for MVP
+- Explorer shows txn hash with 0.00 amounts — the demo proof point
+- Pair: BTC/STRK on Day 2. BTC/ETH deferred.
 
-**Day 2 Deliverable:** Private atomic swaps working with tests
+**Day 2 Deliverable:** Shielded AMM with BTC/STRK swaps, pre-seeded liquidity, exact-amount swaps, full test coverage
 
 ---
 
@@ -661,15 +682,16 @@ Project name, GitHub link, your name
 ### Unit Tests
 - [x] MockBTC: constructor, mint, transfer, approve/transferFrom, owner-only mint (5 tests)
 - [x] Commitment: deterministic hashing, different inputs → different hashes, nullifier hash, verify valid/invalid (6 tests)
-- [x] Verifier: tested via transfer tests (constraint enforcement)
+- [x] Verifier: tested via transfer and withdraw tests (constraint enforcement)
 
 ### Core Contract Tests
 - [x] Deposit: basic deposit, zero amount fails, duplicate fails, multiple deposits, insufficient balance (5 tests)
 - [x] Transfer: valid transfer, double-spend, wrong secret, value not conserved, zero amount, nonexistent, wrong nullifier (7 tests)
-- [ ] Withdraw: valid withdraw, double-spend, wrong secret, wrong amount, nonexistent commitment *(Day 1)*
+- [x] Withdraw: basic withdraw, multiple withdrawals, different recipients, double-spend, wrong secret, wrong amount, wrong nullifier, nonexistent commitment, sequential operations (12 tests) ✅
 
 ### Arm Contract Tests
-- [ ] Private Swap: valid swap, cancel, wrong amount, double-accept, nonexistent commitment *(Day 2)*
+- [ ] MockSTRK: constructor, mint, transfer, approve/transferFrom *(Day 2)*
+- [ ] Shielded AMM: deposit BTC, deposit STRK, swap BTC→STRK, swap STRK→BTC, wrong proof, double-spend, nonexistent commitment, withdraw after swap, full flow, price impact *(Day 2)*
 - [ ] Prediction Market: create, place bet, resolve, claim, wrong outcome, expired, double-claim *(Day 3)*
 - [ ] Private Voting: create, cast vote, after deadline, tally before/after, double-vote, invalid reveal *(Day 4)*
 
@@ -678,12 +700,14 @@ Project name, GitHub link, your name
 - [x] Chained transfers: deposit → transfer → transfer from change (test_chained_transfers)
 - [x] Multiple users: Alice & Bob deposit, Alice transfers to Bob (test_multiple_users)
 - [x] Edge cases: zero amount, insufficient balance, nonexistent commitment
-- [ ] Full loop: deposit → transfer → withdraw *(Day 1)*
-- [ ] Cross-arm: deposit → swap → withdraw *(Day 2)*
+- [x] Full loop: deposit → transfer → withdraw ✅
+- [x] Withdraw after transfer (recipient withdraws received funds) ✅
+- [x] Multi-user full flows (Alice deposits, transfers to Bob, Bob withdraws) ✅
+- [ ] Cross-arm: deposit BTC into AMM → swap BTC→STRK → withdraw STRK *(Day 2)*
 - [ ] Full prediction: deposit → bet → resolve → claim → withdraw *(Day 3)*
 - [ ] Full voting: deposit → vote → tally *(Day 4)*
 
-**Current: 26 tests, 26 passing ✅**
+**Current: 44 tests, 44 passing ✅**
 **Target: ~55-65 tests across all contracts**
 
 ---
@@ -784,9 +808,9 @@ Project name, GitHub link, your name
 ## SUCCESS CRITERIA
 
 ### Minimum Viable Submission
-- [x] Deposit works (contracts complete, 26 tests passing)
+- [x] Deposit works (contracts complete, tests passing)
 - [x] Transfer works with privacy (inline constraint verification, STARK-proven)
-- [ ] Withdraw works
+- [x] Withdraw works (full privacy loop: deposit → transfer → withdraw, 44 tests passing)
 - [ ] At least 2 arms working
 - [ ] Video under 3 minutes showing the platform
 - [ ] GitHub with README
