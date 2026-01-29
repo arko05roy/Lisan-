@@ -932,13 +932,27 @@ Two commitment schemes (core pool + AMM pool). Shared nullifier pattern. Four De
 
 **Validation Attempt #2: Requesting Broader Mentor/Judge Access — IN PROGRESS**
 
-**Date:** Jan 29, 2026
+**Date:** Jan 29, 2026 (updated Jan 30)
 
 **Action taken:** User messaged Omar asking for:
 - Telegram contacts of mentors/judges focused on **Bitcoin** and **Privacy** tracks
 - Any judges evaluating submissions
 
 **Goal:** Get 2+ additional data points beyond Omar's "sounds cool! do it." Current validation is weak (neutral-positive). Need strategic endorsement, not just polite enthusiasm.
+
+**Update (Jan 30):**
+- Omar informed user that **next week** there will be an **AMA with hackathon mentors**. Exact date/time TBD — user needs to confirm.
+- User messaged Omar about expanding scope to include prediction markets and swaps. **No reply yet.** Silence is neutral — not rejection, not endorsement.
+- AMA is now the primary validation opportunity. Public Q&A with actual mentors > 1 dev advocate's DM.
+
+**AMA Prep (BEFORE the AMA happens):**
+- Get exact AMA date/time from Omar or Discord
+- Prepare 2 strategic questions (Claude to review before AMA):
+  1. "What separates a winning submission from a good one at 300+ participants?"
+  2. "Does breadth (platform with multiple primitives) or depth (one feature, polished) score better?"
+  3. "How much weight does the video vs the GitHub repo carry?"
+- Do NOT ask "is my project good?" in a public AMA — waste of a question
+- Listen for mentor language: what words do THEY use to describe winning projects?
 
 **What to listen for when contacts respond:**
 | Response | Signal |
@@ -951,7 +965,7 @@ Two commitment schemes (core pool + AMM pool). Shared nullifier pattern. Four De
 
 **CRITICAL:** User must report **exact words** from any mentor/judge. No self-interpretation. Claude decodes.
 
-**Status:** Message sent to Omar. Awaiting response.
+**Status:** AMA next week = primary validation event. Omar silent on expansion message. No mentor/judge contacts received yet.
 
 ---
 
