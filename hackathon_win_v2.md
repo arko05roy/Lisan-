@@ -862,24 +862,26 @@ Two commitment schemes (core pool + AMM pool). Shared nullifier pattern. Four De
 
 ---
 
-### CURRENT STATUS (Updated Jan 29, 2026 — EOD)
+### CURRENT STATUS (Updated Jan 29, 2026 — Late EOD)
 
-**Phase:** Day 1 COMPLETE. Day 2 spec locked.
+**Phase:** Day 1 COMPLETE. Phase 1-4 ALL done. Day 2: Prediction Market + Voting.
 
 **Progress:**
 - Phase 1 (Foundation): ✅ COMPLETE — MockBTC, Commitment, Deposit (16 tests)
 - Phase 2 (ZK Transfer): ✅ COMPLETE — Verifier, Transfer (10 more tests, 26 total)
 - Phase 3 (Withdraw): ✅ COMPLETE — Withdraw with proof verification (18 more tests, 44 total)
-- Phase 4 (Shielded AMM): ⏳ Day 2 — MockSTRK + ShieldedAMM (BTC/STRK, x*y=k, pre-seeded liquidity)
-- Phase 5 (Prediction Market): ⏳ Day 3
-- Phase 6 (Private Voting): ⏳ Day 4
-- Phase 7 (Frontend): ⏳ Days 5-19
-- Phase 8 (Video): ⏳ Days 20-25
-- Phase 9 (Submission): ⏳ Days 26-30
+- Phase 4 (Shielded AMM): ✅ COMPLETE (Day 1) — MockSTRK + ShieldedAMM (seed, deposit, swap, withdraw) — 44 AMM tests, 88 total
+- Phase 5 (Prediction Market): ⏳ Day 2 (Jan 30)
+- Phase 6 (Private Voting): ⏳ Day 2 (Jan 30)
+- Phase 7 (Frontend): ⏳ Days 3-17
+- Phase 8 (Video): ⏳ Days 18-23
+- Phase 9 (Submission): ⏳ Days 24-30
 
-**Total tests passing: 44 (verified via snforge)**
+**Total tests passing: 88 (verified via snforge — 88 passed, 0 failed)**
 
-**Key milestone:** Completed Phase 1 + 2 + 3 ALL in Day 1 (originally planned for 14 days). Full privacy loop operational: deposit → transfer → withdraw. Scope expanded from 5 phases to 9 phases to match pace.
+**Codebase stats:** 960 lines contract code (7 files), 3,001 lines tests (9 files).
+
+**Key milestone:** Completed Phase 1 + 2 + 3 + 4 ALL in Day 1 (originally planned for 14+ days). Full privacy loop AND shielded AMM operational. Scope compressed further — prediction market + voting moved to Day 2.
 
 **Strategic decision (Jan 29):** Evaluated full PS list from hackathon. Dropped private lending and private yield (too much mocking of core logic). Kept swap, prediction market, voting — all have REAL logic even on testnet, only tokens are mock.
 
@@ -1002,11 +1004,13 @@ Two commitment schemes (core pool + AMM pool). Shared nullifier pattern. Four De
 1. ✅ Phase 1: MockBTC + Commitment + Deposit (16 tests passing)
 2. ✅ Phase 2: Verifier + Transfer (26 total tests passing)
 3. ✅ Phase 3: Withdraw + proof verification (44 total tests passing)
+4. ✅ Phase 4: MockSTRK + ShieldedAMM (seed, deposit, swap, withdraw) — 88 total tests passing
 
 **Full privacy loop operational:** deposit → transfer → withdraw ALL working.
+**Shielded AMM operational:** deposit BTC → swap BTC↔STRK (x*y=k) → withdraw STRK ALL working.
 
 **Scope expansion decision:**
-- User completed 2 weeks of planned work in 1 day
+- User completed 2+ weeks of planned work in 1 day
 - Evaluated full hackathon PS list for additional features
 - Dropped: Private lending, private yield (too much mocking)
 - Added: Shielded AMM, Prediction Market, Private Voting (real logic, mock tokens only)
@@ -1021,7 +1025,9 @@ Two commitment schemes (core pool + AMM pool). Shared nullifier pattern. Four De
 - Core pool commitment unchanged: `Poseidon(amount, secret, nullifier_secret)`
 - MockSTRK added for STRK side of AMM pair
 
-**Check-in status:** Day 1 COMPLETE. 44 tests passing (verified). Day 2 spec locked.
+**Check-in status:** Day 1 COMPLETE. 88 tests passing (verified via snforge). Day 2: prediction market + voting.
+
+**Strategic wobble (late Day 1):** User questioned whether prediction market is worth building, suggested pivoting to Polymarket/Kalshi integration. Coached back to plan — prediction market is the differentiator (platform vs feature), Polymarket's existence validates the use case ("every bet on Polymarket is public — we made them private"). User confirmed proceeding with original plan.
 
 ---
 
@@ -1030,24 +1036,24 @@ Two commitment schemes (core pool + AMM pool). Shared nullifier pattern. Four De
 | Date | Milestone | Status |
 |------|-----------|--------|
 | Jan 28 | Omar validation + skill assessment | ✅ Complete |
-| Jan 29 | Day 1: Phase 1+2+3 COMPLETE. 44 tests. Full privacy loop. Day 2 AMM spec locked. | ✅ Complete |
-| Jan 30 | Day 2: MockSTRK + Shielded AMM (BTC/STRK, x*y=k) + tests | ⏳ Pending |
-| Jan 31 | Day 3: Prediction Market + mock Pragma oracle + tests | ⏳ Pending |
-| Feb 1 | Day 4: Private Voting + time-lock + tests. Hackathon officially starts. | ⏳ Pending |
-| Feb 2-16 | Days 5-19: Frontend — unified UI for ALL flows | ⏳ Pending |
-| Feb 17 | Day 20: Video script LOCKED | ⏳ Pending |
-| Feb 17-22 | Days 20-25: Video production | ⏳ Pending |
-| Feb 23-28 | Days 26-30: Polish, README, GitHub theater, submit | ⏳ Pending |
+| Jan 29 | Day 1: Phase 1+2+3+4 COMPLETE. 88 tests. Full privacy loop + AMM. | ✅ Complete |
+| Jan 30 | Day 2: Prediction Market + mock Pragma oracle + Private Voting + tests | ⏳ Pending |
+| Jan 31 | Day 3: Frontend begins (contracts done) | ⏳ Pending |
+| Feb 1 | Hackathon officially starts. Frontend continues. | ⏳ Pending |
+| Feb 2-14 | Days 5-17: Frontend — unified UI for ALL flows | ⏳ Pending |
+| Feb 15 | Day 18: Video script LOCKED | ⏳ Pending |
+| Feb 15-20 | Days 18-23: Video production | ⏳ Pending |
+| Feb 21-28 | Days 24-30: Polish, README, GitHub theater, submit | ⏳ Pending |
 
 ---
 
 ### NEXT ACTIONS
 
 1. ~~**Jan 29:** Complete withdraw~~ ✅ DONE — 44 tests passing
-2. **TOMORROW (Jan 30):** MockSTRK + Shielded AMM contract (BTC/STRK, x*y=k, pre-seeded liquidity, exact amounts) + tests
-3. **Jan 31:** Prediction Market + mock Pragma oracle + tests
-4. **Feb 1:** Private Voting + time-lock + tests
-5. **Feb 2:** Frontend begins
+2. ~~**Jan 29:** MockSTRK + Shielded AMM~~ ✅ DONE — 88 tests passing (completed same day)
+3. **TOMORROW (Jan 30):** Prediction Market (mock_pragma_oracle.cairo + prediction_market.cairo) + Private Voting (private_voting.cairo) + tests for both
+4. **Jan 31:** Frontend begins — ALL contracts complete
+5. **Feb 2:** Frontend continues
 6. **ONGOING:** Follow up with Omar for mentor/judge contacts. If no response by Feb 1, find someone in Starknet Discord independently.
 7. **EOD CHECK-INS:** User must report daily with snforge output and blockers
 

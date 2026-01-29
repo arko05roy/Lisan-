@@ -28,4 +28,6 @@ build-external-contracts = [
     "lisan_contracts::mock_strk::MockSTRK",
     "lisan_contracts::shielded_pool::ShieldedPool",
     "lisan_contracts::shielded_amm::ShieldedAMM",
+    "lisan_contracts::mock_pragma_oracle::MockPragmaOracle",
+    "lisan_contracts::prediction_market::PredictionMarket",
 ]

@@ -1,4 +1,6 @@
-use lisan_contracts::commitment::{compute_commitment, compute_nullifier_hash, compute_amm_commitment};
+use lisan_contracts::commitment::{
+    compute_commitment, compute_nullifier_hash, compute_amm_commitment, compute_bet_commitment,
+};
 
 /// Verify all transfer constraints.
 /// Returns true if all constraints pass.
@@ -185,6 +187,43 @@ pub fn verify_amm_withdraw_proof(
 
     // Constraint 4: Withdraw amount > 0
     if withdraw_amount == 0 {
+        return false;
+    }
+
+    true
+}
+
+/// Verify all constraints for a prediction market bet claim.
+/// Checks that the commitment matches, nullifier is valid, outcome matches the winning outcome,
+/// and amount is positive.
+pub fn verify_bet_claim_proof(
+    bet_commitment: felt252,
+    outcome: felt252,
+    amount: felt252,
+    secret: felt252,
+    nullifier_secret: felt252,
+    nullifier_hash: felt252,
+    winning_outcome: felt252,
+) -> bool {
+    // Constraint 1: Commitment hash matches private inputs
+    let computed = compute_bet_commitment(outcome, amount, secret, nullifier_secret);
+    if computed != bet_commitment {
+        return false;
+    }
+
+    // Constraint 2: Nullifier hash matches nullifier_secret
+    let computed_nullifier = compute_nullifier_hash(nullifier_secret);
+    if computed_nullifier != nullifier_hash {
+        return false;
+    }
+
+    // Constraint 3: Bet outcome matches the winning outcome
+    if outcome != winning_outcome {
+        return false;
+    }
+
+    // Constraint 4: Amount > 0
+    if amount == 0 {
         return false;
     }
 

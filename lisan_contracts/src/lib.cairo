@@ -4,3 +4,5 @@ pub mod mock_strk;
 pub mod shielded_pool;
 pub mod shielded_amm;
 pub mod verifier;
+pub mod mock_pragma_oracle;
+pub mod prediction_market;
