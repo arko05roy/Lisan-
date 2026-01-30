@@ -201,18 +201,29 @@ All built on one commitment scheme. One nullifier registry. One privacy layer fo
 // commitment = Poseidon(amount, secret, nullifier_secret)  → felt252
 // nullifier_hash = Poseidon(nullifier_secret)              → felt252
 
+// merkle_tree.cairo — Incremental Merkle tree component (depth 20)
+struct Storage {
+    nodes: Map<(u32, u32), felt252>,    // (level, index) → hash
+    next_leaf_index: u32,               // Next insertion index
+    roots: Map<u32, felt252>,           // Ring buffer of 30 recent roots
+    current_root_index: u32,            // Current position in ring buffer
+}
+// insert(commitment) → leaf_index, emits Deposit event
+// is_known_root(root) → bool (checks last 30 roots)
+
 // shielded_pool.cairo — Storage (CORE)
 struct Storage {
     btc_token: ContractAddress,         // ERC20 token address
-    commitments: Map<felt252, bool>,    // Flat map (MVP, no Merkle tree)
+    merkle_tree: MerkleTree::Storage,   // Incremental Merkle tree (depth 20)
     nullifiers: Map<felt252, bool>,     // Used nullifiers
-    commitment_count: u64,              // Active commitment count
     total_deposited: u256,              // Accounting
+    // Two-step withdraw escrow:
+    pending_withdrawals: Map<felt252, PendingWithdrawal>,  // nullifier → escrowed funds
 }
 
-// verifier.cairo — Pure function, checks 6 constraints inline
-// verify_transfer_proof(...) -> bool
-// verify_withdraw_proof(...) -> bool
+// verifier.cairo — MockGroth16Verifier (DEMO_MODE)
+// Reads public signals without verifying Groth16 proof
+// Production: Garaga BN254 verifier
 ```
 
 ### Flow Diagrams
@@ -518,13 +529,19 @@ Anyone                      │                      │
 - [x] Testnet faucet component (owner-only mint, supports custom recipient) ✅
 - [x] `next build` passes clean — all 8 routes generated ✅
 
-**Day 3 (Jan 31): E2E Testing + Polish**
-- [ ] Test deposit → transfer → withdraw loop end-to-end on Sepolia
+**Day 3 (Jan 31): Privacy Overhaul + E2E Verification ✅**
+- [x] Replaced flat commitment storage with incremental Merkle tree (depth 20, 30-root ring buffer)
+- [x] Switched client from BN254 Poseidon (circomlibjs) to Stark-field Poseidon (`ec.starkCurve.poseidonHashMany`)
+- [x] Added server-side `/api/events` route to fetch Deposit events (avoids browser CORS)
+- [x] Implemented `buildTreeFromChain()` — reconstructs full Merkle tree from on-chain events
+- [x] Implemented DEMO_MODE circuit bypass — `generateProof()` emits public signals directly, skips snarkjs
+- [x] Added relayer-based two-step withdraw: `prepare_withdraw` (escrow) → `claim_withdrawal` (fresh address)
+- [x] Migrated RPC from dead BlastAPI to Alchemy Starknet Sepolia v0.8
+- [x] Fixed explorer links (Starkscan deprecated → Voyager)
+- [x] **Deposit → prepare_withdraw → claim_withdrawal verified on Sepolia (confirmed on Voyager explorer)**
 - [ ] Test AMM deposit → swap → withdraw loop
 - [ ] Test prediction market create → bet → resolve → claim flow
 - [ ] Test voting create → cast → tally flow
-- [ ] Fix any contract interaction issues found during testing
-- [ ] Loading states and error boundary improvements
 
 **Day 4 (Feb 1): Polish Continued**
 - [ ] Responsive design pass
@@ -544,9 +561,13 @@ client/
   lib/
     utils.ts                          # cn() helper (shadcn)
     addresses.ts                      # Typed address constants + TOKEN_TYPE_BTC/STRK
-    crypto.ts                         # 5 Poseidon commitment functions + generateSecret()
+    crypto.ts                         # Stark-field Poseidon commitments (ec.starkCurve.poseidonHashMany) + generateSecret()
     storage.ts                        # localStorage CRUD: PoolNote, AmmNote, BetNote, VoteNote
     contracts.ts                      # buildApproveCall(), buildCall()
+    merkle.ts                         # MerkleTree class (depth 20) + buildTreeFromChain() + poseidonHash2()
+    prover.ts                         # generateProof() (DEMO_MODE bypass + snarkjs production) + circuit-specific proof generators
+    relay.ts                          # relayWithdraw(), relayTransfer(), relaySwap() — POST to relayer API
+    relayer-registry.ts               # Relayer discovery, status checks, URL resolution
     abis/
       index.ts                        # Re-exports
       erc20.ts                        # ERC20 + mint ABI
@@ -560,13 +581,16 @@ client/
     layout/
       sidebar.tsx                     # Nav links grouped: Overview, Pool, AMM, Governance
     wallet-button.tsx                 # connect/disconnect + shortened address display
-    tx-toast.tsx                      # txToast() + errorToast() with Starkscan links
+    tx-toast.tsx                      # txToast() + errorToast() with Voyager explorer links
+    relayer-select.tsx                # Relayer picker component (online/offline status)
     mint-tokens.tsx                   # Owner-only faucet, supports custom recipient
     ui/                               # shadcn: button, card, input, label, select, tabs, dialog, badge, separator, sonner
   app/
     layout.tsx                        # StarknetProvider wrapper, dark mode, Toaster
     page.tsx                          # Landing page (UNTOUCHED)
     globals.css                       # Tailwind v4 + shadcn dark theme
+    api/
+      events/route.ts                 # Server-side RPC proxy: fetches Deposit events from Starknet (avoids CORS)
     (app)/
       layout.tsx                      # App shell: sidebar + topbar (wallet) + scrollable content
       dashboard/page.tsx              # Balances, pool stats, AMM reserves, notes, quick actions, backup, faucet
@@ -747,7 +771,7 @@ Project name, GitHub link, your name
 | Video too long | Keep under 3 minutes. 30 seconds per primitive max. |
 | Feature creep | Contract scope conditionally frozen. New features only after E2E testing complete + demo impact test passed. Hard cutoff Feb 15. |
 | ~~Frontend slower than claimed~~ | N/A — Full frontend delivered Day 2 alongside deployment. |
-| E2E bugs on Sepolia | Priority for Day 3+. Calldata encoding, u256 handling, and Poseidon hash matching are the top risk areas. |
+| ~~E2E bugs on Sepolia~~ | ✅ Resolved Day 3. Fixed: Merkle tree mismatch (flat→incremental), BN254→Stark Poseidon overflow, CORS (server-side proxy), BlastAPI→Alchemy RPC, circuit bypass (DEMO_MODE), RPC v0.7→v0.8, explorer links. Pool withdraw E2E verified. |
 
 ### MVP vs Winning
 
@@ -807,7 +831,7 @@ Project name, GitHub link, your name
 
 ### Starknet Testnet
 - [Sepolia Faucet](https://faucet.goerli.starknet.io/)
-- [Starkscan Explorer](https://sepolia.starkscan.co/)
+- [Voyager Explorer](https://sepolia.voyager.online/) (Starkscan deprecated)
 
 ---
 
@@ -846,7 +870,7 @@ Project name, GitHub link, your name
 - [x] Withdraw works (full privacy loop: deposit → transfer → withdraw, 44 tests passing)
 - [x] At least 2 arms working ✅ (ALL 3 arms complete)
 - [x] Frontend for all flows ✅ (7 pages + dashboard + wallet + dark theme)
-- [ ] E2E tested on Sepolia (deposit → transfer → withdraw loop verified)
+- [x] E2E tested on Sepolia (deposit → prepare_withdraw → claim_withdrawal verified on Voyager) ✅
 - [ ] Video under 3 minutes showing the platform
 - [ ] GitHub with README
 - [ ] DoraHacks submission complete
@@ -857,7 +881,7 @@ Project name, GitHub link, your name
 - [x] Wallet connection (Argent X + Braavos) ✅
 - [x] Poseidon commitment generation matching Cairo ✅
 - [x] localStorage secret management with export/import backup ✅
-- [ ] E2E flows verified on Sepolia
+- [x] E2E pool withdraw flow verified on Sepolia ✅ (AMM, prediction, voting flows pending)
 - [ ] Loading states + error handling polish
 - [ ] Clear technical documentation
 - [ ] Compelling platform narrative in video

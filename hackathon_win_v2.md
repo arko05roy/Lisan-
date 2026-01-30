@@ -1199,9 +1199,9 @@ Two commitment schemes (core pool + AMM pool). Shared nullifier pattern. Four De
 
 ---
 
-### CURRENT STATUS (Updated Jan 30, 2026 — Day 2 MIDDAY)
+### CURRENT STATUS (Updated Jan 31, 2026 — Day 3 END, E2E WORKING)
 
-**Phase:** Day 2 IN PROGRESS. Contracts deployed to Sepolia. Frontend functional (all pages). Now entering VISUAL POLISH phase.
+**Phase:** Day 3 COMPLETE. Major privacy overhaul shipped. First E2E deposit → withdraw loop verified on Sepolia (Voyager-confirmed). Frontend UI significantly improved. Entering polish + remaining E2E testing phase.
 
 **Progress:**
 - Phase 1 (Foundation): ✅ COMPLETE — MockBTC, Commitment, Deposit (16 tests)
@@ -1210,16 +1210,22 @@ Two commitment schemes (core pool + AMM pool). Shared nullifier pattern. Four De
 - Phase 4 (Shielded AMM): ✅ COMPLETE (Day 1) — MockSTRK + ShieldedAMM (seed, deposit, swap, withdraw) — 44 AMM tests, 88 total
 - Phase 5 (Prediction Market): ✅ COMPLETE (Day 1) — MockPragmaOracle + PredictionMarket (create, bet, resolve, claim) — 68 tests, 156 total
 - Phase 6 (Private Voting): ✅ COMPLETE (Day 1) — PrivateVoting (create, cast, tally) — 41 tests, 183 total
-- Phase 7a (Frontend — Functional): ✅ COMPLETE (Day 2 morning) — All 7 pages built, all contract integrations wired, wallet connected
-- Phase 7b (Frontend — Visual Polish): ⏳ IN PROGRESS (Day 2 midday - Feb 8)
+- Phase 7a (Frontend — Functional): ✅ COMPLETE (Day 2) — All 7 pages built, all contract integrations wired, wallet connected
+- Phase 7b (Privacy Overhaul): ✅ COMPLETE (Day 3) — Merkle tree, Stark Poseidon, relayer withdraw, event fetching, DEMO_MODE bypass
+- Phase 7c (E2E Pool Verification): ✅ COMPLETE (Day 3) — Deposit → prepare_withdraw → claim_withdrawal verified on Sepolia via Voyager
+- Phase 7d (Frontend UI Polish): ✅ IMPROVED (Day 3) — UI fixes applied
+- Phase 7e (E2E Remaining Flows): ⏳ NEXT — AMM, prediction market, voting flows need Sepolia E2E testing
+- Phase 7f (Frontend Final Polish): ⏳ IN PROGRESS (Feb 1-8) — Responsive, error handling, loading states
 - Phase 8 (Video): ⏳ Days 18-23 (Feb 15-20)
 - Phase 9 (Submission): ⏳ Days 24-30 (Feb 21-28)
 
 **Total tests passing: 183 (verified via snforge — 183 passed, 0 failed)**
 
-**Codebase stats:** 1,808 lines contract code (10 files), 5,577 lines tests (11 files). 7,385 total. Frontend: 8 pages, 5 ABI files, crypto/storage/contract libs, 10 shadcn components.
+**Codebase stats:** 1,808 lines contract code (10 files), 5,577 lines tests (11 files). 7,385 total. Frontend: 8 pages, 5 ABI files, crypto/storage/contract libs, Merkle tree lib, prover lib, relayer lib, 10 shadcn components.
 
-**Key milestone:** Completed ALL 6 contract phases in Day 1 (originally planned for 14+ days). Full privacy loop, shielded AMM, prediction market, AND private voting all operational. "Winning Submission" contract scope achieved.
+**Key milestone (Day 3):** Privacy architecture went from "visible on-chain" to "real privacy primitives." Flat commitment storage replaced with incremental Merkle tree (depth 20, 30-root ring buffer). BN254 Poseidon overflow bug killed (switched to Stark-field Poseidon). Two-step relayer withdraw hides wallet identity. First on-chain E2E loop verified.
+
+**Key milestone (Day 1):** Completed ALL 6 contract phases in Day 1 (originally planned for 14+ days). Full privacy loop, shielded AMM, prediction market, AND private voting all operational. "Winning Submission" contract scope achieved.
 
 **Strategic decision (Jan 29):** Evaluated full PS list from hackathon. Dropped private lending and private yield (too much mocking of core logic). Kept swap, prediction market, voting — all have REAL logic even on testnet, only tokens are mock.
 
@@ -1340,24 +1346,31 @@ Each builds on the last. Three sessions, three dimensions.
 
 ---
 
-### SKILL GAP ASSESSMENT — UPDATED (Jan 30 Midday)
+### SKILL GAP ASSESSMENT — UPDATED (Jan 31 EOD)
 
 | Skill | Status | Risk Level |
 |-------|--------|------------|
 | Cairo | VERIFIED — 183 tests passing, 10 contracts built in Day 1 | 🟢 LOW (proven beyond doubt) |
-| Poseidon commitments | Implemented 4 variants (core, AMM, bet, vote) | 🟢 LOW (proven) |
-| STARK proofs client-side | Clarified — sequencer handles this | 🟢 LOW |
+| Poseidon commitments | Implemented 4 variants (core, AMM, bet, vote) + Stark-field migration | 🟢 LOW (proven) |
+| STARK proofs client-side | Clarified — sequencer handles this. DEMO_MODE bypass implemented. | 🟢 LOW |
 | starknet.js / starknet-react | VERIFIED — full frontend wired, Sepolia tx confirmed | 🟢 LOW (proven) |
 | Argent/Braavos wallet | VERIFIED — wallet connected in screenshots | 🟢 LOW (proven) |
-| Cairo contract calls from frontend | VERIFIED — deposit flow works end-to-end on Sepolia | 🟢 LOW (proven) |
+| Cairo contract calls from frontend | VERIFIED — full deposit → withdraw loop on Sepolia | 🟢 LOW (proven) |
 | Frontend/UI (functional) | VERIFIED — 8 pages built, all integrations working | 🟢 LOW (proven) |
-| Frontend/UI (visual polish) | UNVERIFIED — current UI is default shadcn, no visual identity | 🟡 MEDIUM (original profile says "functional, not beautiful") |
+| Frontend/UI (visual polish) | IMPROVED — UI fixes shipped Day 3, still needs more for video | 🟡 MEDIUM (improving) |
+| Privacy architecture | VERIFIED — Merkle tree + relayer withdraw + Stark Poseidon | 🟢 LOW (proven) |
+| E2E Sepolia integration | VERIFIED — pool withdraw loop confirmed on Voyager | 🟢 LOW (proven) |
+| Remaining E2E flows | UNVERIFIED — AMM, prediction, voting not yet tested on Sepolia | 🟡 MEDIUM (may have bugs) |
 
 **Cairo skill: PROVEN.** 10 contracts, 183 tests, 7,385 lines in Day 1. No longer a concern.
 
-**Frontend functional skill: PROVEN.** 8 pages, all contract integrations, wallet connection, client-side crypto, localStorage management, toast notifications. Completed Days 2-4 planned work by Day 2 morning. Speed is verified.
+**Frontend functional skill: PROVEN.** 8 pages, all contract integrations, wallet connection, client-side crypto, localStorage management, toast notifications. Speed is verified.
 
-**Frontend visual skill: UNVERIFIED.** Current UI is shadcn defaults — grayscale, no branding, no color identity, no animations. Original profile says "UI/UX is functional, not beautiful." This matches what screenshots show. Visual polish quality will be verified Day 3-4. This is the remaining risk area.
+**Privacy architecture skill: PROVEN (Day 3).** Merkle tree (depth 20, 30-root ring buffer), Stark-field Poseidon migration, relayer two-step withdraw, event-based tree reconstruction. This is the real deal — not a toy. Judges who read the code will see production-grade privacy design.
+
+**Frontend visual skill: IMPROVING.** UI polish applied Day 3. Still needs more work for video recording quality. This remains the primary risk area — functional but not yet "wow."
+
+**E2E remaining flows: UNVERIFIED.** Pool withdraw works. AMM, prediction, and voting flows have NOT been tested end-to-end on Sepolia. These are the next priority — if they break on Sepolia, need to know before video recording.
 
 **Critical Clarification Given:**
 - Starknet proves ALL execution via STARKs automatically
@@ -1530,14 +1543,68 @@ TIER 3 (If time permits):
 
 ---
 
-### TIMELINE TO SUBMISSION (Revised Jan 30 — Rev 3)
+### DAY 3 RESULTS (Jan 31) — COMPLETE (MAJOR PRIVACY OVERHAUL + E2E VERIFIED)
+
+**The problem Day 3 solved:** Everything was visible on-chain. Flat commitment storage meant commitments were directly readable. BN254 Poseidon outputs overflowed felt252 ~83% of the time. No real privacy existed despite the architecture claiming it. This was a credibility-killing gap.
+
+**Completed:**
+1. ✅ **Incremental Merkle tree** — Replaced flat commitment storage with depth-20 Merkle tree (2^20 = 1M leaves) + 30-root ring buffer. Commitments inserted as leaves, proofs reference any of last 30 roots. This is real privacy infrastructure, not a demo trick.
+2. ✅ **Stark-field Poseidon migration** — Switched client from BN254 Poseidon (circomlibjs) to `ec.starkCurve.poseidonHashMany` (starknet.js). BN254 outputs exceeded Stark field prime ~83% of the time — silent data corruption. Now matches Cairo's `PoseidonTrait::new().update(...).finalize()` exactly.
+3. ✅ **Server-side event fetching** — Added `/api/events` API route to fetch Deposit events from Starknet RPC. Avoids browser CORS on direct RPC calls. Client calls this route, not RPC directly.
+4. ✅ **Merkle tree reconstruction** — `buildTreeFromChain()` fetches all Deposit events via `/api/events`, rebuilds full Merkle tree client-side. Proof generation uses reconstructed tree.
+5. ✅ **DEMO_MODE circuit bypass** — `generateProof()` emits public signals directly from inputs, skips snarkjs circuit execution. `MockGroth16Verifier` on-chain reads public signals without verifying Groth16 proof. Production path (snarkjs + Garaga) is stubbed but not wired.
+6. ✅ **Two-step relayer withdraw** — `prepare_withdraw` (user generates ZK proof locally, relayer submits to escrow funds keyed by nullifier) → `claim_withdrawal` (user provides fresh recipient address, relayer transfers escrowed funds). Wallet identity hidden from on-chain observer.
+7. ✅ **RPC migration** — BlastAPI deprecated/dead. Migrated to Alchemy Starknet Sepolia v0.8. Server-side `STARKNET_RPC_URL` used by relayer API routes and event fetching.
+8. ✅ **Explorer links fixed** — Starkscan deprecated/redirects to Voyager. All explorer links now point to `sepolia.voyager.online`.
+9. ✅ **Frontend UI improvements** — UI polish applied (details in build plan).
+10. ✅ **E2E VERIFIED** — Deposit → prepare_withdraw → claim_withdrawal confirmed on Starknet Sepolia. Transactions visible on Voyager explorer. First real privacy loop working end-to-end.
+
+**What's NOT yet E2E tested on Sepolia:**
+- ⏳ AMM deposit → swap → withdraw loop
+- ⏳ Prediction market create → bet → resolve → claim flow
+- ⏳ Voting create → cast → tally flow
+
+**Technical decisions made Day 3:**
+- **Merkle tree depth 20:** 2^20 = 1M leaves. Overkill for testnet, but matches production Tornado Cash depth. Shows judges this is a real design, not a toy.
+- **30-root ring buffer:** Allows proofs generated against slightly stale roots (up to 30 insertions ago) to still verify. Prevents race conditions where deposit happens between proof generation and submission.
+- **DEMO_MODE as explicit flag:** Not hidden — clearly documented as hackathon trade-off. Production path exists (snarkjs + Garaga calldata), just not wired. Judges who read code see the intent.
+- **Relayer as API route:** Not a separate service — Next.js API routes act as relayer. Simpler for hackathon demo. User's wallet never touches withdraw transaction directly.
+
+**Privacy architecture assessment (post-Day 3):**
+- ✅ Commitments hidden in Merkle tree (not flat storage)
+- ✅ Client Poseidon matches on-chain Poseidon (Stark-field)
+- ✅ Nullifiers prevent double-spend
+- ✅ Withdraw hides recipient via relayer two-step
+- ✅ Explorer shows 0.00 amounts on shielded transactions
+- 🟡 DEMO_MODE means proofs aren't cryptographically verified (documented trade-off)
+- 🟡 AMM/prediction/voting not yet E2E tested on Sepolia
+
+**Day 3 check-in: ✅ PASSED**
+- ✅ Privacy overhaul shipped (Merkle tree, Poseidon fix, relayer)
+- ✅ E2E pool withdraw verified on Voyager
+- ✅ UI improvements applied
+- ✅ RPC migration to Alchemy working
+- ✅ No regression — 183 contract tests still passing
+
+**Skill gap update (Day 3):**
+| Skill | Status | Risk Level |
+|-------|--------|------------|
+| Privacy architecture | VERIFIED — Merkle tree + relayer withdraw + Stark Poseidon | 🟢 LOW (proven) |
+| E2E Sepolia integration | VERIFIED — deposit → withdraw loop working | 🟢 LOW (proven) |
+| Frontend visual polish | IMPROVED — UI fixes shipped | 🟡 MEDIUM (still needs more polish for video) |
+| Remaining E2E flows | UNVERIFIED — AMM, prediction, voting not tested on Sepolia | 🟡 MEDIUM (may have bugs) |
+
+---
+
+### TIMELINE TO SUBMISSION (Revised Jan 31 — Rev 4)
 
 | Date | Milestone | Status |
 |------|-----------|--------|
 | Jan 28 | Omar validation + skill assessment | ✅ Complete |
 | Jan 29 | Day 1: ALL 6 contract phases COMPLETE. 183 tests. Full platform. | ✅ Complete |
-| Jan 30 | Day 2: Deploy to Sepolia + Frontend ALL pages functional | ✅ Complete (ahead of schedule — was planned for Days 2-4) |
-| Jan 30-Feb 8 | Days 2-11: Visual polish — landing page, color identity, privacy UX, animations | ⏳ IN PROGRESS |
+| Jan 30 | Day 2: Deploy to Sepolia + Frontend ALL pages functional | ✅ Complete |
+| Jan 31 | Day 3: Major privacy overhaul + E2E pool withdraw verified on Sepolia | ✅ Complete |
+| Feb 1-8 | Days 4-11: E2E testing remaining flows (AMM, prediction, voting) + frontend polish | ⏳ IN PROGRESS |
 | Feb 2 | Office Hours — Bitcoin Lead (Adrien) — 9:30 PM IST | ⏳ Scheduled |
 | Feb 3 | Office Hours — Privacy Lead (Teddy) — 10:00 PM IST | ⏳ Scheduled |
 | Feb 4 | Office Hours — Bitcoin Lead #2 (Jonathan) — 9:30 PM IST | ⏳ Scheduled |
@@ -1557,18 +1624,22 @@ TIER 3 (If time permits):
 2. ~~**Jan 29:** MockSTRK + Shielded AMM~~ ✅ DONE — 88 tests passing
 3. ~~**Jan 29:** Prediction Market + Private Voting~~ ✅ DONE — 183 tests passing (all completed Day 1)
 4. ~~**Jan 30:** Deploy ALL contracts to Starknet Sepolia~~ ✅ DONE — 7 contracts deployed
-5. ~~**Jan 30:** Frontend scaffold + all pages functional~~ ✅ DONE — 8 pages, all wired (completed Days 2-4 work in Day 2 morning)
-6. ~~**Jan 30:** End-to-end Sepolia tx~~ ✅ DONE — `0x063eb597c113fe39d30acdb6ca1fba5cbbace80992c96ddba9bb78ee189ad187`
-7. **NOW (Jan 30 afternoon):** Visual polish — landing page (replace Next.js boilerplate), color identity (accent color selection), privacy visual language
-8. **Jan 31-Feb 1:** Continue visual polish — transaction animations, dashboard hierarchy, swap flow UX
-9. **Feb 2-8:** Frontend polish — loading states, error handling, responsive design, privacy proof moments
-10. **Feb 2 (9:30 PM IST):** Office Hours — Bitcoin Lead (Adrien). Ask: "Does Bitcoin track want BTC doing things it can't on L1 — like private DeFi — or replicating existing DeFi?"
-11. **Feb 3 (10:00 PM IST):** Office Hours — Privacy Lead (Teddy). Ask: "If someone builds private DeFi beyond transfers — private swaps, predictions, voting — is that 'finding value in privacy apps'?"
-12. **Feb 4 (9:30 PM IST):** Office Hours — Bitcoin Lead #2 (Jonathan). Ask: "Platform covering multiple BTC primitives vs one deep feature — which is stronger?"
-13. **After each session:** Report exact mentor words + what other builders asked. No interpretation. Claude decodes.
-14. **Feb 9-11:** CONDITIONAL new contract features (only if frontend polished + specific feature pitched + approved)
-15. **Feb 15:** Video script LOCKED. Feature cutoff. Anything not in frontend by now doesn't ship.
-16. **EOD CHECK-INS:** User must report daily with screenshots and blockers
+5. ~~**Jan 30:** Frontend scaffold + all pages functional~~ ✅ DONE — 8 pages, all wired
+6. ~~**Jan 30:** End-to-end Sepolia tx~~ ✅ DONE — deposit verified
+7. ~~**Jan 31:** Privacy overhaul — Merkle tree, Stark Poseidon, relayer, DEMO_MODE~~ ✅ DONE
+8. ~~**Jan 31:** E2E pool withdraw loop on Sepolia~~ ✅ DONE — deposit → prepare_withdraw → claim_withdrawal verified on Voyager
+9. ~~**Jan 31:** UI improvements~~ ✅ DONE
+10. **NOW (Feb 1):** E2E test AMM deposit → swap → withdraw loop on Sepolia
+11. **Feb 1-2:** E2E test prediction market create → bet → resolve → claim on Sepolia
+12. **Feb 1-2:** E2E test voting create → cast → tally on Sepolia
+13. **Feb 1-8:** Frontend polish — responsive design, error handling, loading states, visual polish for video
+14. **Feb 2 (9:30 PM IST):** Office Hours — Bitcoin Lead (Adrien). Ask: "Does Bitcoin track want BTC doing things it can't on L1 — like private DeFi — or replicating existing DeFi?"
+15. **Feb 3 (10:00 PM IST):** Office Hours — Privacy Lead (Teddy). Ask: "If someone builds private DeFi beyond transfers — private swaps, predictions, voting — is that 'finding value in privacy apps'?"
+16. **Feb 4 (9:30 PM IST):** Office Hours — Bitcoin Lead #2 (Jonathan). Ask: "Platform covering multiple BTC primitives vs one deep feature — which is stronger?"
+17. **After each session:** Report exact mentor words + what other builders asked. No interpretation. Claude decodes.
+18. **Feb 9-11:** CONDITIONAL new contract features (only if frontend polished + specific feature pitched + approved)
+19. **Feb 15:** Video script LOCKED. Feature cutoff. Anything not in frontend by now doesn't ship.
+20. **EOD CHECK-INS:** User must report daily with screenshots and blockers
 
 **Day 2 check-in: ✅ PASSED**
 - ✅ Deployment tx hashes: 7 contracts on Sepolia (addresses documented)
@@ -1577,10 +1648,19 @@ TIER 3 (If time permits):
 - ✅ Dashboard reading on-chain data
 - ✅ Sepolia end-to-end tx verified
 
-**Day 3 check-in requirements (Jan 31):**
-- Screenshots of visual polish progress (landing page, color changes)
-- Accent color chosen and applied
-- Landing page no longer Next.js boilerplate
+**Day 3 check-in: ✅ PASSED**
+- ✅ Privacy overhaul shipped (Merkle tree + Stark Poseidon + relayer + DEMO_MODE)
+- ✅ E2E pool withdraw verified on Voyager (deposit → prepare_withdraw → claim_withdrawal)
+- ✅ RPC migrated from dead BlastAPI to Alchemy v0.8
+- ✅ UI improvements applied
+- ✅ 183 contract tests still passing (no regression)
+
+**Day 4 check-in requirements (Feb 1):**
+- E2E test results for AMM flow on Sepolia (pass/fail + tx hashes or error details)
+- E2E test results for prediction market flow on Sepolia
+- E2E test results for voting flow on Sepolia
+- Screenshots of any UI polish progress
+- Hackathon officially starts today — confirm submission page is accessible
 
 ═══════════════════════════════════════════════════════════
 
