@@ -16,7 +16,7 @@ pub trait IShieldedAMM<TContractState> {
         new_secret: felt252,
         new_nullifier_secret: felt252,
     );
-    fn withdraw(
+    fn prepare_withdraw(
         ref self: TContractState,
         commitment: felt252,
         nullifier_hash: felt252,
@@ -24,8 +24,12 @@ pub trait IShieldedAMM<TContractState> {
         token_type: felt252,
         secret: felt252,
         nullifier_secret: felt252,
-        recipient: starknet::ContractAddress,
         withdraw_amount: u256,
+    );
+    fn claim_withdrawal(
+        ref self: TContractState,
+        nullifier_hash: felt252,
+        recipient: starknet::ContractAddress,
     );
     fn get_amount_out(
         self: @TContractState, amount_in: u256, token_type_in: felt252, token_type_out: felt252,
@@ -64,6 +68,8 @@ pub mod ShieldedAMM {
         nullifiers: Map<felt252, bool>,
         commitment_count: u64,
         seeded: bool,
+        pending_withdrawals: Map<felt252, u256>,
+        pending_token_type: Map<felt252, felt252>,
     }
 
     #[event]
@@ -72,7 +78,8 @@ pub mod ShieldedAMM {
         LiquiditySeeded: LiquiditySeeded,
         Deposit: Deposit,
         Swap: Swap,
-        Withdraw: Withdraw,
+        PrepareWithdraw: PrepareWithdraw,
+        Claim: Claim,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -99,10 +106,17 @@ pub mod ShieldedAMM {
     }
 
     #[derive(Drop, starknet::Event)]
-    pub struct Withdraw {
+    pub struct PrepareWithdraw {
         pub nullifier_hash: felt252,
         pub token_type: felt252,
+        pub amount: u256,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    pub struct Claim {
+        pub nullifier_hash: felt252,
         pub recipient: ContractAddress,
+        pub token_type: felt252,
         pub amount: u256,
     }
 
@@ -253,9 +267,6 @@ pub mod ShieldedAMM {
             // Store new commitment
             self.commitments.write(new_commitment, true);
 
-            // Net commitment count: -1 old + 1 new = 0 change
-            // (commitment_count stays the same)
-
             self
                 .emit(
                     Swap {
@@ -264,7 +275,7 @@ pub mod ShieldedAMM {
                 );
         }
 
-        fn withdraw(
+        fn prepare_withdraw(
             ref self: ContractState,
             commitment: felt252,
             nullifier_hash: felt252,
@@ -272,7 +283,6 @@ pub mod ShieldedAMM {
             token_type: felt252,
             secret: felt252,
             nullifier_secret: felt252,
-            recipient: ContractAddress,
             withdraw_amount: u256,
         ) {
             // Validate token type
@@ -297,6 +307,30 @@ pub mod ShieldedAMM {
             self.commitments.write(commitment, false);
             self.nullifiers.write(nullifier_hash, true);
 
+            // Escrow funds: store pending withdrawal keyed by nullifier_hash
+            self.pending_withdrawals.write(nullifier_hash, withdraw_amount);
+            self.pending_token_type.write(nullifier_hash, token_type);
+
+            // Decrement commitment count
+            self.commitment_count.write(self.commitment_count.read() - 1);
+
+            self.emit(PrepareWithdraw { nullifier_hash, token_type, amount: withdraw_amount });
+        }
+
+        fn claim_withdrawal(
+            ref self: ContractState,
+            nullifier_hash: felt252,
+            recipient: ContractAddress,
+        ) {
+            let amount = self.pending_withdrawals.read(nullifier_hash);
+            assert(amount > 0, 'No pending withdrawal');
+
+            let token_type = self.pending_token_type.read(nullifier_hash);
+
+            // Clear pending withdrawal
+            self.pending_withdrawals.write(nullifier_hash, 0);
+            self.pending_token_type.write(nullifier_hash, 0);
+
             // Transfer tokens to recipient
             let token_address = if token_type == TOKEN_TYPE_BTC {
                 self.btc_token.read()
@@ -305,13 +339,10 @@ pub mod ShieldedAMM {
             };
 
             let token = IERC20Dispatcher { contract_address: token_address };
-            let success = token.transfer(recipient, withdraw_amount);
+            let success = token.transfer(recipient, amount);
             assert(success, 'Token transfer failed');
 
-            // Decrement commitment count
-            self.commitment_count.write(self.commitment_count.read() - 1);
-
-            self.emit(Withdraw { nullifier_hash, token_type, recipient, amount: withdraw_amount });
+            self.emit(Claim { nullifier_hash, recipient, token_type, amount });
         }
 
         fn get_amount_out(

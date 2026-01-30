@@ -32,15 +32,24 @@ export const SHIELDED_POOL_ABI = [
   },
   {
     type: "function",
-    name: "withdraw",
+    name: "prepare_withdraw",
     inputs: [
       { name: "commitment", type: "core::felt252" },
       { name: "nullifier_hash", type: "core::felt252" },
       { name: "amount", type: "core::felt252" },
       { name: "secret", type: "core::felt252" },
       { name: "nullifier_secret", type: "core::felt252" },
-      { name: "recipient", type: "core::starknet::contract_address::ContractAddress" },
       { name: "withdraw_amount", type: "core::integer::u256" },
+    ],
+    outputs: [],
+    state_mutability: "external",
+  },
+  {
+    type: "function",
+    name: "claim_withdrawal",
+    inputs: [
+      { name: "nullifier_hash", type: "core::felt252" },
+      { name: "recipient", type: "core::starknet::contract_address::ContractAddress" },
     ],
     outputs: [],
     state_mutability: "external",

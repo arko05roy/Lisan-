@@ -17,15 +17,19 @@ pub trait IShieldedPool<TContractState> {
         new_secret_recipient: felt252,
         new_nullifier_secret_recipient: felt252,
     );
-    fn withdraw(
+    fn prepare_withdraw(
         ref self: TContractState,
         commitment: felt252,
         nullifier_hash: felt252,
         amount: felt252,
         secret: felt252,
         nullifier_secret: felt252,
-        recipient: starknet::ContractAddress,
         withdraw_amount: u256,
+    );
+    fn claim_withdrawal(
+        ref self: TContractState,
+        nullifier_hash: felt252,
+        recipient: starknet::ContractAddress,
     );
     fn is_commitment_valid(self: @TContractState, commitment: felt252) -> bool;
     fn is_nullifier_used(self: @TContractState, nullifier_hash: felt252) -> bool;
@@ -51,6 +55,7 @@ pub mod ShieldedPool {
         nullifiers: Map<felt252, bool>,
         commitment_count: u64,
         total_deposited: u256,
+        pending_withdrawals: Map<felt252, u256>,
     }
 
     #[event]
@@ -58,7 +63,8 @@ pub mod ShieldedPool {
     pub enum Event {
         Deposit: Deposit,
         Transfer: Transfer,
-        Withdraw: Withdraw,
+        PrepareWithdraw: PrepareWithdraw,
+        Claim: Claim,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -77,7 +83,13 @@ pub mod ShieldedPool {
     }
 
     #[derive(Drop, starknet::Event)]
-    pub struct Withdraw {
+    pub struct PrepareWithdraw {
+        pub nullifier_hash: felt252,
+        pub amount: u256,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    pub struct Claim {
         pub nullifier_hash: felt252,
         pub recipient: ContractAddress,
         pub amount: u256,
@@ -165,14 +177,13 @@ pub mod ShieldedPool {
                 );
         }
 
-        fn withdraw(
+        fn prepare_withdraw(
             ref self: ContractState,
             commitment: felt252,
             nullifier_hash: felt252,
             amount: felt252,
             secret: felt252,
             nullifier_secret: felt252,
-            recipient: ContractAddress,
             withdraw_amount: u256,
         ) {
             // Check commitment exists in pool
@@ -193,10 +204,8 @@ pub mod ShieldedPool {
             // Mark nullifier as used
             self.nullifiers.write(nullifier_hash, true);
 
-            // Transfer tokens from pool to recipient
-            let token = IERC20Dispatcher { contract_address: self.btc_token.read() };
-            let success = token.transfer(recipient, withdraw_amount);
-            assert(success, 'Token transfer failed');
+            // Escrow funds: store pending withdrawal amount keyed by nullifier_hash
+            self.pending_withdrawals.write(nullifier_hash, withdraw_amount);
 
             // Decrement commitment count
             self.commitment_count.write(self.commitment_count.read() - 1);
@@ -204,7 +213,26 @@ pub mod ShieldedPool {
             // Decrement total deposited
             self.total_deposited.write(self.total_deposited.read() - withdraw_amount);
 
-            self.emit(Withdraw { nullifier_hash, recipient, amount: withdraw_amount });
+            self.emit(PrepareWithdraw { nullifier_hash, amount: withdraw_amount });
+        }
+
+        fn claim_withdrawal(
+            ref self: ContractState,
+            nullifier_hash: felt252,
+            recipient: ContractAddress,
+        ) {
+            let amount = self.pending_withdrawals.read(nullifier_hash);
+            assert(amount > 0, 'No pending withdrawal');
+
+            // Clear pending withdrawal
+            self.pending_withdrawals.write(nullifier_hash, 0);
+
+            // Transfer tokens from pool to recipient
+            let token = IERC20Dispatcher { contract_address: self.btc_token.read() };
+            let success = token.transfer(recipient, amount);
+            assert(success, 'Token transfer failed');
+
+            self.emit(Claim { nullifier_hash, recipient, amount });
         }
 
         fn is_commitment_valid(self: @ContractState, commitment: felt252) -> bool {

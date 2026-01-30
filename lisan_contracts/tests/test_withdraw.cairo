@@ -72,25 +72,32 @@ fn test_basic_withdraw() {
     let commitment = compute_commitment(1000, 42, 99);
     let nullifier_hash = compute_nullifier_hash(99);
 
+    // Phase 1: prepare_withdraw
     start_cheat_caller_address(pool_address, USER1());
-    pool.withdraw(commitment, nullifier_hash, 1000, 42, 99, USER1(), 1000);
+    pool.prepare_withdraw(commitment, nullifier_hash, 1000, 42, 99, 1000);
     stop_cheat_caller_address(pool_address);
 
     // Commitment should be invalidated
-    assert!(!pool.is_commitment_valid(commitment), "Commitment should be invalid after withdraw");
+    assert!(!pool.is_commitment_valid(commitment), "Commitment should be invalid after prepare");
 
     // Nullifier should be marked as used
-    assert!(pool.is_nullifier_used(nullifier_hash), "Nullifier should be used after withdraw");
-
-    // Tokens should be sent to recipient
-    assert!(erc20.balance_of(USER1()) == 10000, "User should have 10000 after withdraw");
-    assert!(erc20.balance_of(pool_address) == 0, "Pool should have 0 after withdraw");
+    assert!(pool.is_nullifier_used(nullifier_hash), "Nullifier should be used after prepare");
 
     // Commitment count should be decremented
-    assert!(pool.get_commitment_count() == 0, "Count should be 0 after withdraw");
+    assert!(pool.get_commitment_count() == 0, "Count should be 0 after prepare");
 
     // Total deposited should be decremented
-    assert!(pool.get_total_deposited() == 0, "Total should be 0 after withdraw");
+    assert!(pool.get_total_deposited() == 0, "Total should be 0 after prepare");
+
+    // Tokens still in pool (escrowed)
+    assert!(erc20.balance_of(pool_address) == 1000, "Pool should still have 1000 after prepare");
+
+    // Phase 2: claim_withdrawal (can be called from any address)
+    pool.claim_withdrawal(nullifier_hash, USER1());
+
+    // Tokens should be sent to recipient
+    assert!(erc20.balance_of(USER1()) == 10000, "User should have 10000 after claim");
+    assert!(erc20.balance_of(pool_address) == 0, "Pool should have 0 after claim");
 }
 
 #[test]
@@ -105,19 +112,22 @@ fn test_withdraw_to_different_recipient() {
     let commitment = compute_commitment(1000, 42, 99);
     let nullifier_hash = compute_nullifier_hash(99);
 
-    // USER1 deposited, but withdraws to USER2
+    // USER1 deposited, prepares withdraw
     start_cheat_caller_address(pool_address, USER1());
-    pool.withdraw(commitment, nullifier_hash, 1000, 42, 99, USER2(), 1000);
+    pool.prepare_withdraw(commitment, nullifier_hash, 1000, 42, 99, 1000);
     stop_cheat_caller_address(pool_address);
 
+    // Claim to USER2 (can be called from any address)
+    pool.claim_withdrawal(nullifier_hash, USER2());
+
     // USER2 receives the tokens
-    assert!(erc20.balance_of(USER2()) == 1000, "USER2 should have 1000 after withdraw");
+    assert!(erc20.balance_of(USER2()) == 1000, "USER2 should have 1000 after claim");
 
     // USER1 still has 9000 (deposited 1000 from 10000, didn't get them back)
     assert!(erc20.balance_of(USER1()) == 9000, "USER1 should still have 9000");
 
     // Pool balance should be 0
-    assert!(erc20.balance_of(pool_address) == 0, "Pool should have 0 after withdraw");
+    assert!(erc20.balance_of(pool_address) == 0, "Pool should have 0 after claim");
 
     // Pool state should be updated
     assert!(pool.get_commitment_count() == 0, "Count should be 0");
@@ -135,7 +145,7 @@ fn test_withdraw_nonexistent_commitment() {
     let nullifier_hash = compute_nullifier_hash(888);
 
     start_cheat_caller_address(pool_address, USER1());
-    pool.withdraw(fake_commitment, nullifier_hash, 1000, 999, 888, USER1(), 1000);
+    pool.prepare_withdraw(fake_commitment, nullifier_hash, 1000, 999, 888, 1000);
     stop_cheat_caller_address(pool_address);
 }
 
@@ -156,7 +166,6 @@ fn test_withdraw_double_spend() {
     stop_cheat_caller_address(btc_address);
 
     // Deposit two separate commitments that share the same nullifier_secret
-    // This lets us test that the nullifier check fires on the second withdraw
     let commitment1 = compute_commitment(500, 42, 99);
     let commitment2 = compute_commitment(500, 77, 99); // same nullifier_secret=99
 
@@ -169,12 +178,12 @@ fn test_withdraw_double_spend() {
 
     // First withdraw succeeds (commitment1)
     start_cheat_caller_address(pool_address, USER1());
-    pool.withdraw(commitment1, nullifier_hash, 500, 42, 99, USER1(), 500);
+    pool.prepare_withdraw(commitment1, nullifier_hash, 500, 42, 99, 500);
     stop_cheat_caller_address(pool_address);
 
     // Second withdraw with same nullifier should fail, even though commitment2 is valid
     start_cheat_caller_address(pool_address, USER1());
-    pool.withdraw(commitment2, nullifier_hash, 500, 77, 99, USER1(), 500);
+    pool.prepare_withdraw(commitment2, nullifier_hash, 500, 77, 99, 500);
     stop_cheat_caller_address(pool_address);
 }
 
@@ -189,7 +198,7 @@ fn test_withdraw_wrong_secret() {
 
     // Try to withdraw with wrong secret (999 instead of 42)
     start_cheat_caller_address(pool_address, USER1());
-    pool.withdraw(commitment, nullifier_hash, 1000, 999, 99, USER1(), 1000);
+    pool.prepare_withdraw(commitment, nullifier_hash, 1000, 999, 99, 1000);
     stop_cheat_caller_address(pool_address);
 }
 
@@ -204,7 +213,7 @@ fn test_withdraw_wrong_nullifier_secret() {
 
     // Try to withdraw with wrong nullifier_secret (88 instead of 99)
     start_cheat_caller_address(pool_address, USER1());
-    pool.withdraw(commitment, nullifier_hash, 1000, 42, 88, USER1(), 1000);
+    pool.prepare_withdraw(commitment, nullifier_hash, 1000, 42, 88, 1000);
     stop_cheat_caller_address(pool_address);
 }
 
@@ -219,7 +228,7 @@ fn test_withdraw_wrong_amount() {
 
     // Try to withdraw with wrong amount (500 instead of 1000) -- partial withdraw not supported
     start_cheat_caller_address(pool_address, USER1());
-    pool.withdraw(commitment, nullifier_hash, 500, 42, 99, USER1(), 500);
+    pool.prepare_withdraw(commitment, nullifier_hash, 500, 42, 99, 500);
     stop_cheat_caller_address(pool_address);
 }
 
@@ -234,7 +243,7 @@ fn test_withdraw_zero_amount() {
 
     // Try to withdraw with amount=0
     start_cheat_caller_address(pool_address, USER1());
-    pool.withdraw(commitment, nullifier_hash, 0, 42, 99, USER1(), 0);
+    pool.prepare_withdraw(commitment, nullifier_hash, 0, 42, 99, 0);
     stop_cheat_caller_address(pool_address);
 }
 
@@ -269,8 +278,10 @@ fn test_withdraw_after_transfer() {
     let nullifier_hash_withdraw = compute_nullifier_hash(200);
 
     start_cheat_caller_address(pool_address, USER1());
-    pool.withdraw(sender_change, nullifier_hash_withdraw, 700, 100, 200, USER1(), 700);
+    pool.prepare_withdraw(sender_change, nullifier_hash_withdraw, 700, 100, 200, 700);
     stop_cheat_caller_address(pool_address);
+
+    pool.claim_withdrawal(nullifier_hash_withdraw, USER1());
 
     // Commitment should be invalidated
     assert!(!pool.is_commitment_valid(sender_change), "Change commitment should be invalid");
@@ -340,8 +351,10 @@ fn test_withdraw_received_transfer() {
     let bob_nullifier_hash = compute_nullifier_hash(66);
 
     start_cheat_caller_address(pool_address, USER2());
-    pool.withdraw(bob_commitment, bob_nullifier_hash, 300, 55, 66, USER2(), 300);
+    pool.prepare_withdraw(bob_commitment, bob_nullifier_hash, 300, 55, 66, 300);
     stop_cheat_caller_address(pool_address);
+
+    pool.claim_withdrawal(bob_nullifier_hash, USER2());
 
     // Bob (USER2) receives 300 tokens
     assert!(erc20.balance_of(USER2()) == 300, "Bob should have 300 after withdraw");
@@ -396,8 +409,10 @@ fn test_multiple_deposits_withdraw_one() {
     let n2 = compute_nullifier_hash(20);
 
     start_cheat_caller_address(pool_address, USER1());
-    pool.withdraw(c2, n2, 300, 2, 20, USER1(), 300);
+    pool.prepare_withdraw(c2, n2, 300, 2, 20, 300);
     stop_cheat_caller_address(pool_address);
+
+    pool.claim_withdrawal(n2, USER1());
 
     // c2 should be invalidated, c1 and c3 still valid
     assert!(pool.is_commitment_valid(c1), "c1 should still be valid");
@@ -448,10 +463,14 @@ fn test_withdraw_all_deposits() {
     let n3 = compute_nullifier_hash(30);
 
     start_cheat_caller_address(pool_address, USER1());
-    pool.withdraw(c1, n1, 500, 1, 10, USER1(), 500);
-    pool.withdraw(c2, n2, 300, 2, 20, USER1(), 300);
-    pool.withdraw(c3, n3, 200, 3, 30, USER1(), 200);
+    pool.prepare_withdraw(c1, n1, 500, 1, 10, 500);
+    pool.prepare_withdraw(c2, n2, 300, 2, 20, 300);
+    pool.prepare_withdraw(c3, n3, 200, 3, 30, 200);
     stop_cheat_caller_address(pool_address);
+
+    pool.claim_withdrawal(n1, USER1());
+    pool.claim_withdrawal(n2, USER1());
+    pool.claim_withdrawal(n3, USER1());
 
     // All commitments invalid
     assert!(!pool.is_commitment_valid(c1), "c1 should be invalid");

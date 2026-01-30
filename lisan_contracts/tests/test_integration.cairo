@@ -238,12 +238,14 @@ fn test_full_deposit_transfer_withdraw_flow() {
         "Transfer nullifier should be used",
     );
 
-    // --- Step 3: Alice withdraws her 600 change ---
+    // --- Step 3: Alice withdraws her 600 change (two-phase) ---
     let alice_withdraw_nullifier = compute_nullifier_hash(44);
 
     start_cheat_caller_address(pool_address, ALICE());
-    pool.withdraw(alice_change, alice_withdraw_nullifier, 600, 33, 44, ALICE(), 600);
+    pool.prepare_withdraw(alice_change, alice_withdraw_nullifier, 600, 33, 44, 600);
     stop_cheat_caller_address(pool_address);
+
+    pool.claim_withdrawal(alice_withdraw_nullifier, ALICE());
 
     assert!(!pool.is_commitment_valid(alice_change), "Alice change should be invalid after withdraw");
     assert!(
@@ -255,12 +257,14 @@ fn test_full_deposit_transfer_withdraw_flow() {
     assert!(pool.get_commitment_count() == 1, "Count should be 1 after Alice withdraw");
     assert!(pool.get_total_deposited() == 400, "Total should be 400 after Alice withdraw");
 
-    // --- Step 4: Bob withdraws his 400 ---
+    // --- Step 4: Bob withdraws his 400 (two-phase) ---
     let bob_withdraw_nullifier = compute_nullifier_hash(66);
 
     start_cheat_caller_address(pool_address, BOB());
-    pool.withdraw(bob_commitment, bob_withdraw_nullifier, 400, 55, 66, BOB(), 400);
+    pool.prepare_withdraw(bob_commitment, bob_withdraw_nullifier, 400, 55, 66, 400);
     stop_cheat_caller_address(pool_address);
+
+    pool.claim_withdrawal(bob_withdraw_nullifier, BOB());
 
     assert!(!pool.is_commitment_valid(bob_commitment), "Bob commitment should be invalid after withdraw");
     assert!(
@@ -342,12 +346,14 @@ fn test_chained_transfers_then_withdraw_all() {
     assert!(pool.get_commitment_count() == 3, "Count should be 3 after second transfer");
     // Active commitments: c2_bob(400), c3_alice(400), c3_bob(200) = 1000 total
 
-    // Now withdraw all three remaining commitments
+    // Now withdraw all three remaining commitments (two-phase)
     // Withdraw c3_alice (Alice's 400 change)
     let n_alice_withdraw = compute_nullifier_hash(8);
     start_cheat_caller_address(pool_address, ALICE());
-    pool.withdraw(c3_alice, n_alice_withdraw, 400, 7, 8, ALICE(), 400);
+    pool.prepare_withdraw(c3_alice, n_alice_withdraw, 400, 7, 8, 400);
     stop_cheat_caller_address(pool_address);
+
+    pool.claim_withdrawal(n_alice_withdraw, ALICE());
 
     assert!(erc20.balance_of(ALICE()) == 4400, "Alice should have 4400 after withdrawing 400");
     assert!(pool.get_commitment_count() == 2, "Count should be 2");
@@ -356,8 +362,10 @@ fn test_chained_transfers_then_withdraw_all() {
     // Withdraw c2_bob (Bob's first received 400)
     let n_bob_withdraw1 = compute_nullifier_hash(6);
     start_cheat_caller_address(pool_address, BOB());
-    pool.withdraw(c2_bob, n_bob_withdraw1, 400, 5, 6, BOB(), 400);
+    pool.prepare_withdraw(c2_bob, n_bob_withdraw1, 400, 5, 6, 400);
     stop_cheat_caller_address(pool_address);
+
+    pool.claim_withdrawal(n_bob_withdraw1, BOB());
 
     assert!(erc20.balance_of(BOB()) == 400, "Bob should have 400 after first withdraw");
     assert!(pool.get_commitment_count() == 1, "Count should be 1");
@@ -366,8 +374,10 @@ fn test_chained_transfers_then_withdraw_all() {
     // Withdraw c3_bob (Bob's second received 200)
     let n_bob_withdraw2 = compute_nullifier_hash(10);
     start_cheat_caller_address(pool_address, BOB());
-    pool.withdraw(c3_bob, n_bob_withdraw2, 200, 9, 10, BOB(), 200);
+    pool.prepare_withdraw(c3_bob, n_bob_withdraw2, 200, 9, 10, 200);
     stop_cheat_caller_address(pool_address);
+
+    pool.claim_withdrawal(n_bob_withdraw2, BOB());
 
     assert!(erc20.balance_of(BOB()) == 600, "Bob should have 600 total");
     assert!(erc20.balance_of(pool_address) == 0, "Pool should be empty");
@@ -442,31 +452,37 @@ fn test_multiple_users_deposit_transfer_withdraw() {
     assert!(pool.get_commitment_count() == 3, "Count should be 3 after transfer");
     // Active: alice_change(700), bob_received(300), bob_c(500) = 1500
 
-    // Alice withdraws her 700 change
+    // Alice withdraws her 700 change (two-phase)
     let n_alice_w = compute_nullifier_hash(66);
     start_cheat_caller_address(pool_address, ALICE());
-    pool.withdraw(alice_change, n_alice_w, 700, 55, 66, ALICE(), 700);
+    pool.prepare_withdraw(alice_change, n_alice_w, 700, 55, 66, 700);
     stop_cheat_caller_address(pool_address);
+
+    pool.claim_withdrawal(n_alice_w, ALICE());
 
     assert!(erc20.balance_of(ALICE()) == 4700, "Alice should have 4700");
     assert!(pool.get_commitment_count() == 2, "Count should be 2");
     assert!(pool.get_total_deposited() == 800, "Total should be 800");
 
-    // Bob withdraws his received 300
+    // Bob withdraws his received 300 (two-phase)
     let n_bob_received_w = compute_nullifier_hash(88);
     start_cheat_caller_address(pool_address, BOB());
-    pool.withdraw(bob_received, n_bob_received_w, 300, 77, 88, BOB(), 300);
+    pool.prepare_withdraw(bob_received, n_bob_received_w, 300, 77, 88, 300);
     stop_cheat_caller_address(pool_address);
+
+    pool.claim_withdrawal(n_bob_received_w, BOB());
 
     assert!(erc20.balance_of(BOB()) == 2800, "Bob should have 2800");
     assert!(pool.get_commitment_count() == 1, "Count should be 1");
     assert!(pool.get_total_deposited() == 500, "Total should be 500");
 
-    // Bob withdraws his original 500 deposit
+    // Bob withdraws his original 500 deposit (two-phase)
     let n_bob_orig_w = compute_nullifier_hash(44);
     start_cheat_caller_address(pool_address, BOB());
-    pool.withdraw(bob_c, n_bob_orig_w, 500, 33, 44, BOB(), 500);
+    pool.prepare_withdraw(bob_c, n_bob_orig_w, 500, 33, 44, 500);
     stop_cheat_caller_address(pool_address);
+
+    pool.claim_withdrawal(n_bob_orig_w, BOB());
 
     assert!(erc20.balance_of(BOB()) == 3300, "Bob should have 3300");
     assert!(erc20.balance_of(pool_address) == 0, "Pool should be empty");
@@ -531,30 +547,36 @@ fn test_three_hop_transfer_then_withdraw() {
     assert!(pool.get_commitment_count() == 3, "Count should be 3");
     // Active: c_alice_change(400), c_bob_change(350), c_charlie(250)
 
-    // Charlie withdraws his 250
+    // Charlie withdraws his 250 (two-phase)
     let n_charlie_w = compute_nullifier_hash(100);
     start_cheat_caller_address(pool_address, charlie);
-    pool.withdraw(c_charlie, n_charlie_w, 250, 90, 100, charlie, 250);
+    pool.prepare_withdraw(c_charlie, n_charlie_w, 250, 90, 100, 250);
     stop_cheat_caller_address(pool_address);
+
+    pool.claim_withdrawal(n_charlie_w, charlie);
 
     assert!(erc20.balance_of(charlie) == 250, "Charlie should have 250");
     assert!(pool.get_commitment_count() == 2, "Count should be 2");
     assert!(pool.get_total_deposited() == 750, "Total should be 750");
 
-    // Bob withdraws his 350 change
+    // Bob withdraws his 350 change (two-phase)
     let n_bob_w = compute_nullifier_hash(80);
     start_cheat_caller_address(pool_address, BOB());
-    pool.withdraw(c_bob_change, n_bob_w, 350, 70, 80, BOB(), 350);
+    pool.prepare_withdraw(c_bob_change, n_bob_w, 350, 70, 80, 350);
     stop_cheat_caller_address(pool_address);
+
+    pool.claim_withdrawal(n_bob_w, BOB());
 
     assert!(erc20.balance_of(BOB()) == 350, "Bob should have 350");
     assert!(pool.get_commitment_count() == 1, "Count should be 1");
 
-    // Alice withdraws her 400 change
+    // Alice withdraws her 400 change (two-phase)
     let n_alice_w = compute_nullifier_hash(40);
     start_cheat_caller_address(pool_address, ALICE());
-    pool.withdraw(c_alice_change, n_alice_w, 400, 30, 40, ALICE(), 400);
+    pool.prepare_withdraw(c_alice_change, n_alice_w, 400, 30, 40, 400);
     stop_cheat_caller_address(pool_address);
+
+    pool.claim_withdrawal(n_alice_w, ALICE());
 
     assert!(erc20.balance_of(ALICE()) == 4400, "Alice should have 4400");
     assert!(erc20.balance_of(pool_address) == 0, "Pool should be empty");
@@ -600,10 +622,10 @@ fn test_withdraw_commitment_already_consumed_by_transfer() {
             600, 400, 33, 44, 55, 66,
         );
 
-    // Now try to withdraw c1 which was already consumed by the transfer
+    // Now try to prepare_withdraw c1 which was already consumed by the transfer
     let n_withdraw = compute_nullifier_hash(22);
     start_cheat_caller_address(pool_address, ALICE());
-    pool.withdraw(c1, n_withdraw, 1000, 11, 22, ALICE(), 1000);
+    pool.prepare_withdraw(c1, n_withdraw, 1000, 11, 22, 1000);
     stop_cheat_caller_address(pool_address);
 }
 
@@ -629,11 +651,13 @@ fn test_transfer_commitment_already_consumed_by_withdraw() {
     pool.deposit(1000, c1);
     stop_cheat_caller_address(pool_address);
 
-    // Withdraw c1 first
+    // Withdraw c1 first (two-phase)
     let n_withdraw = compute_nullifier_hash(22);
     start_cheat_caller_address(pool_address, ALICE());
-    pool.withdraw(c1, n_withdraw, 1000, 11, 22, ALICE(), 1000);
+    pool.prepare_withdraw(c1, n_withdraw, 1000, 11, 22, 1000);
     stop_cheat_caller_address(pool_address);
+
+    pool.claim_withdrawal(n_withdraw, ALICE());
 
     // Now try to transfer using the already-withdrawn c1
     let n_transfer = compute_nullifier_hash(22);

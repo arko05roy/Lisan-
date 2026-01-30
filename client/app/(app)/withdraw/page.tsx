@@ -19,6 +19,11 @@ import { txToast, errorToast } from "@/components/tx-toast";
 import { ADDRESSES, TOKEN_TYPE_BTC } from "@/lib/addresses";
 import { uint256 } from "starknet";
 
+interface PendingClaim {
+  nullifierHash: string;
+  source: "pool" | "amm";
+}
+
 export default function WithdrawPage() {
   const { address } = useAccount();
   const { sendAsync } = useSendTransaction({});
@@ -29,16 +34,16 @@ export default function WithdrawPage() {
   const [selectedAmm, setSelectedAmm] = useState<number | null>(null);
   const [recipient, setRecipient] = useState("");
   const [loading, setLoading] = useState(false);
+  const [pendingClaim, setPendingClaim] = useState<PendingClaim | null>(null);
 
   useEffect(() => {
     setPoolNotes(getPoolNotes().filter((n) => !n.spent));
     setAmmNotes(getAmmNotes().filter((n) => !n.spent));
   }, []);
 
-  async function withdrawPool() {
+  async function preparePoolWithdraw() {
     if (!address || selectedPool === null) return;
     const note = poolNotes[selectedPool];
-    const recip = recipient || address;
     setLoading(true);
     try {
       const nullifierHash = computeNullifierHash(note.nullifierSecret);
@@ -46,13 +51,12 @@ export default function WithdrawPage() {
       const u = uint256.bnToUint256(withdrawAmountBig);
 
       const result = await sendAsync([
-        buildCall(ADDRESSES.SHIELDED_POOL, "withdraw", [
+        buildCall(ADDRESSES.SHIELDED_POOL, "prepare_withdraw", [
           note.commitment,
           nullifierHash,
           note.amount,
           note.secret,
           note.nullifierSecret,
-          recip,
           u.low.toString(), u.high.toString(),
         ]),
       ]);
@@ -60,18 +64,18 @@ export default function WithdrawPage() {
       markPoolNoteSpent(note.commitment);
       t.success();
       setPoolNotes(getPoolNotes().filter((n) => !n.spent));
+      setPendingClaim({ nullifierHash, source: "pool" });
       setSelectedPool(null);
     } catch (e: unknown) {
-      errorToast(e instanceof Error ? e.message : "Withdraw failed");
+      errorToast(e instanceof Error ? e.message : "Prepare withdraw failed");
     } finally {
       setLoading(false);
     }
   }
 
-  async function withdrawAmm() {
+  async function prepareAmmWithdraw() {
     if (!address || selectedAmm === null) return;
     const note = ammNotes[selectedAmm];
-    const recip = recipient || address;
     setLoading(true);
     try {
       const nullifierHash = computeNullifierHash(note.nullifierSecret);
@@ -79,14 +83,13 @@ export default function WithdrawPage() {
       const u = uint256.bnToUint256(withdrawAmountBig);
 
       const result = await sendAsync([
-        buildCall(ADDRESSES.SHIELDED_AMM, "withdraw", [
+        buildCall(ADDRESSES.SHIELDED_AMM, "prepare_withdraw", [
           note.commitment,
           nullifierHash,
           note.amount,
           note.tokenType,
           note.secret,
           note.nullifierSecret,
-          recip,
           u.low.toString(), u.high.toString(),
         ]),
       ]);
@@ -94,9 +97,35 @@ export default function WithdrawPage() {
       markAmmNoteSpent(note.commitment);
       t.success();
       setAmmNotes(getAmmNotes().filter((n) => !n.spent));
+      setPendingClaim({ nullifierHash, source: "amm" });
       setSelectedAmm(null);
     } catch (e: unknown) {
-      errorToast(e instanceof Error ? e.message : "AMM withdraw failed");
+      errorToast(e instanceof Error ? e.message : "AMM prepare withdraw failed");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function claimWithdrawal() {
+    if (!address || !pendingClaim) return;
+    const recip = recipient || address;
+    setLoading(true);
+    try {
+      const contractAddr = pendingClaim.source === "pool"
+        ? ADDRESSES.SHIELDED_POOL
+        : ADDRESSES.SHIELDED_AMM;
+
+      const result = await sendAsync([
+        buildCall(contractAddr, "claim_withdrawal", [
+          pendingClaim.nullifierHash,
+          recip,
+        ]),
+      ]);
+      const t = txToast(result.transaction_hash);
+      t.success();
+      setPendingClaim(null);
+    } catch (e: unknown) {
+      errorToast(e instanceof Error ? e.message : "Claim failed");
     } finally {
       setLoading(false);
     }
@@ -131,27 +160,51 @@ export default function WithdrawPage() {
     });
   }
 
+  if (pendingClaim) {
+    return (
+      <div className="mx-auto max-w-lg space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold">Claim Withdrawal</h1>
+          <p className="text-muted-foreground">
+            Step 2: Send the escrowed funds to a recipient address.
+            This can be called from any wallet for privacy.
+          </p>
+        </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Recipient</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Input
+              placeholder="0x... (defaults to your wallet)"
+              value={recipient}
+              onChange={(e) => setRecipient(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              For maximum privacy, use a fresh wallet address that is not linked to your main account.
+            </p>
+            <Button className="w-full" disabled={loading || !address} onClick={claimWithdrawal}>
+              {loading ? "Processing..." : "Claim Withdrawal"}
+            </Button>
+            <Button variant="outline" className="w-full" onClick={() => setPendingClaim(null)}>
+              Cancel
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto max-w-lg space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Withdraw</h1>
         <p className="text-muted-foreground">
-          Withdraw tokens from the Shielded Pool or AMM
+          Step 1: Prepare withdrawal — proves note ownership and escrows funds.
+          No recipient address is revealed on-chain.
         </p>
       </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Recipient (optional)</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Input
-            placeholder="0x... (defaults to your wallet)"
-            value={recipient}
-            onChange={(e) => setRecipient(e.target.value)}
-          />
-        </CardContent>
-      </Card>
 
       <Tabs defaultValue="pool">
         <TabsList className="w-full">
@@ -167,8 +220,8 @@ export default function WithdrawPage() {
             <CardContent className="space-y-2">
               {renderNoteList(poolNotes, selectedPool, setSelectedPool, false)}
               {selectedPool !== null && (
-                <Button className="mt-4 w-full" disabled={loading || !address} onClick={withdrawPool}>
-                  {loading ? "Processing..." : "Withdraw from Pool"}
+                <Button className="mt-4 w-full" disabled={loading || !address} onClick={preparePoolWithdraw}>
+                  {loading ? "Processing..." : "Prepare Withdrawal"}
                 </Button>
               )}
             </CardContent>
@@ -183,8 +236,8 @@ export default function WithdrawPage() {
             <CardContent className="space-y-2">
               {renderNoteList(ammNotes, selectedAmm, setSelectedAmm, true)}
               {selectedAmm !== null && (
-                <Button className="mt-4 w-full" disabled={loading || !address} onClick={withdrawAmm}>
-                  {loading ? "Processing..." : "Withdraw from AMM"}
+                <Button className="mt-4 w-full" disabled={loading || !address} onClick={prepareAmmWithdraw}>
+                  {loading ? "Processing..." : "Prepare Withdrawal"}
                 </Button>
               )}
             </CardContent>

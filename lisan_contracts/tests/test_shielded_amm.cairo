@@ -670,10 +670,13 @@ fn test_withdraw_btc() {
     let user_balance_before = btc_erc20.balance_of(USER1());
     let nullifier_hash = compute_nullifier_hash(99);
 
-    // Withdraw BTC
+    // Phase 1: prepare_withdraw
     start_cheat_caller_address(amm_address, USER1());
-    amm.withdraw(commitment, nullifier_hash, 1000, TOKEN_TYPE_BTC, 42, 99, USER1(), 1000);
+    amm.prepare_withdraw(commitment, nullifier_hash, 1000, TOKEN_TYPE_BTC, 42, 99, 1000);
     stop_cheat_caller_address(amm_address);
+
+    // Phase 2: claim_withdrawal
+    amm.claim_withdrawal(nullifier_hash, USER1());
 
     assert!(!amm.is_commitment_valid(commitment), "Commitment should be invalid");
     assert!(amm.is_nullifier_used(nullifier_hash), "Nullifier should be used");
@@ -698,10 +701,13 @@ fn test_withdraw_strk() {
     let user_balance_before = strk_erc20.balance_of(USER1());
     let nullifier_hash = compute_nullifier_hash(88);
 
-    // Withdraw STRK to USER2
+    // Phase 1: prepare_withdraw
     start_cheat_caller_address(amm_address, USER1());
-    amm.withdraw(commitment, nullifier_hash, 5000, TOKEN_TYPE_STRK, 77, 88, USER2(), 5000);
+    amm.prepare_withdraw(commitment, nullifier_hash, 5000, TOKEN_TYPE_STRK, 77, 88, 5000);
     stop_cheat_caller_address(amm_address);
+
+    // Phase 2: claim to USER2
+    amm.claim_withdrawal(nullifier_hash, USER2());
 
     assert!(!amm.is_commitment_valid(commitment), "Commitment invalid");
     assert!(amm.is_nullifier_used(nullifier_hash), "Nullifier used");
@@ -730,12 +736,12 @@ fn test_withdraw_double_spend_fails() {
 
     // First withdraw succeeds
     start_cheat_caller_address(amm_address, USER1());
-    amm.withdraw(c1, nullifier_hash, 500, TOKEN_TYPE_BTC, 42, 99, USER1(), 500);
+    amm.prepare_withdraw(c1, nullifier_hash, 500, TOKEN_TYPE_BTC, 42, 99, 500);
     stop_cheat_caller_address(amm_address);
 
     // Second withdraw with same nullifier should fail
     start_cheat_caller_address(amm_address, USER1());
-    amm.withdraw(c2, nullifier_hash, 500, TOKEN_TYPE_BTC, 77, 99, USER1(), 500);
+    amm.prepare_withdraw(c2, nullifier_hash, 500, TOKEN_TYPE_BTC, 77, 99, 500);
     stop_cheat_caller_address(amm_address);
 }
 
@@ -754,7 +760,7 @@ fn test_withdraw_wrong_proof_fails() {
 
     // Wrong secret (999 instead of 42)
     start_cheat_caller_address(amm_address, USER1());
-    amm.withdraw(commitment, nullifier_hash, 1000, TOKEN_TYPE_BTC, 999, 99, USER1(), 1000);
+    amm.prepare_withdraw(commitment, nullifier_hash, 1000, TOKEN_TYPE_BTC, 999, 99, 1000);
     stop_cheat_caller_address(amm_address);
 }
 
@@ -768,7 +774,7 @@ fn test_withdraw_nonexistent_fails() {
     let nullifier_hash = compute_nullifier_hash(99);
 
     start_cheat_caller_address(amm_address, USER1());
-    amm.withdraw(fake, nullifier_hash, 1000, TOKEN_TYPE_BTC, 42, 99, USER1(), 1000);
+    amm.prepare_withdraw(fake, nullifier_hash, 1000, TOKEN_TYPE_BTC, 42, 99, 1000);
     stop_cheat_caller_address(amm_address);
 }
 
@@ -788,7 +794,7 @@ fn test_withdraw_wrong_token_type_fails() {
 
     // Try to withdraw as STRK — proof will fail because token_type is part of commitment
     start_cheat_caller_address(amm_address, USER1());
-    amm.withdraw(commitment, nullifier_hash, 1000, TOKEN_TYPE_STRK, 42, 99, USER1(), 1000);
+    amm.prepare_withdraw(commitment, nullifier_hash, 1000, TOKEN_TYPE_STRK, 42, 99, 1000);
     stop_cheat_caller_address(amm_address);
 }
 
@@ -854,23 +860,24 @@ fn test_full_flow_deposit_btc_swap_to_strk_withdraw_strk() {
     assert!(amm.get_btc_reserve() == 11000, "BTC reserve after swap");
     assert!(amm.get_strk_reserve() == 50000 - expected_strk, "STRK reserve after swap");
 
-    // Step 3: Withdraw STRK to USER1
+    // Step 3: Withdraw STRK to USER1 (two-phase)
     let nullifier_hash_withdraw = compute_nullifier_hash(300);
     let withdraw_amount: u256 = expected_strk;
 
     start_cheat_caller_address(amm_address, USER1());
     amm
-        .withdraw(
+        .prepare_withdraw(
             strk_commitment,
             nullifier_hash_withdraw,
             expected_strk_felt,
             TOKEN_TYPE_STRK,
             200,
             300,
-            USER1(),
             withdraw_amount,
         );
     stop_cheat_caller_address(amm_address);
+
+    amm.claim_withdrawal(nullifier_hash_withdraw, USER1());
 
     // User should have received STRK
     assert!(
@@ -926,22 +933,23 @@ fn test_full_flow_deposit_strk_swap_to_btc_withdraw_btc() {
         );
     stop_cheat_caller_address(amm_address);
 
-    // Step 3: Withdraw BTC
+    // Step 3: Withdraw BTC (two-phase)
     let nullifier_hash_withdraw = compute_nullifier_hash(44);
 
     start_cheat_caller_address(amm_address, USER1());
     amm
-        .withdraw(
+        .prepare_withdraw(
             btc_commitment,
             nullifier_hash_withdraw,
             expected_btc_felt,
             TOKEN_TYPE_BTC,
             33,
             44,
-            USER1(),
             expected_btc,
         );
     stop_cheat_caller_address(amm_address);
+
+    amm.claim_withdrawal(nullifier_hash_withdraw, USER1());
 
     assert!(btc_erc20.balance_of(USER1()) == user_btc_before + expected_btc, "User received BTC");
     assert!(strk_erc20.balance_of(USER1()) == user_strk_before - 5000, "User paid STRK");
@@ -1054,11 +1062,13 @@ fn test_reserves_unchanged_after_deposit_and_withdraw() {
         amm.get_strk_reserve() == strk_reserve_before, "STRK reserve unchanged after deposit",
     );
 
-    // Withdraw BTC
+    // Withdraw BTC (two-phase)
     let n1 = compute_nullifier_hash(99);
     start_cheat_caller_address(amm_address, USER1());
-    amm.withdraw(c1, n1, 1000, TOKEN_TYPE_BTC, 42, 99, USER1(), 1000);
+    amm.prepare_withdraw(c1, n1, 1000, TOKEN_TYPE_BTC, 42, 99, 1000);
     stop_cheat_caller_address(amm_address);
+
+    amm.claim_withdrawal(n1, USER1());
 
     assert!(amm.get_btc_reserve() == btc_reserve_before, "BTC reserve unchanged after withdraw");
     assert!(
@@ -1254,11 +1264,13 @@ fn test_withdraw_to_different_recipient() {
     amm.deposit(TOKEN_TYPE_BTC, 1000, commitment);
     stop_cheat_caller_address(amm_address);
 
-    // USER1 withdraws to USER2
+    // USER1 prepares withdraw, then claims to USER2
     let nullifier_hash = compute_nullifier_hash(99);
     start_cheat_caller_address(amm_address, USER1());
-    amm.withdraw(commitment, nullifier_hash, 1000, TOKEN_TYPE_BTC, 42, 99, USER2(), 1000);
+    amm.prepare_withdraw(commitment, nullifier_hash, 1000, TOKEN_TYPE_BTC, 42, 99, 1000);
     stop_cheat_caller_address(amm_address);
+
+    amm.claim_withdrawal(nullifier_hash, USER2());
 
     assert!(
         btc_erc20.balance_of(USER2()) == user2_balance_before + 1000, "USER2 received tokens",
