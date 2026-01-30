@@ -1,0 +1,247 @@
+{
+  "meta": {
+    "name": "Dark Fintech Dashboard System",
+    "style": "premium-dark-glassmorphism",
+    "mood": ["modern", "minimal", "high-contrast", "professional", "crypto/finance", "data-dense"],
+    "density": "compact",
+    "cornerStyle": "rounded-xl",
+    "designPhilosophy": "Layered dark surfaces with soft elevation, subtle glow accents, and card-based modular layout. Prioritize readability, hierarchy, and quick scanning of metrics."
+  },
+
+  "tokens": {
+    "colors": {
+      "background": {
+        "base": "#0B0F14",
+        "elevated": "#11161D",
+        "surface": "#151B23",
+        "card": "#1A2029",
+        "hover": "#222A36",
+        "border": "rgba(255,255,255,0.06)"
+      },
+      "text": {
+        "primary": "#FFFFFF",
+        "secondary": "rgba(255,255,255,0.72)",
+        "tertiary": "rgba(255,255,255,0.45)",
+        "muted": "rgba(255,255,255,0.28)"
+      },
+      "brand": {
+        "primary": "#8B8CFF",
+        "primaryGlow": "rgba(139,140,255,0.35)",
+        "accent": "#6F73FF"
+      },
+      "status": {
+        "positive": "#22C55E",
+        "negative": "#EF4444",
+        "warning": "#F59E0B",
+        "info": "#60A5FA"
+      },
+      "gradients": {
+        "brandSoft": "linear-gradient(135deg, #8B8CFF, #6F73FF)",
+        "cardHighlight": "linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0))"
+      }
+    },
+
+    "typography": {
+      "fontFamily": "Inter, ui-sans-serif, system-ui",
+      "scale": {
+        "xs": "12px",
+        "sm": "13px",
+        "base": "14px",
+        "md": "16px",
+        "lg": "20px",
+        "xl": "28px",
+        "2xl": "40px"
+      },
+      "weights": {
+        "regular": 400,
+        "medium": 500,
+        "semibold": 600,
+        "bold": 700
+      },
+      "tracking": {
+        "tight": "-0.01em",
+        "normal": "0em"
+      }
+    },
+
+    "spacing": {
+      "unit": 4,
+      "scale": [4, 8, 12, 16, 20, 24, 32, 40, 48]
+    },
+
+    "radius": {
+      "sm": 8,
+      "md": 12,
+      "lg": 16,
+      "xl": 20,
+      "pill": 999
+    },
+
+    "shadow": {
+      "card": "0 8px 30px rgba(0,0,0,0.45)",
+      "hover": "0 12px 40px rgba(0,0,0,0.55)",
+      "glow": "0 0 0 1px rgba(139,140,255,0.3), 0 0 20px rgba(139,140,255,0.25)"
+    },
+
+    "motion": {
+      "fast": "120ms ease",
+      "normal": "200ms ease",
+      "slow": "320ms ease",
+      "hoverLift": "translateY(-2px)"
+    }
+  },
+
+  "layout": {
+    "type": "dashboard",
+    "grid": {
+      "columns": 12,
+      "gutter": 24,
+      "maxWidth": 1440,
+      "sidebarWidth": 260,
+      "headerHeight": 64
+    },
+    "structure": [
+      "top-header",
+      "left-sidebar",
+      "main-content-grid",
+      "cards-as-modules"
+    ],
+    "rules": [
+      "Use cards for all data clusters",
+      "Avoid full-bleed sections",
+      "Keep consistent padding inside modules",
+      "Group related stats horizontally"
+    ]
+  },
+
+  "surfaces": {
+    "card": {
+      "background": "colors.background.card",
+      "border": "1px solid colors.background.border",
+      "radius": "radius.lg",
+      "shadow": "shadow.card",
+      "padding": 20
+    },
+    "panel": {
+      "background": "colors.background.elevated",
+      "radius": "radius.xl",
+      "padding": 24
+    },
+    "glass": {
+      "background": "rgba(255,255,255,0.04)",
+      "backdropBlur": 12,
+      "border": "1px solid rgba(255,255,255,0.08)"
+    }
+  },
+
+  "components": {
+    "sidebar": {
+      "style": "vertical-navigation",
+      "background": "colors.background.elevated",
+      "itemHeight": 44,
+      "itemRadius": "radius.md",
+      "activeStyle": "soft-glow + brand background tint"
+    },
+
+    "topbar": {
+      "style": "minimal",
+      "height": 64,
+      "elements": ["search", "actions", "profile", "cta-button"]
+    },
+
+    "card": {
+      "style": "elevated",
+      "padding": 20,
+      "header": {
+        "fontSize": "sm",
+        "color": "text.secondary"
+      },
+      "metric": {
+        "fontSize": "xl",
+        "weight": "bold"
+      }
+    },
+
+    "button": {
+      "primary": {
+        "bg": "colors.brand.primary",
+        "color": "#ffffff",
+        "radius": "radius.md",
+        "shadow": "shadow.glow"
+      },
+      "secondary": {
+        "bg": "colors.background.hover",
+        "color": "text.primary",
+        "border": "1px solid colors.background.border"
+      },
+      "ghost": {
+        "bg": "transparent",
+        "color": "text.secondary"
+      }
+    },
+
+    "badge": {
+      "radius": "radius.pill",
+      "padding": "4px 10px",
+      "fontSize": "xs",
+      "styles": ["success", "danger", "info"]
+    },
+
+    "input": {
+      "background": "colors.background.surface",
+      "border": "1px solid colors.background.border",
+      "radius": "radius.md",
+      "padding": "10px 14px",
+      "focus": "brand glow"
+    },
+
+    "chart": {
+      "background": "transparent",
+      "gridColor": "rgba(255,255,255,0.06)",
+      "lineWidth": 2,
+      "smooth": true,
+      "useGlow": true
+    }
+  },
+
+  "interactionPatterns": {
+    "hover": [
+      "slight lift",
+      "increase brightness",
+      "soft glow on actionable items"
+    ],
+    "active": [
+      "tint with brand color",
+      "stronger shadow"
+    ],
+    "transitions": "subtle and fast, avoid bouncy animations",
+    "feedback": "color-coded metrics and badges"
+  },
+
+  "informationDesign": {
+    "hierarchy": [
+      "big number",
+      "label",
+      "trend indicator",
+      "micro chart"
+    ],
+    "grouping": "cluster related metrics inside single card",
+    "readability": "high contrast, minimal clutter, avoid decorative noise"
+  },
+
+  "iconography": {
+    "style": "thin outline",
+    "stroke": 1.5,
+    "size": 16,
+    "color": "text.secondary"
+  },
+
+  "aiReplicationHints": [
+    "Always place content inside modular cards",
+    "Prefer dark surfaces with subtle depth instead of flat black",
+    "Use brand gradient sparingly for CTAs",
+    "Keep typography minimal and numeric-heavy",
+    "Use glow + shadow instead of hard borders",
+    "Design for dashboards, not marketing pages"
+  ]
+}
