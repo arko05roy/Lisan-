@@ -13,7 +13,7 @@
 
 ---
 
-## CURRENT STATUS (Updated Jan 30, 2026 — Day 2, Deployment COMPLETE)
+## CURRENT STATUS (Updated Jan 30, 2026 — Day 2, Frontend BUILT)
 
 | Phase | Status | Details |
 |-------|--------|---------|
@@ -24,14 +24,15 @@
 | Phase 5: Prediction Market | ✅ COMPLETE (Day 1) | MockPragmaOracle + PredictionMarket (create, bet, resolve, claim) — 68 tests, 156 total |
 | Phase 6: Private Voting | ✅ COMPLETE (Day 1) | PrivateVoting (create, cast, tally) — 41 tests, 183 total |
 | Phase 7: Deploy | ✅ COMPLETE (Day 2) | All 7 contracts declared + deployed to Starknet Sepolia |
-| Phase 7: Frontend | ⏳ STARTING Day 2 (Jan 30 - Feb 8) | Unified UI for ALL flows |
+| Phase 7: Frontend | ✅ BUILT (Day 2) | All 7 pages + shell + wallet + ABIs + crypto + storage |
+| Phase 7a: Frontend Polish | ⏳ IN PROGRESS (Jan 30 - Feb 8) | E2E testing, error handling, UX polish |
 | Phase 7b: New Features | ⏳ CONDITIONAL (Feb 9-14) | Only if frontend done + feature passes demo impact test |
 | Phase 8: Video | ⏳ PENDING (Feb 15-20) | Script LOCKED Feb 15. Record + edit. |
 | Phase 9: Submission | ⏳ PENDING (Feb 21-28) | README, GitHub theater, DoraHacks, buffer |
 
-**Pace:** ALL 6 contract phases completed in Day 1 (originally planned for 14+ days). Full privacy loop (deposit → transfer → withdraw), shielded AMM (deposit → swap → withdraw), prediction market (create → bet → resolve → claim), AND private voting (create → vote → tally) all operational. 183 tests passing. All 3 arms complete — "Winning Submission" contract scope achieved. **Day 2:** All 7 contracts declared and deployed to Starknet Sepolia testnet. Deployment addresses saved to `.env`.
+**Pace:** ALL 6 contract phases completed in Day 1 (originally planned for 14+ days). Full privacy loop (deposit → transfer → withdraw), shielded AMM (deposit → swap → withdraw), prediction market (create → bet → resolve → claim), AND private voting (create → vote → tally) all operational. 183 tests passing. All 3 arms complete — "Winning Submission" contract scope achieved. **Day 2:** All 7 contracts declared and deployed to Starknet Sepolia testnet. Deployment addresses saved to `.env`. **Full frontend built same day:** Next.js 16 App Router, dark theme, Starknet wallet connection (Argent X + Braavos), all 7 pages implemented with contract interaction, Poseidon commitment generation, localStorage secret management, transaction toast notifications. Build passes clean.
 
-**Contract scope:** CONDITIONALLY FROZEN. Frontend for existing 4 primitives must be complete before any new contract work. New features must pass demo impact test and clear all gates (contract + frontend + video fit) by Feb 15.
+**Contract scope:** CONDITIONALLY FROZEN. Frontend polish and E2E testing are the priority. New features must pass demo impact test and clear all gates (contract + frontend + video fit) by Feb 15.
 
 ### Deployed Contract Addresses (Starknet Sepolia)
 ```
@@ -486,58 +487,87 @@ Anyone                      │                      │
 ### DAYS 2-11 (Jan 30-Feb 8) — Deploy + Frontend
 **Goal:** Deploy contracts to Sepolia + Unified UI for ALL private DeFi flows
 
-**Day 2 (Jan 30): Deploy + Scaffold**
+**Day 2 (Jan 30): Deploy + Full Frontend**
 - [x] Deploy ALL contracts to Starknet Sepolia testnet ✅ (7 contracts declared + deployed)
 - [x] Save deployment addresses to `.env`, add `.env` to `.gitignore` ✅
-- [ ] Frontend scaffold: Next.js + starknet-react + wallet connection (Argent/Braavos)
-- [ ] Deposit + Transfer + Withdraw UI working by EOD
-- [ ] Check-in: wallet connection screenshot + deposit flow status
+- [x] Frontend scaffold: Next.js 16 + starknet-react + starknet v8 + wallet connection (Argent X/Braavos) ✅
+- [x] shadcn/ui components (button, card, input, label, select, tabs, dialog, badge, separator, sonner) ✅
+- [x] StarknetProvider with Sepolia chain, dark theme, Toaster ✅
+- [x] Sidebar navigation grouped by primitive (Pool, AMM, Governance) ✅
+- [x] Wallet connect/disconnect button with address display ✅
+- [x] Transaction toast notifications with Starkscan links ✅
+- [x] All 5 ABI files extracted from contract interfaces ✅
+- [x] Poseidon commitment library (all 5 commitment types matching Cairo) ✅
+- [x] localStorage CRUD for notes (PoolNote, AmmNote, BetNote, VoteNote) + export/import ✅
+- [x] Contract call builders (approve, generic calls) ✅
+- [x] Dashboard page: wallet balances, pool stats, AMM reserves, note counts, quick actions, backup/restore, faucet ✅
+- [x] Deposit page: Pool (mBTC) + AMM (mBTC/mSTRK) tabs with auto commitment generation ✅
+- [x] Transfer page: note selection, 13-param transfer call, recipient secret display ✅
+- [x] Withdraw page: Pool + AMM tabs, note selection, optional custom recipient ✅
+- [x] Swap page: AMM note selection, live quote via get_amount_out, new commitment generation ✅
+- [x] Predict page: Create Market / Place Bet / Resolve / Claim tabs with full commitment flow ✅
+- [x] Vote page: Create Proposal / Cast Vote / Tally tabs with revealed votes encoding ✅
+- [x] Testnet faucet component (owner-only mint, supports custom recipient) ✅
+- [x] `next build` passes clean — all 8 routes generated ✅
 
-**Day 3 (Jan 31): Swap + Prediction UI**
-- [ ] Swap UI (deposit into AMM, swap BTC↔STRK, withdraw)
-- [ ] Prediction market UI (create market, place bet, view results)
+**Day 3 (Jan 31): E2E Testing + Polish**
+- [ ] Test deposit → transfer → withdraw loop end-to-end on Sepolia
+- [ ] Test AMM deposit → swap → withdraw loop
+- [ ] Test prediction market create → bet → resolve → claim flow
+- [ ] Test voting create → cast → tally flow
+- [ ] Fix any contract interaction issues found during testing
+- [ ] Loading states and error boundary improvements
 
-**Day 4 (Feb 1): Voting + Dashboard**
-- [ ] Voting UI (create proposal, cast vote, tally)
-- [ ] Unified dashboard showing all primitives
+**Day 4 (Feb 1): Polish Continued**
+- [ ] Responsive design pass
 - [ ] Hackathon officially starts
-
-**Days 5-11 (Feb 2-8): Polish**
-- [ ] Loading states, error handling, responsive design
-- [ ] Local secret management (commitment/nullifier storage client-side)
-- [ ] Claim flow for prediction market
 - [ ] Polish all flows for video recording quality
-- [ ] Test all flows end-to-end on Sepolia
 
-**Frontend Structure:**
+**Days 5-11 (Feb 2-8): Final Polish**
+- [ ] Edge case handling (zero amounts, missing wallet, etc.)
+- [ ] Visual polish for demo video
+- [ ] Test all flows end-to-end on Sepolia (regression)
+
+**Frontend Structure (Implemented):**
 ```
-/app
-  /page.tsx                 # Landing — "Every DeFi primitive leaks your intent"
-  /dashboard/page.tsx       # Unified dashboard showing all primitives
-  /deposit/page.tsx         # Deposit BTC into shielded pool
-  /transfer/page.tsx        # Private transfer
-  /withdraw/page.tsx        # Withdraw from pool
-  /swap/page.tsx            # Private swap — deposit/swap/withdraw via AMM
-  /predict/page.tsx         # Prediction market — create/bet/claim
-  /vote/page.tsx            # Private voting — create/cast/tally
-/components
-  /WalletConnect.tsx
-  /ShieldedBalance.tsx
-  /DepositForm.tsx
-  /TransferForm.tsx
-  /WithdrawForm.tsx
-  /SwapForm.tsx
-  /MarketCreate.tsx
-  /PlaceBet.tsx
-  /ClaimWinnings.tsx
-  /CreateProposal.tsx
-  /CastVote.tsx
-  /TallyResults.tsx
-/lib
-  /starknet.ts              # Contract interactions
-  /crypto.ts                # Commitment generation, proof generation
-  /storage.ts               # Local secret storage (commitments, nullifiers)
-  /contracts.ts             # Contract addresses and ABIs
+client/
+  .env.local                          # All 7 contract addresses
+  .npmrc                              # legacy-peer-deps for starknet-react
+  lib/
+    utils.ts                          # cn() helper (shadcn)
+    addresses.ts                      # Typed address constants + TOKEN_TYPE_BTC/STRK
+    crypto.ts                         # 5 Poseidon commitment functions + generateSecret()
+    storage.ts                        # localStorage CRUD: PoolNote, AmmNote, BetNote, VoteNote
+    contracts.ts                      # buildApproveCall(), buildCall()
+    abis/
+      index.ts                        # Re-exports
+      erc20.ts                        # ERC20 + mint ABI
+      shielded-pool.ts               # deposit, transfer (13 params), withdraw, views
+      shielded-amm.ts                # seed, deposit, swap (11 params), withdraw, get_amount_out, reserves
+      prediction-market.ts           # create_market, place_bet, resolve, claim, market views
+      private-voting.ts              # create_proposal, cast_vote, tally (Span<RevealedVote>), proposal views
+  components/
+    providers/
+      starknet-provider.tsx           # StarknetConfig: Sepolia, publicProvider, Argent X + Braavos
+    layout/
+      sidebar.tsx                     # Nav links grouped: Overview, Pool, AMM, Governance
+    wallet-button.tsx                 # connect/disconnect + shortened address display
+    tx-toast.tsx                      # txToast() + errorToast() with Starkscan links
+    mint-tokens.tsx                   # Owner-only faucet, supports custom recipient
+    ui/                               # shadcn: button, card, input, label, select, tabs, dialog, badge, separator, sonner
+  app/
+    layout.tsx                        # StarknetProvider wrapper, dark mode, Toaster
+    page.tsx                          # Landing page (UNTOUCHED)
+    globals.css                       # Tailwind v4 + shadcn dark theme
+    (app)/
+      layout.tsx                      # App shell: sidebar + topbar (wallet) + scrollable content
+      dashboard/page.tsx              # Balances, pool stats, AMM reserves, notes, quick actions, backup, faucet
+      deposit/page.tsx                # Pool (mBTC) + AMM (mBTC/mSTRK) tabs, auto secrets
+      transfer/page.tsx               # Note select, transfer amount, 13-param call, recipient secrets
+      withdraw/page.tsx               # Pool + AMM tabs, note select, custom recipient
+      swap/page.tsx                   # AMM note select, live quote, swap with new commitment
+      predict/page.tsx                # Create / Bet / Resolve / Claim tabs
+      vote/page.tsx                   # Create / Vote / Tally tabs
 ```
 
 ---
@@ -705,23 +735,26 @@ Project name, GitHub link, your name
 | ~~Swap atomicity complex~~ | N/A — AMM approach, no atomic swaps needed. |
 | ~~Oracle integration~~ | N/A — Pragma interface implemented with mock data. |
 | ~~Time-lock testing~~ | N/A — block manipulation working in tests. |
-| Frontend for 6 flows | Unified dashboard, shared components. Don't over-design. User claims frontend is a strength — 10 days. |
+| ~~Frontend for 6 flows~~ | N/A — All 7 pages built Day 2. Build passes. Now in E2E testing + polish phase. |
 | Video too long | Keep under 3 minutes. 30 seconds per primitive max. |
-| Feature creep | Contract scope conditionally frozen. New features only after frontend is done + demo impact test passed. Hard cutoff Feb 15. |
-| Frontend slower than claimed | If Day 2-3 output is weak, reallocate conditional days (Feb 9-11) to frontend polish instead of new features. |
+| Feature creep | Contract scope conditionally frozen. New features only after E2E testing complete + demo impact test passed. Hard cutoff Feb 15. |
+| ~~Frontend slower than claimed~~ | N/A — Full frontend delivered Day 2 alongside deployment. |
+| E2E bugs on Sepolia | Priority for Day 3+. Calldata encoding, u256 handling, and Poseidon hash matching are the top risk areas. |
 
 ### MVP vs Winning
 
-**MVP (Must Ship):** ✅ CONTRACT SCOPE ACHIEVED
+**MVP (Must Ship):** ✅ CONTRACT + FRONTEND ACHIEVED
 - ~~ShieldedPool: deposit + transfer + withdraw~~ ✅
 - ~~At least 2 arms working~~ ✅ All 3 arms done
-- Basic frontend showing flows — **NEXT**
+- ~~Basic frontend showing flows~~ ✅ All 7 pages built, build passes clean
 - Video under 3 minutes — **PENDING**
 - GitHub with README — **PENDING**
 
-**Winning Submission (Full Platform):** ✅ CONTRACT SCOPE ACHIEVED
+**Winning Submission (Full Platform):** ✅ CONTRACT + FRONTEND BUILT
 - ~~All 3 arms working (swap + prediction + voting)~~ ✅ 183 tests
-- Polished unified UI — **NEXT (Days 2-11)**
+- ~~Unified UI for all primitives~~ ✅ Built Day 2 — dark theme, sidebar nav, all pages
+- E2E testing on Sepolia — **IN PROGRESS (Day 3+)**
+- Polished UX (loading states, error handling) — **NEXT**
 - Compelling platform narrative in video — **PENDING (Days 18-23)**
 - All demos smooth (no bugs during recording) — **PENDING**
 - Clean GitHub with architecture docs — **PENDING (Days 24-28)**
@@ -804,13 +837,20 @@ Project name, GitHub link, your name
 - [x] Transfer works with privacy (inline constraint verification, STARK-proven)
 - [x] Withdraw works (full privacy loop: deposit → transfer → withdraw, 44 tests passing)
 - [x] At least 2 arms working ✅ (ALL 3 arms complete)
+- [x] Frontend for all flows ✅ (7 pages + dashboard + wallet + dark theme)
+- [ ] E2E tested on Sepolia (deposit → transfer → withdraw loop verified)
 - [ ] Video under 3 minutes showing the platform
 - [ ] GitHub with README
 - [ ] DoraHacks submission complete
 
 ### Winning Submission
 - [x] All 3 arms working (swap + prediction + voting) ✅ 183 tests passing
-- [ ] Clean, intuitive unified UI
+- [x] Unified UI ✅ Next.js 16, sidebar nav, all 7 pages, shadcn/ui, dark theme
+- [x] Wallet connection (Argent X + Braavos) ✅
+- [x] Poseidon commitment generation matching Cairo ✅
+- [x] localStorage secret management with export/import backup ✅
+- [ ] E2E flows verified on Sepolia
+- [ ] Loading states + error handling polish
 - [ ] Clear technical documentation
 - [ ] Compelling platform narrative in video
 - [ ] All demos smooth (no bugs during recording)
