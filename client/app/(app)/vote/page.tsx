@@ -77,8 +77,8 @@ export default function VotePage() {
     try {
       const secret = generateSecret();
       const nullifierSecret = generateSecret();
-      const voteCommitment = computeVoteCommitment(voteChoice, secret, nullifierSecret);
-      const nullifierHash = computeNullifierHash(nullifierSecret);
+      const voteCommitment = await computeVoteCommitment(voteChoice, secret, nullifierSecret);
+      const nullifierHash = await computeNullifierHash(nullifierSecret);
 
       const result = await sendAsync([
         buildCall(ADDRESSES.PRIVATE_VOTING, "cast_vote", [

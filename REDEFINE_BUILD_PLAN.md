@@ -13,7 +13,7 @@
 
 ---
 
-## CURRENT STATUS (Updated Jan 30, 2026 — Day 2, Frontend BUILT)
+## CURRENT STATUS (Updated Jan 31, 2026 — Day 3, E2E WORKING)
 
 | Phase | Status | Details |
 |-------|--------|---------|
@@ -25,12 +25,14 @@
 | Phase 6: Private Voting | ✅ COMPLETE (Day 1) | PrivateVoting (create, cast, tally) — 41 tests, 183 total |
 | Phase 7: Deploy | ✅ COMPLETE (Day 2) | All 7 contracts declared + deployed to Starknet Sepolia |
 | Phase 7: Frontend | ✅ BUILT (Day 2) | All 7 pages + shell + wallet + ABIs + crypto + storage |
-| Phase 7a: Frontend Polish | ⏳ IN PROGRESS (Jan 30 - Feb 8) | E2E testing, error handling, UX polish |
-| Phase 7b: New Features | ⏳ CONDITIONAL (Feb 9-14) | Only if frontend done + feature passes demo impact test |
+| Phase 7a: Privacy Overhaul | ✅ COMPLETE (Day 3) | Merkle tree, on-chain events, Stark Poseidon, relayer, DEMO_MODE bypass |
+| Phase 7b: E2E Testing | ✅ VERIFIED (Day 3) | Deposit → withdraw loop confirmed on Sepolia via Voyager explorer |
+| Phase 7c: Frontend Polish | ⏳ IN PROGRESS (Feb 1-8) | UX polish, error handling, remaining flow testing |
+| Phase 7d: New Features | ⏳ CONDITIONAL (Feb 9-14) | Only if frontend done + feature passes demo impact test |
 | Phase 8: Video | ⏳ PENDING (Feb 15-20) | Script LOCKED Feb 15. Record + edit. |
 | Phase 9: Submission | ⏳ PENDING (Feb 21-28) | README, GitHub theater, DoraHacks, buffer |
 
-**Pace:** ALL 6 contract phases completed in Day 1 (originally planned for 14+ days). Full privacy loop (deposit → transfer → withdraw), shielded AMM (deposit → swap → withdraw), prediction market (create → bet → resolve → claim), AND private voting (create → vote → tally) all operational. 183 tests passing. All 3 arms complete — "Winning Submission" contract scope achieved. **Day 2:** All 7 contracts declared and deployed to Starknet Sepolia testnet. Deployment addresses saved to `.env`. **Full frontend built same day:** Next.js 16 App Router, dark theme, Starknet wallet connection (Argent X + Braavos), all 7 pages implemented with contract interaction, Poseidon commitment generation, localStorage secret management, transaction toast notifications. Build passes clean.
+**Pace:** ALL 6 contract phases completed in Day 1 (originally planned for 14+ days). Full privacy loop (deposit → transfer → withdraw), shielded AMM (deposit → swap → withdraw), prediction market (create → bet → resolve → claim), AND private voting (create → vote → tally) all operational. 183 tests passing. All 3 arms complete — "Winning Submission" contract scope achieved. **Day 2:** All 7 contracts declared and deployed to Starknet Sepolia testnet. Deployment addresses saved to `.env`. **Full frontend built same day:** Next.js 16 App Router, dark theme, Starknet wallet connection (Argent X + Braavos), all 7 pages implemented with contract interaction, Poseidon commitment generation, localStorage secret management, transaction toast notifications. Build passes clean. **Day 3:** Major privacy overhaul — replaced flat commitment storage with incremental Merkle tree (depth 20), switched from BN254 Poseidon to Stark-field Poseidon, added server-side event fetching via API route, implemented DEMO_MODE circuit bypass, relayer-based two-step withdraw flow, migrated RPC from dead BlastAPI to Alchemy v0.8. **First successful deposit → prepare_withdraw → claim_withdrawal confirmed on Sepolia and visible on Voyager explorer.**
 
 **Contract scope:** CONDITIONALLY FROZEN. Frontend polish and E2E testing are the priority. New features must pass demo impact test and clear all gates (contract + frontend + video fit) by Feb 15.
 
@@ -88,9 +90,14 @@ lisan_contracts/
 ```
 
 ### Key Design Decisions Made
-- **Hash function:** Poseidon (native Cairo, cheapest gas)
-- **Commitment storage:** Flat `Map<felt252, bool>` (no Merkle tree for MVP)
-- **Proof approach:** Inline Cairo constraint checks (Starknet execution is STARK-proven)
+- **Hash function:** Stark-field Poseidon (Cairo's native `PoseidonTrait`) for on-chain + client. BN254 Poseidon in circom circuits (Groth16). On-chain `bn254_poseidon.cairo` currently uses Stark Poseidon as dev placeholder; production will switch to Garaga BN254 ops.
+- **Commitment storage:** Incremental Merkle tree (depth 20, 2^20 = 1M leaves) with 30-root ring buffer. Commitments inserted as leaves; proofs reference any of the last 30 roots.
+- **Merkle tree reconstruction:** Client fetches all `Deposit` events via server-side `/api/events` API route (avoids browser CORS on RPC), rebuilds full tree client-side using `buildTreeFromChain()`.
+- **Proof approach (DEMO_MODE):** Circuit execution skipped — `generateProof()` emits public signals directly from inputs. `MockGroth16Verifier` on-chain reads public signals without verifying Groth16 proof. Production will use snarkjs + Garaga calldata.
+- **Proof approach (Production):** Circom circuits (BN254 Groth16) generate real proofs via snarkjs. Garaga npm converts proof + verification key into `full_proof_with_hints` calldata for on-chain verification.
+- **Withdraw flow:** Two-step relayer-based: (1) `prepare_withdraw` — user generates ZK proof locally, relayer submits to escrow funds keyed by nullifier; (2) `claim_withdrawal` — user provides fresh recipient address, relayer transfers escrowed funds. Wallet identity hidden.
+- **Client-side Poseidon:** `ec.starkCurve.poseidonHashMany` from starknet.js (matches Cairo `PoseidonTrait::new().update(...).finalize()`). Replaced circomlibjs BN254 Poseidon which caused felt252 overflow (~83% of BN254 outputs exceed Stark field prime).
+- **RPC endpoint:** Alchemy Starknet Sepolia v0.8 (BlastAPI deprecated). Server-side `STARKNET_RPC_URL` used by relayer API routes and event fetching.
 - **ERC20:** OpenZeppelin Cairo components (git main branch, Cairo 2.15.0 compatible)
 - **Amounts:** felt252 for Poseidon compatibility, u256 for ERC20 amounts
 - **Architecture:** ShieldedPool is the core (octopus body), arms extend it for specific DeFi primitives
@@ -102,6 +109,7 @@ lisan_contracts/
 - **Nullifier mismatch detection:** During tally, verifies `compute_nullifier_hash(nullifier_secret)` matches stored `nullifier_hash` — prevents fake nullifier bypass
 - **Voting reveal:** Time-locked by `get_block_timestamp()`, trustless — anyone can trigger tally after end_time
 - **Partial reveals:** Unrevealed votes simply aren't counted in tally; tie-breaking favors lowest index option
+- **Explorer links:** Voyager (`sepolia.voyager.online`) — Starkscan deprecated/redirects to Voyager
 
 ---
 

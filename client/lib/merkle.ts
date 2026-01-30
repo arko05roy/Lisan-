@@ -1,36 +1,28 @@
 /**
  * Client-side Merkle tree that mirrors the on-chain incremental Poseidon Merkle tree.
  *
- * Uses circomlibjs Poseidon (BN254 field) to match the ZK circuits.
+ * Uses Stark-field Poseidon (matching Cairo's PoseidonTrait) for hashing.
  * Reconstructs the tree from on-chain Deposit events.
  */
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let poseidonInstance: any = null;
+import { ec } from "starknet";
 
-async function getPoseidon() {
-  if (poseidonInstance) return poseidonInstance;
-  // Dynamic import — circomlibjs uses WASM
-  const circomlibjs = await import("circomlibjs");
-  poseidonInstance = await circomlibjs.buildPoseidon();
-  return poseidonInstance;
-}
+const { poseidonHashMany } = ec.starkCurve;
 
 /**
- * Compute BN254 Poseidon hash (matches circomlib).
+ * Compute Stark-field Poseidon hash.
+ * Matches Cairo's PoseidonTrait::new().update(...).finalize().
  * Returns a BigInt.
  */
-export async function poseidonHash(inputs: bigint[]): Promise<bigint> {
-  const poseidon = await getPoseidon();
-  const hash = poseidon(inputs.map((x) => x));
-  return poseidon.F.toObject(hash);
+export function poseidonHash(inputs: bigint[]): bigint {
+  return poseidonHashMany(inputs);
 }
 
 /**
  * Compute Poseidon hash of two elements (for Merkle tree nodes).
  */
-export async function poseidonHash2(left: bigint, right: bigint): Promise<bigint> {
-  return poseidonHash([left, right]);
+export function poseidonHash2(left: bigint, right: bigint): bigint {
+  return poseidonHashMany([left, right]);
 }
 
 const TREE_LEVELS = 20;
@@ -47,7 +39,7 @@ export interface MerklePath {
 }
 
 /**
- * Incremental Merkle tree (BN254 Poseidon) — mirrors the on-chain component.
+ * Incremental Merkle tree (Stark Poseidon) — mirrors the on-chain component.
  */
 export class MerkleTree {
   levels: number;
@@ -75,7 +67,7 @@ export class MerkleTree {
 
     let currentZero = ZERO_VALUE;
     for (let i = 1; i <= this.levels; i++) {
-      currentZero = await poseidonHash2(currentZero, currentZero);
+      currentZero = poseidonHash2(currentZero, currentZero);
       this._zeros[i] = currentZero;
       this._filledSubtrees[i] = currentZero;
     }
@@ -101,9 +93,9 @@ export class MerkleTree {
     for (let i = 0; i < this.levels; i++) {
       if (currentIndex % 2 === 0) {
         this._filledSubtrees[i] = currentLevelHash;
-        currentLevelHash = await poseidonHash2(currentLevelHash, this._zeros[i]);
+        currentLevelHash = poseidonHash2(currentLevelHash, this._zeros[i]);
       } else {
-        currentLevelHash = await poseidonHash2(this._filledSubtrees[i], currentLevelHash);
+        currentLevelHash = poseidonHash2(this._filledSubtrees[i], currentLevelHash);
       }
       currentIndex = Math.floor(currentIndex / 2);
     }
@@ -123,47 +115,57 @@ export class MerkleTree {
 
   /**
    * Get the Merkle path (proof) for a leaf at the given index.
-   * This recomputes the path from scratch using all inserted leaves.
+   * optimized to use sparse tree traversal (skipping empty subtrees).
    */
   async getPath(leafIndex: number): Promise<MerklePath> {
     if (!this._initialized) throw new Error("Tree not initialized");
     if (leafIndex >= this._nextIndex) throw new Error("Leaf index out of range");
 
-    // Build full tree layer by layer
-    const layers: bigint[][] = [];
-
-    // Layer 0: all leaves, padded with zeros
-    const totalLeaves = 2 ** this.levels;
-    const layer0: bigint[] = new Array(totalLeaves);
-    for (let i = 0; i < totalLeaves; i++) {
-      layer0[i] = i < this._leaves.length ? this._leaves[i] : this._zeros[0];
-    }
-    layers.push(layer0);
-
-    // Build parent layers
-    for (let level = 1; level <= this.levels; level++) {
-      const prevLayer = layers[level - 1];
-      const layerSize = prevLayer.length / 2;
-      const layer: bigint[] = new Array(layerSize);
-      for (let j = 0; j < layerSize; j++) {
-        layer[j] = await poseidonHash2(prevLayer[2 * j], prevLayer[2 * j + 1]);
-      }
-      layers.push(layer);
-    }
-
-    // Extract path
     const pathElements: bigint[] = [];
     const pathIndices: number[] = [];
 
-    let idx = leafIndex;
+    let currentIndex = leafIndex;
     for (let level = 0; level < this.levels; level++) {
-      const siblingIdx = idx % 2 === 0 ? idx + 1 : idx - 1;
-      pathElements.push(layers[level][siblingIdx]);
-      pathIndices.push(idx % 2);
-      idx = Math.floor(idx / 2);
+      const siblingIndex = currentIndex % 2 === 0 ? currentIndex + 1 : currentIndex - 1;
+
+      // Calculate sibling value efficiently
+      const siblingValue = this._getNode(level, siblingIndex);
+
+      pathElements.push(siblingValue);
+      pathIndices.push(currentIndex % 2);
+
+      currentIndex = Math.floor(currentIndex / 2);
     }
 
     return { pathElements, pathIndices };
+  }
+
+  /**
+   * Recursive helper to get node value at (level, index).
+   * Returns precomputed zero hash if subtree is empty.
+   */
+  private _getNode(level: number, index: number): bigint {
+    // Base case: leaf level
+    if (level === 0) {
+      if (index < this._leaves.length) {
+        return this._leaves[index];
+      }
+      return this._zeros[0];
+    }
+
+    // Optimization: if the start leaf index for this subtree is beyond the inserted leaves,
+    // then the entire subtree is empty.
+    // The subtree at (level, index) covers leaves starting at index * 2^level
+    const startLeafIndex = index * (1 << level);
+    if (startLeafIndex >= this._leaves.length) {
+      return this._zeros[level];
+    }
+
+    // Recursive step
+    const leftChild = this._getNode(level - 1, index * 2);
+    const rightChild = this._getNode(level - 1, index * 2 + 1);
+
+    return poseidonHash2(leftChild, rightChild);
   }
 
   /**
@@ -192,4 +194,44 @@ export async function buildTreeFromEvents(
   }
 
   return tree;
+}
+
+/**
+ * Normalize a hex commitment string so comparisons are safe.
+ * Strips leading zeros after 0x prefix.
+ */
+function normalizeHex(hex: string): string {
+  return "0x" + BigInt(hex).toString(16);
+}
+
+/**
+ * Fetch all Deposit events from a shielded contract and build the full
+ * incremental Merkle tree. Uses the /api/events server-side endpoint to
+ * avoid browser CORS restrictions on the RPC node.
+ *
+ * @param _contractAddress  Unused (resolved server-side from env vars).
+ * @param contractType      "pool" or "amm" — determines which contract to query.
+ */
+export async function buildTreeFromChain(
+  _contractAddress: string,
+  contractType: "pool" | "amm",
+): Promise<{ tree: MerkleTree; commitmentToLeafIndex: Map<string, number> }> {
+  const resp = await fetch(`/api/events?contract=${contractType}`);
+  if (!resp.ok) {
+    const body = await resp.json().catch(() => ({}));
+    throw new Error(body.error || `Failed to fetch deposit events (${resp.status})`);
+  }
+
+  const { deposits } = (await resp.json()) as {
+    deposits: Array<{ commitment: string; leafIndex: number }>;
+  };
+
+  const tree = await buildTreeFromEvents(deposits);
+
+  const commitmentToLeafIndex = new Map<string, number>();
+  for (const d of deposits) {
+    commitmentToLeafIndex.set(normalizeHex(d.commitment), d.leafIndex);
+  }
+
+  return { tree, commitmentToLeafIndex };
 }

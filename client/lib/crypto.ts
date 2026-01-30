@@ -1,4 +1,17 @@
-import { hash } from "starknet";
+import { ec } from "starknet";
+
+const { poseidonHashMany } = ec.starkCurve;
+
+/**
+ * Compute Stark-field Poseidon hash of elements.
+ * Matches Cairo's PoseidonTrait::new().update(...).finalize().
+ * Returns a hex string (0x...).
+ */
+function poseidonHash(inputs: (string | number | bigint)[]): string {
+  const biInputs = inputs.map((x) => BigInt(x));
+  const hash = poseidonHashMany(biInputs);
+  return "0x" + hash.toString(16);
+}
 
 /**
  * Generate a random secret (31 bytes as hex string).
@@ -13,48 +26,48 @@ export function generateSecret(): string {
 /**
  * Pool commitment = Poseidon(amount, secret, nullifier_secret)
  */
-export function computeCommitment(amount: string, secret: string, nullifierSecret: string): string {
-  return hash.computePoseidonHashOnElements([amount, secret, nullifierSecret]);
+export async function computeCommitment(amount: string, secret: string, nullifierSecret: string): Promise<string> {
+  return poseidonHash([amount, secret, nullifierSecret]);
 }
 
 /**
  * Nullifier hash = Poseidon(nullifier_secret)
  */
-export function computeNullifierHash(nullifierSecret: string): string {
-  return hash.computePoseidonHashOnElements([nullifierSecret]);
+export async function computeNullifierHash(nullifierSecret: string): Promise<string> {
+  return poseidonHash([nullifierSecret]);
 }
 
 /**
  * AMM commitment = Poseidon(amount, token_type, secret, nullifier_secret)
  */
-export function computeAmmCommitment(
+export async function computeAmmCommitment(
   amount: string,
   tokenType: string,
   secret: string,
   nullifierSecret: string,
-): string {
-  return hash.computePoseidonHashOnElements([amount, tokenType, secret, nullifierSecret]);
+): Promise<string> {
+  return poseidonHash([amount, tokenType, secret, nullifierSecret]);
 }
 
 /**
  * Bet commitment = Poseidon(outcome, amount, secret, nullifier_secret)
  */
-export function computeBetCommitment(
+export async function computeBetCommitment(
   outcome: string,
   amount: string,
   secret: string,
   nullifierSecret: string,
-): string {
-  return hash.computePoseidonHashOnElements([outcome, amount, secret, nullifierSecret]);
+): Promise<string> {
+  return poseidonHash([outcome, amount, secret, nullifierSecret]);
 }
 
 /**
  * Vote commitment = Poseidon(choice, secret, nullifier_secret)
  */
-export function computeVoteCommitment(
+export async function computeVoteCommitment(
   choice: string,
   secret: string,
   nullifierSecret: string,
-): string {
-  return hash.computePoseidonHashOnElements([choice, secret, nullifierSecret]);
+): Promise<string> {
+  return poseidonHash([choice, secret, nullifierSecret]);
 }

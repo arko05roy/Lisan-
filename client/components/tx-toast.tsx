@@ -2,14 +2,14 @@
 
 import { toast } from "sonner";
 
-const STARKSCAN_BASE = "https://sepolia.starkscan.co/tx/";
+const EXPLORER_BASE = "https://sepolia.voyager.online/tx/";
 
 export function txToast(txHash: string) {
   const id = toast.loading("Transaction pending...", {
     description: txHash.slice(0, 10) + "...",
     action: {
       label: "View",
-      onClick: () => window.open(STARKSCAN_BASE + txHash, "_blank"),
+      onClick: () => window.open(EXPLORER_BASE + txHash, "_blank"),
     },
   });
 
@@ -20,7 +20,7 @@ export function txToast(txHash: string) {
         description: txHash.slice(0, 10) + "...",
         action: {
           label: "View",
-          onClick: () => window.open(STARKSCAN_BASE + txHash, "_blank"),
+          onClick: () => window.open(EXPLORER_BASE + txHash, "_blank"),
         },
       });
     },
@@ -30,7 +30,7 @@ export function txToast(txHash: string) {
         description: txHash.slice(0, 10) + "...",
         action: {
           label: "View",
-          onClick: () => window.open(STARKSCAN_BASE + txHash, "_blank"),
+          onClick: () => window.open(EXPLORER_BASE + txHash, "_blank"),
         },
       });
     },

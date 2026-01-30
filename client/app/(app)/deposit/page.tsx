@@ -31,7 +31,7 @@ export default function DepositPage() {
       const secret = generateSecret();
       const nullifierSecret = generateSecret();
       const amountFelt = amountWei.toString();
-      const commitment = computeCommitment(amountFelt, secret, nullifierSecret);
+      const commitment = await computeCommitment(amountFelt, secret, nullifierSecret);
 
       const u = uint256.bnToUint256(amountWei);
       const calls = [
@@ -78,7 +78,7 @@ export default function DepositPage() {
       const secret = generateSecret();
       const nullifierSecret = generateSecret();
       const amountFelt = amountWei.toString();
-      const commitment = computeAmmCommitment(amountFelt, tokenType, secret, nullifierSecret);
+      const commitment = await computeAmmCommitment(amountFelt, tokenType, secret, nullifierSecret);
 
       const u = uint256.bnToUint256(amountWei);
       const calls = [

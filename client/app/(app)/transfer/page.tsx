@@ -10,7 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { getPoolNotes, addNote, markPoolNoteSpent, PoolNote } from "@/lib/storage";
 import { generateSecret, computeCommitment, computeNullifierHash } from "@/lib/crypto";
 import { txToast, errorToast } from "@/components/tx-toast";
-import { MerkleTree } from "@/lib/merkle";
+import { buildTreeFromChain } from "@/lib/merkle";
+import { ADDRESSES } from "@/lib/addresses";
 import { generatePoolTransferProof } from "@/lib/prover";
 import { relayTransfer, getRelayTxStatus } from "@/lib/relay";
 import { Relayer, resolveRelayerBaseUrl } from "@/lib/relayer-registry";
@@ -54,7 +55,7 @@ export default function TransferPage() {
       // Generate new secrets for sender change note
       const newSecretSender = generateSecret();
       const newNullifierSecretSender = generateSecret();
-      const newCommitmentSender = computeCommitment(
+      const newCommitmentSender = await computeCommitment(
         changeAmount.toString(),
         newSecretSender,
         newNullifierSecretSender,
@@ -63,23 +64,33 @@ export default function TransferPage() {
       // Generate new secrets for recipient note
       const newSecretRecipient = generateSecret();
       const newNullifierSecretRecipient = generateSecret();
-      const newCommitmentRecipient = computeCommitment(
+      const newCommitmentRecipient = await computeCommitment(
         transferAmountWei.toString(),
         newSecretRecipient,
         newNullifierSecretRecipient,
       );
 
-      // Build Merkle tree and generate ZK proof
-      setProofStatus("Building Merkle tree...");
-      const tree = new MerkleTree();
-      await tree.initialize();
-      const leafIndex = await tree.insert(BigInt(selectedNote.commitment));
+      // Build Merkle tree from on-chain events and generate ZK proof
+      setProofStatus("Building Merkle tree from on-chain events...");
+      const { tree, commitmentToLeafIndex } = await buildTreeFromChain(
+        ADDRESSES.SHIELDED_POOL,
+        "pool",
+      );
+      const normalizedCommitment = "0x" + BigInt(selectedNote.commitment).toString(16);
+      const leafIndex = commitmentToLeafIndex.get(normalizedCommitment);
+      if (leafIndex === undefined) throw new Error("Note commitment not found on-chain. Has the deposit been confirmed?");
 
       setProofStatus("Generating ZK proof...");
       const path = await tree.getPath(leafIndex);
-      const { fullProofWithHints, publicSignals } = await generatePoolTransferProof(
+      const root = tree.getRoot().toString();
+      const nullifierHash = await computeNullifierHash(selectedNote.nullifierSecret);
+      const { fullProofWithHints } = await generatePoolTransferProof(
         selectedNote,
         path,
+        root,
+        nullifierHash,
+        newCommitmentSender,
+        newCommitmentRecipient,
         changeAmount.toString(),
         transferAmountWei.toString(),
         newSecretSender,
@@ -87,9 +98,6 @@ export default function TransferPage() {
         newSecretRecipient,
         newNullifierSecretRecipient,
       );
-
-      const root = publicSignals[0];
-      const nullifierHash = computeNullifierHash(selectedNote.nullifierSecret);
 
       setProofStatus("Sending to relayer...");
       const { transactionHash } = await relayTransfer(relayerUrl, {
@@ -191,9 +199,8 @@ export default function TransferPage() {
                 <button
                   key={note.commitment}
                   onClick={() => setSelectedIdx(i)}
-                  className={`w-full rounded-md border p-3 text-left transition-colors ${
-                    selectedIdx === i ? "border-primary bg-accent" : "hover:bg-accent/50"
-                  }`}
+                  className={`w-full rounded-md border p-3 text-left transition-colors ${selectedIdx === i ? "border-primary bg-accent" : "hover:bg-accent/50"
+                    }`}
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-mono">{note.commitment.slice(0, 16)}...</span>

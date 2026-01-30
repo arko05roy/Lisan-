@@ -127,34 +127,55 @@ function convertProof(proof: any, publicSignals: string[]) {
   };
 }
 
+/**
+ * Public signal names for each circuit, in declaration order.
+ * Must match the `component main {public [...]}` in each .circom file.
+ */
+const CIRCUIT_PUBLIC_SIGNALS: Record<string, string[]> = {
+  pool_withdraw: ["root", "nullifierHash", "withdrawAmount"],
+  pool_transfer: ["root", "nullifierHash", "newCommitmentSender", "newCommitmentRecipient"],
+  amm_withdraw: ["root", "nullifierHash", "tokenType", "withdrawAmount"],
+  amm_swap: ["root", "nullifierHash", "tokenTypeIn", "amountIn", "tokenTypeOut", "newCommitment", "amountOut"],
+  bet_claim: ["betCommitment", "nullifierHash", "winningOutcome"],
+};
+
 async function generateProof(
   circuitName: string,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   inputs: Record<string, any>
 ): Promise<ProofResult> {
+  if (DEMO_MODE) {
+    // Demo mode: skip ZK circuit entirely.
+    // MockGroth16Verifier reads the first N felts as public inputs,
+    // so we just send the public signals directly.
+    const signalNames = CIRCUIT_PUBLIC_SIGNALS[circuitName];
+    if (!signalNames) throw new Error(`Unknown circuit: ${circuitName}`);
+
+    const publicSignals = signalNames.map((name) => {
+      const val = inputs[name];
+      if (val === undefined) throw new Error(`Missing public input: ${name}`);
+      return BigInt(val).toString();
+    });
+
+    const fullProofWithHints = publicSignals.map((s) => {
+      return "0x" + BigInt(s).toString(16);
+    });
+
+    return { fullProofWithHints, publicSignals };
+  }
+
+  // Production mode: generate real Groth16 proof via snarkjs + garaga
   const sn = await getSnarkJS();
 
   const wasmPath = `${CIRCUIT_BASE}/${circuitName}/${circuitName}.wasm`;
   const zkeyPath = `${CIRCUIT_BASE}/${circuitName}/${circuitName}_final.zkey`;
 
-  // 1. Generate snarkjs proof (proves correctness of private inputs)
   const { proof, publicSignals } = await sn.groth16.fullProve(
     inputs,
     wasmPath,
     zkeyPath
   );
 
-  if (DEMO_MODE) {
-    // Demo mode: MockGroth16Verifier reads first N felts as public inputs.
-    // Public signals from snarkjs are the verified public inputs.
-    const fullProofWithHints = publicSignals.map((s: string) => {
-      const bi = BigInt(s);
-      return "0x" + bi.toString(16);
-    });
-    return { fullProofWithHints, publicSignals };
-  }
-
-  // Production mode: use garaga to build full_proof_with_hints calldata
   const garaga = await getGaraga();
   const vkJSON = await loadVerifyingKey(circuitName);
   const garagaProof = convertProof(proof, publicSignals);
@@ -175,9 +196,16 @@ async function generateProof(
 export async function generatePoolWithdrawProof(
   note: PoolNote,
   merklePath: MerklePath,
+  root: string,
+  nullifierHash: string,
 ): Promise<ProofResult> {
   const inputs = {
-    // Private inputs — public inputs are computed by the circuit
+    // Public inputs
+    root,
+    nullifierHash,
+    withdrawAmount: note.amount,
+
+    // Private inputs
     amount: note.amount,
     secret: note.secret,
     nullifierSecret: note.nullifierSecret,
@@ -194,6 +222,10 @@ export async function generatePoolWithdrawProof(
 export async function generatePoolTransferProof(
   note: PoolNote,
   merklePath: MerklePath,
+  root: string,
+  nullifierHash: string,
+  newCommitmentSender: string,
+  newCommitmentRecipient: string,
   changeAmount: string,
   transferAmount: string,
   newSecretSender: string,
@@ -202,6 +234,13 @@ export async function generatePoolTransferProof(
   newNullifierSecretRecipient: string,
 ): Promise<ProofResult> {
   const inputs = {
+    // Public inputs
+    root,
+    nullifierHash,
+    newCommitmentSender,
+    newCommitmentRecipient,
+
+    // Private inputs
     oldAmount: note.amount,
     oldSecret: note.secret,
     oldNullifierSecret: note.nullifierSecret,
@@ -224,10 +263,18 @@ export async function generatePoolTransferProof(
 export async function generateAmmWithdrawProof(
   note: AmmNote,
   merklePath: MerklePath,
+  root: string,
+  nullifierHash: string,
 ): Promise<ProofResult> {
   const inputs = {
-    amount: note.amount,
+    // Public inputs
+    root,
+    nullifierHash,
     tokenType: note.tokenType,
+    withdrawAmount: note.amount,
+
+    // Private inputs
+    amount: note.amount,
     secret: note.secret,
     nullifierSecret: note.nullifierSecret,
     pathElements: merklePath.pathElements.map((e) => e.toString()),
@@ -243,16 +290,25 @@ export async function generateAmmWithdrawProof(
 export async function generateAmmSwapProof(
   note: AmmNote,
   merklePath: MerklePath,
+  root: string,
+  nullifierHash: string,
+  newCommitment: string,
   amountOut: string,
   tokenTypeOut: string,
   newSecret: string,
   newNullifierSecret: string,
 ): Promise<ProofResult> {
   const inputs = {
+    // Public inputs
+    root,
+    nullifierHash,
     tokenTypeIn: note.tokenType,
     amountIn: note.amount,
     tokenTypeOut,
+    newCommitment,
     amountOut,
+
+    // Private inputs
     oldSecret: note.secret,
     oldNullifierSecret: note.nullifierSecret,
     newSecret,

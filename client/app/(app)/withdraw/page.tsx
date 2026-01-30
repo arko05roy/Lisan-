@@ -14,7 +14,7 @@ import {
 } from "@/lib/storage";
 import { computeNullifierHash } from "@/lib/crypto";
 import { txToast, errorToast } from "@/components/tx-toast";
-import { TOKEN_TYPE_BTC } from "@/lib/addresses";
+import { ADDRESSES, TOKEN_TYPE_BTC } from "@/lib/addresses";
 import {
   relayPrepareWithdraw,
   relayClaimWithdrawal,
@@ -22,7 +22,7 @@ import {
 } from "@/lib/relay";
 import { Relayer, resolveRelayerBaseUrl, formatFee } from "@/lib/relayer-registry";
 import { RelayerSelect } from "@/components/relayer-select";
-import { MerkleTree } from "@/lib/merkle";
+import { buildTreeFromChain } from "@/lib/merkle";
 import { generatePoolWithdrawProof, generateAmmWithdrawProof } from "@/lib/prover";
 
 interface PendingClaim {
@@ -77,19 +77,21 @@ export default function WithdrawPage() {
     setProofStatus(null);
     try {
       // Generate ZK proof locally
-      setProofStatus("Building Merkle tree...");
-      const tree = new MerkleTree();
-      await tree.initialize();
-
-      // Insert this note's commitment (simplified — in production, reconstruct full tree from events)
-      const leafIndex = await tree.insert(BigInt(note.commitment));
+      setProofStatus("Building Merkle tree from on-chain events...");
+      const { tree, commitmentToLeafIndex } = await buildTreeFromChain(
+        ADDRESSES.SHIELDED_POOL,
+        "pool",
+      );
+      const normalizedCommitment = "0x" + BigInt(note.commitment).toString(16);
+      const leafIndex = commitmentToLeafIndex.get(normalizedCommitment);
+      if (leafIndex === undefined) throw new Error("Note commitment not found on-chain. Has the deposit been confirmed?");
 
       setProofStatus("Generating ZK proof...");
       const path = await tree.getPath(leafIndex);
-      const { fullProofWithHints, publicSignals } = await generatePoolWithdrawProof(note, path);
+      const root = tree.getRoot().toString();
+      const nullifierHash = await computeNullifierHash(note.nullifierSecret);
 
-      const root = publicSignals[0];
-      const nullifierHash = computeNullifierHash(note.nullifierSecret);
+      const { fullProofWithHints } = await generatePoolWithdrawProof(note, path, root, nullifierHash);
 
       setProofStatus("Sending to relayer...");
       const { transactionHash } = await relayPrepareWithdraw(relayerUrl, {
@@ -131,17 +133,21 @@ export default function WithdrawPage() {
       const tokenLabel = note.tokenType === TOKEN_TYPE_BTC ? "mBTC" : "mSTRK";
 
       // Generate ZK proof locally
-      setProofStatus("Building Merkle tree...");
-      const tree = new MerkleTree();
-      await tree.initialize();
-      const leafIndex = await tree.insert(BigInt(note.commitment));
+      setProofStatus("Building Merkle tree from on-chain events...");
+      const { tree, commitmentToLeafIndex } = await buildTreeFromChain(
+        ADDRESSES.SHIELDED_AMM,
+        "amm",
+      );
+      const normalizedCommitment = "0x" + BigInt(note.commitment).toString(16);
+      const leafIndex = commitmentToLeafIndex.get(normalizedCommitment);
+      if (leafIndex === undefined) throw new Error("Note commitment not found on-chain. Has the deposit been confirmed?");
 
       setProofStatus("Generating ZK proof...");
       const path = await tree.getPath(leafIndex);
-      const { fullProofWithHints, publicSignals } = await generateAmmWithdrawProof(note, path);
+      const root = tree.getRoot().toString();
+      const nullifierHash = await computeNullifierHash(note.nullifierSecret);
 
-      const root = publicSignals[0];
-      const nullifierHash = computeNullifierHash(note.nullifierSecret);
+      const { fullProofWithHints } = await generateAmmWithdrawProof(note, path, root, nullifierHash);
 
       setProofStatus("Sending to relayer...");
       const { transactionHash } = await relayPrepareWithdraw(relayerUrl, {
@@ -233,9 +239,8 @@ export default function WithdrawPage() {
         <button
           key={note.commitment}
           onClick={() => setSelected(i)}
-          className={`w-full rounded-md border p-3 text-left transition-colors ${
-            selected === i ? "border-primary bg-accent" : "hover:bg-accent/50"
-          }`}
+          className={`w-full rounded-md border p-3 text-left transition-colors ${selected === i ? "border-primary bg-accent" : "hover:bg-accent/50"
+            }`}
         >
           <div className="flex items-center justify-between">
             <Badge variant="secondary">{amtTokens.toString()} {tokenLabel}</Badge>

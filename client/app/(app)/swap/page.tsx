@@ -11,7 +11,7 @@ import { getAmmNotes, addNote, markAmmNoteSpent, AmmNote } from "@/lib/storage";
 import { generateSecret, computeAmmCommitment, computeNullifierHash } from "@/lib/crypto";
 import { txToast, errorToast } from "@/components/tx-toast";
 import { uint256 } from "starknet";
-import { MerkleTree } from "@/lib/merkle";
+import { buildTreeFromChain } from "@/lib/merkle";
 import { generateAmmSwapProof } from "@/lib/prover";
 import { relaySwap } from "@/lib/relay";
 import { Relayer, resolveRelayerBaseUrl } from "@/lib/relayer-registry";
@@ -69,10 +69,10 @@ export default function SwapPage() {
     functionName: "get_amount_out",
     args: selectedNote
       ? [
-          uint256.bnToUint256(BigInt(selectedNote.amount)),
-          tokenTypeIn,
-          tokenTypeOut,
-        ]
+        uint256.bnToUint256(BigInt(selectedNote.amount)),
+        tokenTypeIn,
+        tokenTypeOut,
+      ]
       : undefined,
     enabled: !!selectedNote,
   });
@@ -86,32 +86,38 @@ export default function SwapPage() {
     setLoading(true);
     setProofStatus(null);
     try {
-      const nullifierHash = computeNullifierHash(selectedNote.nullifierSecret);
+      const nullifierHash = await computeNullifierHash(selectedNote.nullifierSecret);
       const amountOut = BigInt(quoteData as string | number | bigint).toString();
 
       // Generate new note for output token
       const newSecret = generateSecret();
       const newNullifierSecret = generateSecret();
-      const newCommitment = computeAmmCommitment(amountOut, tokenTypeOut, newSecret, newNullifierSecret);
+      const newCommitment = await computeAmmCommitment(amountOut, tokenTypeOut, newSecret, newNullifierSecret);
 
-      // Build Merkle tree and generate ZK proof
-      setProofStatus("Building Merkle tree...");
-      const tree = new MerkleTree();
-      await tree.initialize();
-      const leafIndex = await tree.insert(BigInt(selectedNote.commitment));
+      // Build Merkle tree from on-chain events and generate ZK proof
+      setProofStatus("Building Merkle tree from on-chain events...");
+      const { tree, commitmentToLeafIndex } = await buildTreeFromChain(
+        ADDRESSES.SHIELDED_AMM,
+        "amm",
+      );
+      const normalizedCommitment = "0x" + BigInt(selectedNote.commitment).toString(16);
+      const leafIndex = commitmentToLeafIndex.get(normalizedCommitment);
+      if (leafIndex === undefined) throw new Error("Note commitment not found on-chain. Has the deposit been confirmed?");
 
       setProofStatus("Generating ZK proof...");
       const path = await tree.getPath(leafIndex);
-      const { fullProofWithHints, publicSignals } = await generateAmmSwapProof(
+      const root = tree.getRoot().toString();
+      const { fullProofWithHints } = await generateAmmSwapProof(
         selectedNote,
         path,
+        root,
+        nullifierHash,
+        newCommitment,
         amountOut,
         tokenTypeOut,
         newSecret,
         newNullifierSecret,
       );
-
-      const root = publicSignals[0];
 
       setProofStatus("Sending to relayer...");
       const { transactionHash } = await relaySwap(relayerUrl, {
@@ -207,9 +213,8 @@ export default function SwapPage() {
                 <button
                   key={note.commitment}
                   onClick={() => setSelectedIdx(i)}
-                  className={`w-full rounded-md border p-3 text-left transition-colors ${
-                    selectedIdx === i ? "border-primary bg-accent" : "hover:bg-accent/50"
-                  }`}
+                  className={`w-full rounded-md border p-3 text-left transition-colors ${selectedIdx === i ? "border-primary bg-accent" : "hover:bg-accent/50"
+                    }`}
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-mono">{note.commitment.slice(0, 16)}...</span>

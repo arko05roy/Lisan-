@@ -84,7 +84,7 @@ export default function PredictPage() {
       const secret = generateSecret();
       const nullifierSecret = generateSecret();
       const amountFelt = amountWei.toString();
-      const betCommitment = computeBetCommitment(betOutcome, amountFelt, secret, nullifierSecret);
+      const betCommitment = await computeBetCommitment(betOutcome, amountFelt, secret, nullifierSecret);
 
       const u = uint256.bnToUint256(amountWei);
       const calls = [
@@ -141,7 +141,7 @@ export default function PredictPage() {
     const note = betNotes[selectedBetIdx];
     setLoading(true);
     try {
-      const nullifierHash = computeNullifierHash(note.nullifierSecret);
+      const nullifierHash = await computeNullifierHash(note.nullifierSecret);
 
       // Generate ZK proof for bet claim with Garaga full_proof_with_hints
       const { fullProofWithHints } = await generateBetClaimProof(note, note.outcome);
@@ -313,9 +313,8 @@ export default function PredictPage() {
                     <button
                       key={note.commitment}
                       onClick={() => setSelectedBetIdx(i)}
-                      className={`w-full rounded-md border p-3 text-left transition-colors ${
-                        selectedBetIdx === i ? "border-primary bg-accent" : "hover:bg-accent/50"
-                      }`}
+                      className={`w-full rounded-md border p-3 text-left transition-colors ${selectedBetIdx === i ? "border-primary bg-accent" : "hover:bg-accent/50"
+                        }`}
                     >
                       <div className="flex items-center justify-between">
                         <div>
