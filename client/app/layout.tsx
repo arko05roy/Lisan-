@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { ThemeProvider } from "next-themes";
 import { StarknetProvider } from "@/components/providers/starknet-provider";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -30,10 +31,17 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <StarknetProvider>
-          {children}
-          <Toaster richColors position="bottom-right" />
-        </StarknetProvider>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+          enableSystem={false}
+          disableTransitionOnChange
+        >
+          <StarknetProvider>
+            {children}
+            <Toaster richColors position="bottom-right" />
+          </StarknetProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
