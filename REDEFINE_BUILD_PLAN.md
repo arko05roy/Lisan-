@@ -13,7 +13,7 @@
 
 ---
 
-## CURRENT STATUS (Updated Jan 29, 2026 — Evening, Day 1 COMPLETE)
+## CURRENT STATUS (Updated Jan 30, 2026 — Day 2, Deployment COMPLETE)
 
 | Phase | Status | Details |
 |-------|--------|---------|
@@ -23,14 +23,37 @@
 | Phase 4: Shielded AMM | ✅ COMPLETE (Day 1) | MockSTRK + ShieldedAMM (seed, deposit, swap, withdraw) — 44 AMM tests, 88 total |
 | Phase 5: Prediction Market | ✅ COMPLETE (Day 1) | MockPragmaOracle + PredictionMarket (create, bet, resolve, claim) — 68 tests, 156 total |
 | Phase 6: Private Voting | ✅ COMPLETE (Day 1) | PrivateVoting (create, cast, tally) — 41 tests, 183 total |
-| Phase 7: Deploy + Frontend | ⏳ STARTING Day 2 (Jan 30 - Feb 8) | Deploy to Sepolia + Unified UI for ALL flows |
+| Phase 7: Deploy | ✅ COMPLETE (Day 2) | All 7 contracts declared + deployed to Starknet Sepolia |
+| Phase 7: Frontend | ⏳ STARTING Day 2 (Jan 30 - Feb 8) | Unified UI for ALL flows |
 | Phase 7b: New Features | ⏳ CONDITIONAL (Feb 9-14) | Only if frontend done + feature passes demo impact test |
 | Phase 8: Video | ⏳ PENDING (Feb 15-20) | Script LOCKED Feb 15. Record + edit. |
 | Phase 9: Submission | ⏳ PENDING (Feb 21-28) | README, GitHub theater, DoraHacks, buffer |
 
-**Pace:** ALL 6 contract phases completed in Day 1 (originally planned for 14+ days). Full privacy loop (deposit → transfer → withdraw), shielded AMM (deposit → swap → withdraw), prediction market (create → bet → resolve → claim), AND private voting (create → vote → tally) all operational. 183 tests passing. All 3 arms complete — "Winning Submission" contract scope achieved.
+**Pace:** ALL 6 contract phases completed in Day 1 (originally planned for 14+ days). Full privacy loop (deposit → transfer → withdraw), shielded AMM (deposit → swap → withdraw), prediction market (create → bet → resolve → claim), AND private voting (create → vote → tally) all operational. 183 tests passing. All 3 arms complete — "Winning Submission" contract scope achieved. **Day 2:** All 7 contracts declared and deployed to Starknet Sepolia testnet. Deployment addresses saved to `.env`.
 
 **Contract scope:** CONDITIONALLY FROZEN. Frontend for existing 4 primitives must be complete before any new contract work. New features must pass demo impact test and clear all gates (contract + frontend + video fit) by Feb 15.
+
+### Deployed Contract Addresses (Starknet Sepolia)
+```
+MockBTC:           0x03ffc3ab1419ed9daa9cc49d0f000b13f23c47b42bb931d1cf1cbbb22639ba8f
+MockSTRK:          0x023de67f0eaa413e33173e040bfbaa25c5e0a47d74c69e7acaecedd64afbd37f
+MockPragmaOracle:  0x07c57f85bf5febfde9bfbef4444d1359b0fdadc87bacb4f2516ad9bc33f4d8ba
+PrivateVoting:     0x05670a0067833e25f39d0baec27ea0ce1dfb662126b469d28a4d768252f6b2b1
+ShieldedPool:      0x06b9b37c101cf533cd7a86392b157cc9ab82ba56575336c0c2cd666dc17ad744
+ShieldedAMM:       0x02749e95fa37685141d75c1e7c299b40c741e5a49911ce5e560254c24613c8dc
+PredictionMarket:  0x07e7287f4d0f5e319c80b251219c117cf29af1974ddf5b540fdaf4490c3e59b1
+```
+
+### Constructor Wiring
+```
+MockBTC(owner)           → deployer account
+MockSTRK(owner)          → deployer account
+MockPragmaOracle(owner)  → deployer account
+PrivateVoting()          → no args
+ShieldedPool(btc_token)  → MockBTC
+ShieldedAMM(owner, btc_token, strk_token) → deployer, MockBTC, MockSTRK
+PredictionMarket(btc_token, oracle)       → MockBTC, MockPragmaOracle
+```
 
 ### Implemented Contract Files
 ```
@@ -464,10 +487,11 @@ Anyone                      │                      │
 **Goal:** Deploy contracts to Sepolia + Unified UI for ALL private DeFi flows
 
 **Day 2 (Jan 30): Deploy + Scaffold**
-- [ ] Deploy ALL contracts to Starknet Sepolia testnet
+- [x] Deploy ALL contracts to Starknet Sepolia testnet ✅ (7 contracts declared + deployed)
+- [x] Save deployment addresses to `.env`, add `.env` to `.gitignore` ✅
 - [ ] Frontend scaffold: Next.js + starknet-react + wallet connection (Argent/Braavos)
 - [ ] Deposit + Transfer + Withdraw UI working by EOD
-- [ ] Check-in: deployment tx hashes + wallet connection screenshot + deposit flow status
+- [ ] Check-in: wallet connection screenshot + deposit flow status
 
 **Day 3 (Jan 31): Swap + Prediction UI**
 - [ ] Swap UI (deposit into AMM, swap BTC↔STRK, withdraw)
