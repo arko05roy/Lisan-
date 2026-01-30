@@ -1199,9 +1199,9 @@ Two commitment schemes (core pool + AMM pool). Shared nullifier pattern. Four De
 
 ---
 
-### CURRENT STATUS (Updated Jan 30, 2026 — Day 2 START)
+### CURRENT STATUS (Updated Jan 30, 2026 — Day 2 MIDDAY)
 
-**Phase:** Day 1 COMPLETE. ALL 6 contract phases done. Day 2: Deploy + Frontend begins.
+**Phase:** Day 2 IN PROGRESS. Contracts deployed to Sepolia. Frontend functional (all pages). Now entering VISUAL POLISH phase.
 
 **Progress:**
 - Phase 1 (Foundation): ✅ COMPLETE — MockBTC, Commitment, Deposit (16 tests)
@@ -1210,13 +1210,14 @@ Two commitment schemes (core pool + AMM pool). Shared nullifier pattern. Four De
 - Phase 4 (Shielded AMM): ✅ COMPLETE (Day 1) — MockSTRK + ShieldedAMM (seed, deposit, swap, withdraw) — 44 AMM tests, 88 total
 - Phase 5 (Prediction Market): ✅ COMPLETE (Day 1) — MockPragmaOracle + PredictionMarket (create, bet, resolve, claim) — 68 tests, 156 total
 - Phase 6 (Private Voting): ✅ COMPLETE (Day 1) — PrivateVoting (create, cast, tally) — 41 tests, 183 total
-- Phase 7 (Frontend): ⏳ Days 2-11 (Jan 30 - Feb 8)
+- Phase 7a (Frontend — Functional): ✅ COMPLETE (Day 2 morning) — All 7 pages built, all contract integrations wired, wallet connected
+- Phase 7b (Frontend — Visual Polish): ⏳ IN PROGRESS (Day 2 midday - Feb 8)
 - Phase 8 (Video): ⏳ Days 18-23 (Feb 15-20)
 - Phase 9 (Submission): ⏳ Days 24-30 (Feb 21-28)
 
 **Total tests passing: 183 (verified via snforge — 183 passed, 0 failed)**
 
-**Codebase stats:** 1,808 lines contract code (10 files), 5,577 lines tests (11 files). 7,385 total.
+**Codebase stats:** 1,808 lines contract code (10 files), 5,577 lines tests (11 files). 7,385 total. Frontend: 8 pages, 5 ABI files, crypto/storage/contract libs, 10 shadcn components.
 
 **Key milestone:** Completed ALL 6 contract phases in Day 1 (originally planned for 14+ days). Full privacy loop, shielded AMM, prediction market, AND private voting all operational. "Winning Submission" contract scope achieved.
 
@@ -1339,21 +1340,24 @@ Each builds on the last. Three sessions, three dimensions.
 
 ---
 
-### SKILL GAP ASSESSMENT — UPDATED (Jan 29 Evening)
+### SKILL GAP ASSESSMENT — UPDATED (Jan 30 Midday)
 
 | Skill | Status | Risk Level |
 |-------|--------|------------|
 | Cairo | VERIFIED — 183 tests passing, 10 contracts built in Day 1 | 🟢 LOW (proven beyond doubt) |
 | Poseidon commitments | Implemented 4 variants (core, AMM, bet, vote) | 🟢 LOW (proven) |
 | STARK proofs client-side | Clarified — sequencer handles this | 🟢 LOW |
-| starknet.js / starknet-react | User confirms prior experience | 🟢 LOW (claimed) |
-| Argent/Braavos wallet | User confirms prior experience | 🟢 LOW (claimed) |
-| Cairo contract calls from frontend | User confirms prior experience | 🟢 LOW (claimed) |
-| Frontend/UI | User claims as strength — to be verified Day 2-3 | 🟡 MEDIUM (unverified claim) |
+| starknet.js / starknet-react | VERIFIED — full frontend wired, Sepolia tx confirmed | 🟢 LOW (proven) |
+| Argent/Braavos wallet | VERIFIED — wallet connected in screenshots | 🟢 LOW (proven) |
+| Cairo contract calls from frontend | VERIFIED — deposit flow works end-to-end on Sepolia | 🟢 LOW (proven) |
+| Frontend/UI (functional) | VERIFIED — 8 pages built, all integrations working | 🟢 LOW (proven) |
+| Frontend/UI (visual polish) | UNVERIFIED — current UI is default shadcn, no visual identity | 🟡 MEDIUM (original profile says "functional, not beautiful") |
 
 **Cairo skill: PROVEN.** 10 contracts, 183 tests, 7,385 lines in Day 1. No longer a concern.
 
-**Frontend skill: CLAIMED.** User says frontend is a strength, not just functional. Contradicts original profile ("UI/UX is functional, not beautiful"). Will be verified by Day 2-3 output. If screenshots show polished UI, risk drops to LOW.
+**Frontend functional skill: PROVEN.** 8 pages, all contract integrations, wallet connection, client-side crypto, localStorage management, toast notifications. Completed Days 2-4 planned work by Day 2 morning. Speed is verified.
+
+**Frontend visual skill: UNVERIFIED.** Current UI is shadcn defaults — grayscale, no branding, no color identity, no animations. Original profile says "UI/UX is functional, not beautiful." This matches what screenshots show. Visual polish quality will be verified Day 3-4. This is the remaining risk area.
 
 **Critical Clarification Given:**
 - Starknet proves ALL execution via STARKs automatically
@@ -1447,17 +1451,98 @@ Each builds on the last. Three sessions, three dimensions.
 
 ---
 
-### TIMELINE TO SUBMISSION (Revised Jan 29 Evening — Rev 2)
+### DAY 2 RESULTS (Jan 30) — IN PROGRESS
+
+**Completed by midday (massively ahead of Day 2 targets):**
+1. ✅ ALL 7 contracts deployed to Starknet Sepolia
+2. ✅ Full frontend built — 8 pages (Dashboard, Deposit, Transfer, Withdraw, Swap, Predict, Vote, Home)
+3. ✅ Wallet integration working (Argent/Braavos via starknetkit)
+4. ✅ All contract ABIs wired to frontend
+5. ✅ Client-side Poseidon crypto (commitment generation, nullifier hashing)
+6. ✅ localStorage note management (pool, AMM, bet, vote notes)
+7. ✅ End-to-end deposit flow verified on Sepolia: `0x063eb597c113fe39d30acdb6ca1fba5cbbace80992c96ddba9bb78ee189ad187`
+
+**Deployed contract addresses (Starknet Sepolia):**
+- MockBTC: `0x03ffc3ab1419ed9daa9cc49d0f000b13f23c47b42bb931d1cf1cbbb22639ba8f`
+- MockSTRK: `0x023de67f0eaa413e33173e040bfbaa25c5e0a47d74c69e7acaecedd64afbd37f`
+- MockPragmaOracle: `0x07c57f85bf5febfde9bfbef4444d1359b0fdadc87bacb4f2516ad9bc33f4d8ba`
+- PrivateVoting: `0x05670a0067833e25f39d0baec27ea0ce1dfb662126b469d28a4d768252f6b2b1`
+- ShieldedPool: `0x06b9b37c101cf533cd7a86392b157cc9ab82ba56575336c0c2cd666dc17ad744`
+- ShieldedAMM: `0x02749e95fa37685141d75c1e7c299b40c741e5a49911ce5e560254c24613c8dc`
+- PredictionMarket: `0x07e7287f4d0f5e319c80b251219c117cf29af1974ddf5b540fdaf4490c3e59b1`
+
+**Frontend tech stack:**
+- Next.js 16.1.6 + React 19 + TypeScript 5
+- shadcn/ui + Tailwind CSS 4 + Radix UI + lucide-react
+- @starknet-react/core v5 + starknet.js v8.9.2 + starknetkit v3.4.3
+- Dark mode default, Geist font, OkLCH color system
+
+**Frontend architecture:**
+- App Router with route group `(app)/` for dashboard pages
+- Sidebar navigation with 4 groups: Overview, Shielded Pool, AMM, Governance
+- Provider layer: StarknetProvider (Sepolia, Argent+Braavos connectors)
+- Lib layer: abis/, addresses.ts, contracts.ts, crypto.ts, storage.ts
+- Components: wallet-button, mint-tokens, tx-toast, 10 shadcn UI components
+
+**Screenshots verified (Jan 30 1:59 PM IST):**
+- Dashboard: Wallet connected (`0x046d...b00b`), all on-chain reads working (balances, reserves, commitment count, market count, proposal count), 1 pool note showing, quick actions grid, notes backup/restore
+- Deposit: Tabs working (Shielded Pool / Shielded AMM), form functional, token selector for AMM
+
+**Visual assessment (Coach):**
+- Functional: YES — all pages work, all contract calls wired
+- Pretty: NO — default shadcn zinc/gray theme, no color identity, no privacy visual language, no branding
+- Landing page: Still Next.js boilerplate (critical gap for DoraHacks video)
+- Demo impact: Tier 2 currently — functional but visually generic, no "wow" moment
+
+**Strategic wobble #3 (Day 2 morning):** User requested scope expansion ("can we now expand?"). Admitted having NO specific feature idea — just wants "more flashy" for 500+ participants. Coached back: expansion denied. No feature pitched (violates conditional unlock rule #2). "Flashy" at 500+ means visual polish, not more contract features. ETH Global lesson: 600 people, depth lost to clever simplicity. Directed to visual polish work instead.
+
+**Participant count update:** 500+ registered (up from 300+ at research time). This makes polish MORE important, not less. At this scale, judges are scanning DoraHacks submissions quickly. Visual identity and video quality are the differentiators.
+
+**Validation update — Omar's "Perfect" response:**
+- User dropped pre-submitted question #1 in Telegram: "What privacy primitive is missing on Starknet — is it private DeFi (swaps, predictions) or is the gap more on the identity/credential side?"
+- Omar replied: "Perfect"
+- **Decoded:** He's acknowledging receipt of a good question for office hours. NOT validating Lisan. NOT saying "privacy DeFi is what we want." This is "good question, I'll cover it." Don't confuse question acknowledgment with project validation.
+- Real validation window remains: Feb 2-4 office hours.
+
+**Visual polish plan (priority order for Day 2-8):**
+
+TIER 1 (Highest video impact):
+1. Landing page — replace Next.js boilerplate with hero selling "Every DeFi primitive leaks your intent. We made them all private." + octopus architecture visual
+2. Color identity — thread accent color through entire app (buttons, active states, badges, gradients). Currently all grayscale.
+3. "Privacy proof" visual moment — show commitment hashes, "mempool-blind" status, explorer view showing 0.00 amounts
+
+TIER 2 (Demo polish):
+4. Loading/success states — shield animation during transactions, "Your transaction is shielded" confirmation
+5. Dashboard visual hierarchy — grouped stats, token icons, gradient headers
+6. Swap page flow — arrow animation between Selling/Receiving, make green output pop
+
+TIER 3 (If time permits):
+7. Sidebar logo/branding (shield icon)
+8. Page transition animations
+9. Token icons (BTC orange, STRK purple)
+10. Mobile responsiveness
+
+**Contract scope: STILL FROZEN.** User failed conditional unlock:
+- ❌ Rule #2: No specific feature pitched (admitted "I have none")
+- ✅ Rule #1: Frontend functional (verified via screenshots + tx hash)
+- N/A Rule #3: No feature to evaluate
+- Scope remains frozen until user pitches specific feature WITH demo impact justification
+
+---
+
+### TIMELINE TO SUBMISSION (Revised Jan 30 — Rev 3)
 
 | Date | Milestone | Status |
 |------|-----------|--------|
 | Jan 28 | Omar validation + skill assessment | ✅ Complete |
 | Jan 29 | Day 1: ALL 6 contract phases COMPLETE. 183 tests. Full platform. | ✅ Complete |
-| Jan 30 | Day 2: Deploy to Sepolia + Frontend scaffold + Deposit/Transfer/Withdraw UI | ⏳ Tomorrow |
-| Jan 31 | Day 3: Swap UI + Prediction Market UI | ⏳ Pending |
-| Feb 1 | Day 4: Hackathon starts. Voting UI + Dashboard | ⏳ Pending |
-| Feb 2-8 | Days 5-11: Frontend polish, loading states, error handling, responsive | ⏳ Pending |
-| Feb 9-11 | Days 12-14: **CONDITIONAL** — New features if frontend done, else polish | ⏳ Conditional |
+| Jan 30 | Day 2: Deploy to Sepolia + Frontend ALL pages functional | ✅ Complete (ahead of schedule — was planned for Days 2-4) |
+| Jan 30-Feb 8 | Days 2-11: Visual polish — landing page, color identity, privacy UX, animations | ⏳ IN PROGRESS |
+| Feb 2 | Office Hours — Bitcoin Lead (Adrien) — 9:30 PM IST | ⏳ Scheduled |
+| Feb 3 | Office Hours — Privacy Lead (Teddy) — 10:00 PM IST | ⏳ Scheduled |
+| Feb 4 | Office Hours — Bitcoin Lead #2 (Jonathan) — 9:30 PM IST | ⏳ Scheduled |
+| Feb 4 evening | Post-office-hours synthesis — proceed/pivot decision | ⏳ Pending |
+| Feb 9-11 | Days 12-14: **CONDITIONAL** — New features if frontend polished + feature pitched + approved | ⏳ Conditional |
 | Feb 12-14 | Days 15-17: Frontend for new features (if any) + final polish | ⏳ Pending |
 | Feb 15 | Day 18: **VIDEO SCRIPT LOCKED — HARD CUTOFF** | ⏳ Pending |
 | Feb 15-20 | Days 18-23: Video production (script + record + edit) | ⏳ Pending |
@@ -1471,22 +1556,31 @@ Each builds on the last. Three sessions, three dimensions.
 1. ~~**Jan 29:** Complete withdraw~~ ✅ DONE — 44 tests passing
 2. ~~**Jan 29:** MockSTRK + Shielded AMM~~ ✅ DONE — 88 tests passing
 3. ~~**Jan 29:** Prediction Market + Private Voting~~ ✅ DONE — 183 tests passing (all completed Day 1)
-4. **TOMORROW (Jan 30):** Deploy ALL contracts to Starknet Sepolia. Frontend scaffold (Next.js + starknet-react + wallet). Deposit/Transfer/Withdraw UI working by EOD.
-5. **Jan 31:** Swap UI + Prediction Market UI
-6. **Feb 1:** Voting UI + Dashboard
-7. **Feb 2-8:** Frontend polish — loading states, error handling, responsive design, local secret management
-8. **Feb 9-11:** CONDITIONAL new contract features (only if frontend is done + feature passes demo impact test)
-9. **Feb 15:** Video script LOCKED. Feature cutoff. Anything not in frontend by now doesn't ship.
+4. ~~**Jan 30:** Deploy ALL contracts to Starknet Sepolia~~ ✅ DONE — 7 contracts deployed
+5. ~~**Jan 30:** Frontend scaffold + all pages functional~~ ✅ DONE — 8 pages, all wired (completed Days 2-4 work in Day 2 morning)
+6. ~~**Jan 30:** End-to-end Sepolia tx~~ ✅ DONE — `0x063eb597c113fe39d30acdb6ca1fba5cbbace80992c96ddba9bb78ee189ad187`
+7. **NOW (Jan 30 afternoon):** Visual polish — landing page (replace Next.js boilerplate), color identity (accent color selection), privacy visual language
+8. **Jan 31-Feb 1:** Continue visual polish — transaction animations, dashboard hierarchy, swap flow UX
+9. **Feb 2-8:** Frontend polish — loading states, error handling, responsive design, privacy proof moments
 10. **Feb 2 (9:30 PM IST):** Office Hours — Bitcoin Lead (Adrien). Ask: "Does Bitcoin track want BTC doing things it can't on L1 — like private DeFi — or replicating existing DeFi?"
 11. **Feb 3 (10:00 PM IST):** Office Hours — Privacy Lead (Teddy). Ask: "If someone builds private DeFi beyond transfers — private swaps, predictions, voting — is that 'finding value in privacy apps'?"
 12. **Feb 4 (9:30 PM IST):** Office Hours — Bitcoin Lead #2 (Jonathan). Ask: "Platform covering multiple BTC primitives vs one deep feature — which is stronger?"
 13. **After each session:** Report exact mentor words + what other builders asked. No interpretation. Claude decodes.
-11. **EOD CHECK-INS:** User must report daily with screenshots and blockers
+14. **Feb 9-11:** CONDITIONAL new contract features (only if frontend polished + specific feature pitched + approved)
+15. **Feb 15:** Video script LOCKED. Feature cutoff. Anything not in frontend by now doesn't ship.
+16. **EOD CHECK-INS:** User must report daily with screenshots and blockers
 
-**Day 2 check-in requirements:**
-- Deployment tx hashes (proof contracts are on Sepolia)
-- Screenshot of wallet connecting to app
-- Status of deposit flow UI
+**Day 2 check-in: ✅ PASSED**
+- ✅ Deployment tx hashes: 7 contracts on Sepolia (addresses documented)
+- ✅ Screenshot of wallet connecting to app (0x046d...b00b)
+- ✅ Deposit flow UI functional (pool + AMM tabs)
+- ✅ Dashboard reading on-chain data
+- ✅ Sepolia end-to-end tx verified
+
+**Day 3 check-in requirements (Jan 31):**
+- Screenshots of visual polish progress (landing page, color changes)
+- Accent color chosen and applied
+- Landing page no longer Next.js boilerplate
 
 ═══════════════════════════════════════════════════════════
 
