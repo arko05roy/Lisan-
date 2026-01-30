@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useAccount, useSendTransaction } from "@starknet-react/core";
+import { useAccount } from "@starknet-react/core";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,30 +9,37 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { getPoolNotes, addNote, markPoolNoteSpent, PoolNote } from "@/lib/storage";
 import { generateSecret, computeCommitment, computeNullifierHash } from "@/lib/crypto";
-import { buildCall } from "@/lib/contracts";
 import { txToast, errorToast } from "@/components/tx-toast";
-import { ADDRESSES } from "@/lib/addresses";
+import { MerkleTree } from "@/lib/merkle";
+import { generatePoolTransferProof } from "@/lib/prover";
+import { relayTransfer, getRelayTxStatus } from "@/lib/relay";
+import { Relayer, resolveRelayerBaseUrl } from "@/lib/relayer-registry";
+import { RelayerSelect } from "@/components/relayer-select";
 
 export default function TransferPage() {
   const { address } = useAccount();
-  const { sendAsync } = useSendTransaction({});
 
   const [notes, setNotes] = useState<PoolNote[]>([]);
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
   const [transferAmount, setTransferAmount] = useState("");
   const [loading, setLoading] = useState(false);
+  const [proofStatus, setProofStatus] = useState<string | null>(null);
   const [recipientSecrets, setRecipientSecrets] = useState<string | null>(null);
+  const [selectedRelayer, setSelectedRelayer] = useState<Relayer | null>(null);
 
   useEffect(() => {
     setNotes(getPoolNotes().filter((n) => !n.spent));
   }, []);
 
   const selectedNote = selectedIdx !== null ? notes[selectedIdx] : null;
+  const relayerUrl = selectedRelayer ? resolveRelayerBaseUrl(selectedRelayer) : "";
+  const relayerDisabled = !selectedRelayer || selectedRelayer.status === "offline";
 
   async function handleTransfer() {
-    if (!address || !selectedNote || !transferAmount) return;
+    if (!address || !selectedNote || !transferAmount || relayerDisabled) return;
     setLoading(true);
     setRecipientSecrets(null);
+    setProofStatus(null);
     try {
       const transferAmountWei = BigInt(transferAmount) * 10n ** 18n;
       const oldAmountBig = BigInt(selectedNote.amount);
@@ -43,8 +50,6 @@ export default function TransferPage() {
         setLoading(false);
         return;
       }
-
-      const nullifierHash = computeNullifierHash(selectedNote.nullifierSecret);
 
       // Generate new secrets for sender change note
       const newSecretSender = generateSecret();
@@ -64,26 +69,37 @@ export default function TransferPage() {
         newNullifierSecretRecipient,
       );
 
-      const calldata = [
-        selectedNote.commitment,
-        nullifierHash,
-        selectedNote.amount,
-        selectedNote.secret,
-        selectedNote.nullifierSecret,
-        newCommitmentSender,
-        newCommitmentRecipient,
+      // Build Merkle tree and generate ZK proof
+      setProofStatus("Building Merkle tree...");
+      const tree = new MerkleTree();
+      await tree.initialize();
+      const leafIndex = await tree.insert(BigInt(selectedNote.commitment));
+
+      setProofStatus("Generating ZK proof...");
+      const path = await tree.getPath(leafIndex);
+      const { fullProofWithHints, publicSignals } = await generatePoolTransferProof(
+        selectedNote,
+        path,
         changeAmount.toString(),
         transferAmountWei.toString(),
         newSecretSender,
         newNullifierSecretSender,
         newSecretRecipient,
         newNullifierSecretRecipient,
-      ];
+      );
 
-      const result = await sendAsync([
-        buildCall(ADDRESSES.SHIELDED_POOL, "transfer", calldata),
-      ]);
-      const t = txToast(result.transaction_hash);
+      const root = publicSignals[0];
+      const nullifierHash = computeNullifierHash(selectedNote.nullifierSecret);
+
+      setProofStatus("Sending to relayer...");
+      const { transactionHash } = await relayTransfer(relayerUrl, {
+        fullProofWithHints,
+        root,
+        nullifierHash,
+        newCommitmentSender,
+        newCommitmentRecipient,
+      });
+      const t = txToast(transactionHash);
 
       // Mark old note as spent
       markPoolNoteSpent(selectedNote.commitment);
@@ -126,10 +142,12 @@ export default function TransferPage() {
       setNotes(getPoolNotes().filter((n) => !n.spent));
       setSelectedIdx(null);
       setTransferAmount("");
+      setProofStatus(null);
     } catch (e: unknown) {
       errorToast(e instanceof Error ? e.message : "Transfer failed");
     } finally {
       setLoading(false);
+      setProofStatus(null);
     }
   }
 
@@ -138,9 +156,26 @@ export default function TransferPage() {
       <div>
         <h1 className="text-2xl font-bold">Shielded Transfer</h1>
         <p className="text-muted-foreground">
-          Transfer within the shielded pool without revealing amounts
+          Transfer within the shielded pool using ZK proofs. Secrets never leave your browser.
         </p>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Select Relayer</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <RelayerSelect selectedRelayer={selectedRelayer} onSelect={setSelectedRelayer} />
+        </CardContent>
+      </Card>
+
+      {proofStatus && (
+        <Card>
+          <CardContent className="py-3">
+            <p className="text-sm text-muted-foreground">{proofStatus}</p>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>
@@ -189,8 +224,8 @@ export default function TransferPage() {
                 Note balance: {(BigInt(selectedNote.amount) / 10n ** 18n).toString()} mBTC
               </p>
             </div>
-            <Button className="w-full" disabled={loading || !transferAmount} onClick={handleTransfer}>
-              {loading ? "Processing..." : "Transfer"}
+            <Button className="w-full" disabled={loading || !transferAmount || relayerDisabled} onClick={handleTransfer}>
+              {loading ? `Processing${proofStatus ? ` — ${proofStatus}` : ""}...` : "Generate Proof & Transfer"}
             </Button>
           </CardContent>
         </Card>

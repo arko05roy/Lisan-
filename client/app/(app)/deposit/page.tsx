@@ -45,6 +45,9 @@ export default function DepositPage() {
       const result = await sendAsync(calls);
       const t = txToast(result.transaction_hash);
 
+      // TODO: Parse leaf_index from Deposit event once transaction is confirmed.
+      // For now, store without leafIndex. The client can reconstruct the tree
+      // from on-chain events when generating proofs.
       addNote({
         type: "pool",
         commitment,
@@ -90,6 +93,7 @@ export default function DepositPage() {
       const result = await sendAsync(calls);
       const t = txToast(result.transaction_hash);
 
+      // TODO: Parse leaf_index from Deposit event once transaction is confirmed.
       addNote({
         type: "amm",
         commitment,
@@ -115,7 +119,8 @@ export default function DepositPage() {
       <div>
         <h1 className="text-2xl font-bold">Deposit</h1>
         <p className="text-muted-foreground">
-          Deposit tokens into the Shielded Pool or AMM
+          Deposit tokens into the Shielded Pool or AMM. Your commitment is added
+          to the Merkle tree on-chain.
         </p>
       </div>
 
@@ -142,6 +147,7 @@ export default function DepositPage() {
               </div>
               <p className="text-xs text-muted-foreground">
                 A secret and nullifier will be generated automatically. Your note will be stored in localStorage.
+                Secrets never touch the blockchain.
               </p>
               <Button className="w-full" disabled={loading || !address || !poolAmount} onClick={depositPool}>
                 {loading ? "Processing..." : "Deposit to Pool"}

@@ -8,6 +8,9 @@ starknet = "2.15.0"
 openzeppelin_token = { git = "https://github.com/OpenZeppelin/cairo-contracts.git", branch = "main" }
 openzeppelin_access = { git = "https://github.com/OpenZeppelin/cairo-contracts.git", branch = "main" }
 openzeppelin_interfaces = { git = "https://github.com/OpenZeppelin/cairo-contracts.git", branch = "main" }
+# Garaga verifier contracts are deployed separately (see circuits/build/*_verifier/).
+# Our contracts call them via the IGroth16VerifierBN254 dispatcher interface
+# defined in src/garaga_verifiers.cairo — no garaga dependency needed here.
 
 [dev-dependencies]
 snforge_std = "0.55.0"
@@ -31,4 +34,5 @@ build-external-contracts = [
     "lisan_contracts::mock_pragma_oracle::MockPragmaOracle",
     "lisan_contracts::prediction_market::PredictionMarket",
     "lisan_contracts::private_voting::PrivateVoting",
+    "lisan_contracts::mock_groth16_verifier::MockGroth16Verifier",
 ]

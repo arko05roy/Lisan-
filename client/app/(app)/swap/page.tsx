@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useAccount, useReadContract, useSendTransaction } from "@starknet-react/core";
+import { useAccount, useReadContract } from "@starknet-react/core";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,9 +9,13 @@ import { ADDRESSES, TOKEN_TYPE_BTC, TOKEN_TYPE_STRK } from "@/lib/addresses";
 import { SHIELDED_AMM_ABI } from "@/lib/abis";
 import { getAmmNotes, addNote, markAmmNoteSpent, AmmNote } from "@/lib/storage";
 import { generateSecret, computeAmmCommitment, computeNullifierHash } from "@/lib/crypto";
-import { buildCall } from "@/lib/contracts";
 import { txToast, errorToast } from "@/components/tx-toast";
 import { uint256 } from "starknet";
+import { MerkleTree } from "@/lib/merkle";
+import { generateAmmSwapProof } from "@/lib/prover";
+import { relaySwap } from "@/lib/relay";
+import { Relayer, resolveRelayerBaseUrl } from "@/lib/relayer-registry";
+import { RelayerSelect } from "@/components/relayer-select";
 
 function formatTokens(data: unknown): string {
   if (!data) return "0";
@@ -26,11 +30,12 @@ function formatTokens(data: unknown): string {
 
 export default function SwapPage() {
   const { address } = useAccount();
-  const { sendAsync } = useSendTransaction({});
 
   const [notes, setNotes] = useState<AmmNote[]>([]);
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
+  const [proofStatus, setProofStatus] = useState<string | null>(null);
+  const [selectedRelayer, setSelectedRelayer] = useState<Relayer | null>(null);
 
   const selectedNote = selectedIdx !== null ? notes[selectedIdx] : null;
 
@@ -39,6 +44,9 @@ export default function SwapPage() {
   const tokenTypeOut = tokenTypeIn === TOKEN_TYPE_BTC ? TOKEN_TYPE_STRK : TOKEN_TYPE_BTC;
   const tokenLabelIn = tokenTypeIn === TOKEN_TYPE_BTC ? "mBTC" : "mSTRK";
   const tokenLabelOut = tokenTypeOut === TOKEN_TYPE_BTC ? "mBTC" : "mSTRK";
+
+  const relayerUrl = selectedRelayer ? resolveRelayerBaseUrl(selectedRelayer) : "";
+  const relayerDisabled = !selectedRelayer || selectedRelayer.status === "offline";
 
   const { data: btcReserve } = useReadContract({
     address: ADDRESSES.SHIELDED_AMM as `0x${string}`,
@@ -74,8 +82,9 @@ export default function SwapPage() {
   }, []);
 
   async function handleSwap() {
-    if (!address || !selectedNote || !quoteData) return;
+    if (!address || !selectedNote || !quoteData || relayerDisabled) return;
     setLoading(true);
+    setProofStatus(null);
     try {
       const nullifierHash = computeNullifierHash(selectedNote.nullifierSecret);
       const amountOut = BigInt(quoteData as string | number | bigint).toString();
@@ -85,24 +94,37 @@ export default function SwapPage() {
       const newNullifierSecret = generateSecret();
       const newCommitment = computeAmmCommitment(amountOut, tokenTypeOut, newSecret, newNullifierSecret);
 
-      const calldata = [
-        selectedNote.commitment,
-        nullifierHash,
-        selectedNote.amount,
-        tokenTypeIn,
-        selectedNote.secret,
-        selectedNote.nullifierSecret,
-        newCommitment,
+      // Build Merkle tree and generate ZK proof
+      setProofStatus("Building Merkle tree...");
+      const tree = new MerkleTree();
+      await tree.initialize();
+      const leafIndex = await tree.insert(BigInt(selectedNote.commitment));
+
+      setProofStatus("Generating ZK proof...");
+      const path = await tree.getPath(leafIndex);
+      const { fullProofWithHints, publicSignals } = await generateAmmSwapProof(
+        selectedNote,
+        path,
         amountOut,
         tokenTypeOut,
         newSecret,
         newNullifierSecret,
-      ];
+      );
 
-      const result = await sendAsync([
-        buildCall(ADDRESSES.SHIELDED_AMM, "swap", calldata),
-      ]);
-      const t = txToast(result.transaction_hash);
+      const root = publicSignals[0];
+
+      setProofStatus("Sending to relayer...");
+      const { transactionHash } = await relaySwap(relayerUrl, {
+        fullProofWithHints,
+        root,
+        nullifierHash,
+        tokenTypeIn,
+        amountIn: selectedNote.amount,
+        tokenTypeOut,
+        newCommitment,
+        amountOut,
+      });
+      const t = txToast(transactionHash);
 
       markAmmNoteSpent(selectedNote.commitment);
       addNote({
@@ -119,10 +141,12 @@ export default function SwapPage() {
       t.success();
       setNotes(getAmmNotes().filter((n) => !n.spent));
       setSelectedIdx(null);
+      setProofStatus(null);
     } catch (e: unknown) {
       errorToast(e instanceof Error ? e.message : "Swap failed");
     } finally {
       setLoading(false);
+      setProofStatus(null);
     }
   }
 
@@ -131,9 +155,18 @@ export default function SwapPage() {
       <div>
         <h1 className="text-2xl font-bold">Shielded Swap</h1>
         <p className="text-muted-foreground">
-          Swap tokens privately through the AMM
+          Swap tokens privately through the AMM using ZK proofs
         </p>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Select Relayer</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <RelayerSelect selectedRelayer={selectedRelayer} onSelect={setSelectedRelayer} />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
@@ -150,6 +183,14 @@ export default function SwapPage() {
           </div>
         </CardContent>
       </Card>
+
+      {proofStatus && (
+        <Card>
+          <CardContent className="py-3">
+            <p className="text-sm text-muted-foreground">{proofStatus}</p>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>
@@ -199,8 +240,8 @@ export default function SwapPage() {
                 {quoteData ? formatTokens(quoteData) : "..."} {tokenLabelOut}
               </span>
             </div>
-            <Button className="w-full" disabled={loading || !quoteData || !address} onClick={handleSwap}>
-              {loading ? "Processing..." : `Swap ${tokenLabelIn} → ${tokenLabelOut}`}
+            <Button className="w-full" disabled={loading || !quoteData || !address || relayerDisabled} onClick={handleSwap}>
+              {loading ? `Processing${proofStatus ? ` — ${proofStatus}` : ""}...` : `Generate Proof & Swap ${tokenLabelIn} → ${tokenLabelOut}`}
             </Button>
           </CardContent>
         </Card>

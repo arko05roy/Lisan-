@@ -33,12 +33,9 @@ export const PREDICTION_MARKET_ABI = [
     name: "claim",
     inputs: [
       { name: "market_id", type: "core::integer::u64" },
+      { name: "full_proof_with_hints", type: "core::array::Span::<core::felt252>" },
       { name: "bet_commitment", type: "core::felt252" },
       { name: "nullifier_hash", type: "core::felt252" },
-      { name: "outcome", type: "core::felt252" },
-      { name: "amount", type: "core::felt252" },
-      { name: "secret", type: "core::felt252" },
-      { name: "nullifier_secret", type: "core::felt252" },
       { name: "recipient", type: "core::starknet::contract_address::ContractAddress" },
     ],
     outputs: [],

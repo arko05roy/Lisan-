@@ -15,6 +15,7 @@ import { addNote, getBetNotes, markBetNoteClaimed, BetNote } from "@/lib/storage
 import { buildApproveCall, buildCall } from "@/lib/contracts";
 import { txToast, errorToast } from "@/components/tx-toast";
 import { uint256, hash } from "starknet";
+import { generateBetClaimProof } from "@/lib/prover";
 
 export default function PredictPage() {
   const { address } = useAccount();
@@ -142,17 +143,20 @@ export default function PredictPage() {
     try {
       const nullifierHash = computeNullifierHash(note.nullifierSecret);
 
+      // Generate ZK proof for bet claim with Garaga full_proof_with_hints
+      const { fullProofWithHints } = await generateBetClaimProof(note, note.outcome);
+
+      // full_proof_with_hints is passed as a Span<felt252>
+      const calldata = [
+        note.marketId.toString(),
+        fullProofWithHints.length.toString(), ...fullProofWithHints,
+        note.commitment,
+        nullifierHash,
+        address,
+      ];
+
       const result = await sendAsync([
-        buildCall(ADDRESSES.PREDICTION_MARKET, "claim", [
-          note.marketId.toString(),
-          note.commitment,
-          nullifierHash,
-          note.outcome,
-          note.amount,
-          note.secret,
-          note.nullifierSecret,
-          address,
-        ]),
+        buildCall(ADDRESSES.PREDICTION_MARKET, "claim", calldata),
       ]);
       const t = txToast(result.transaction_hash);
       markBetNoteClaimed(note.commitment);

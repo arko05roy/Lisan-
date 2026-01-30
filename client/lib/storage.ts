@@ -6,6 +6,7 @@ export interface PoolNote {
   amount: string;
   secret: string;
   nullifierSecret: string;
+  leafIndex?: number;
   spent: boolean;
   createdAt: number;
 }
@@ -17,6 +18,7 @@ export interface AmmNote {
   tokenType: string;
   secret: string;
   nullifierSecret: string;
+  leafIndex?: number;
   spent: boolean;
   createdAt: number;
 }

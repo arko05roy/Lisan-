@@ -13,12 +13,9 @@ pub trait IPredictionMarket<TContractState> {
     fn claim(
         ref self: TContractState,
         market_id: u64,
+        full_proof_with_hints: Span<felt252>,
         bet_commitment: felt252,
         nullifier_hash: felt252,
-        outcome: felt252,
-        amount: felt252,
-        secret: felt252,
-        nullifier_secret: felt252,
         recipient: starknet::ContractAddress,
     );
     fn get_market_count(self: @TContractState) -> u64;
@@ -49,12 +46,13 @@ pub mod PredictionMarket {
     use lisan_contracts::mock_pragma_oracle::{
         IMockPragmaOracleDispatcher, IMockPragmaOracleDispatcherTrait,
     };
-    use lisan_contracts::verifier::verify_bet_claim_proof;
+    use lisan_contracts::verifier::verify_bet_claim;
 
     #[storage]
     struct Storage {
         btc_token: ContractAddress,
         oracle: ContractAddress,
+        bet_claim_verifier: ContractAddress,
         market_count: u64,
         // Per-market storage
         market_question: Map<u64, felt252>,
@@ -121,9 +119,15 @@ pub mod PredictionMarket {
     }
 
     #[constructor]
-    fn constructor(ref self: ContractState, btc_token: ContractAddress, oracle: ContractAddress) {
+    fn constructor(
+        ref self: ContractState,
+        btc_token: ContractAddress,
+        oracle: ContractAddress,
+        bet_claim_verifier: ContractAddress,
+    ) {
         self.btc_token.write(btc_token);
         self.oracle.write(oracle);
+        self.bet_claim_verifier.write(bet_claim_verifier);
     }
 
     #[abi(embed_v0)]
@@ -233,12 +237,9 @@ pub mod PredictionMarket {
         fn claim(
             ref self: ContractState,
             market_id: u64,
+            full_proof_with_hints: Span<felt252>,
             bet_commitment: felt252,
             nullifier_hash: felt252,
-            outcome: felt252,
-            amount: felt252,
-            secret: felt252,
-            nullifier_secret: felt252,
             recipient: ContractAddress,
         ) {
             // Market must be resolved
@@ -258,23 +259,23 @@ pub mod PredictionMarket {
             // Nullifier must not be used (double-claim prevention)
             assert(!self.nullifiers.read(nullifier_hash), 'Nullifier already used');
 
-            // Verify claim proof (commitment integrity + outcome matches winner)
+            // Verify ZK proof via Garaga verifier contract
             let winning_outcome = self.market_winning_outcome.read(market_id);
-            let valid = verify_bet_claim_proof(
-                bet_commitment, outcome, amount, secret, nullifier_secret, nullifier_hash,
+            verify_bet_claim(
+                self.bet_claim_verifier.read(),
+                full_proof_with_hints,
+                bet_commitment,
+                nullifier_hash,
                 winning_outcome,
             );
-            assert(valid, 'Invalid claim proof');
 
-            // Verify amount matches stored bet amount (belt-and-suspenders)
+            // Get stored bet amount for payout calculation
             let stored_amount = self.bet_amounts.read(bet_commitment);
-            let claimed_amount: u256 = amount.into();
-            assert(claimed_amount == stored_amount, 'Amount mismatch');
 
             // Calculate payout: amount * num_outcomes (fair odds), capped at remaining pool
             let num_outcomes = self.market_num_outcomes.read(market_id);
             let multiplier: u256 = num_outcomes.into();
-            let ideal_payout: u256 = claimed_amount * multiplier;
+            let ideal_payout: u256 = stored_amount * multiplier;
             let remaining_pool = self.market_remaining_pool.read(market_id);
             let payout = if ideal_payout > remaining_pool {
                 remaining_pool

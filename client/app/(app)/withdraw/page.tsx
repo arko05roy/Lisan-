@@ -1,11 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useAccount, useSendTransaction } from "@starknet-react/core";
+import { useState, useEffect, useCallback } from "react";
+import { useAccount } from "@starknet-react/core";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -14,19 +13,27 @@ import {
   PoolNote, AmmNote,
 } from "@/lib/storage";
 import { computeNullifierHash } from "@/lib/crypto";
-import { buildCall } from "@/lib/contracts";
 import { txToast, errorToast } from "@/components/tx-toast";
-import { ADDRESSES, TOKEN_TYPE_BTC } from "@/lib/addresses";
-import { uint256 } from "starknet";
+import { TOKEN_TYPE_BTC } from "@/lib/addresses";
+import {
+  relayPrepareWithdraw,
+  relayClaimWithdrawal,
+  getRelayTxStatus,
+} from "@/lib/relay";
+import { Relayer, resolveRelayerBaseUrl, formatFee } from "@/lib/relayer-registry";
+import { RelayerSelect } from "@/components/relayer-select";
+import { MerkleTree } from "@/lib/merkle";
+import { generatePoolWithdrawProof, generateAmmWithdrawProof } from "@/lib/prover";
 
 interface PendingClaim {
   nullifierHash: string;
   source: "pool" | "amm";
+  amount: string;
+  tokenLabel: string;
 }
 
 export default function WithdrawPage() {
   const { address } = useAccount();
-  const { sendAsync } = useSendTransaction({});
 
   const [poolNotes, setPoolNotes] = useState<PoolNote[]>([]);
   const [ammNotes, setAmmNotes] = useState<AmmNote[]>([]);
@@ -35,100 +42,179 @@ export default function WithdrawPage() {
   const [recipient, setRecipient] = useState("");
   const [loading, setLoading] = useState(false);
   const [pendingClaim, setPendingClaim] = useState<PendingClaim | null>(null);
+  const [txStatus, setTxStatus] = useState<string | null>(null);
+  const [proofStatus, setProofStatus] = useState<string | null>(null);
+  const [selectedRelayer, setSelectedRelayer] = useState<Relayer | null>(null);
 
   useEffect(() => {
     setPoolNotes(getPoolNotes().filter((n) => !n.spent));
     setAmmNotes(getAmmNotes().filter((n) => !n.spent));
   }, []);
 
+  const relayerUrl = selectedRelayer ? resolveRelayerBaseUrl(selectedRelayer) : "";
+  const relayerDisabled = !selectedRelayer || selectedRelayer.status === "offline";
+
+  const pollTxStatus = useCallback(async (txHash: string) => {
+    setTxStatus("PENDING");
+    const maxAttempts = 60;
+    for (let i = 0; i < maxAttempts; i++) {
+      await new Promise((r) => setTimeout(r, 3000));
+      try {
+        const { status } = await getRelayTxStatus(relayerUrl, txHash);
+        setTxStatus(status);
+        if (status === "ACCEPTED_ON_L2" || status === "REJECTED") return status;
+      } catch {
+        // keep polling
+      }
+    }
+    return "PENDING";
+  }, [relayerUrl]);
+
   async function preparePoolWithdraw() {
-    if (!address || selectedPool === null) return;
+    if (selectedPool === null || relayerDisabled) return;
     const note = poolNotes[selectedPool];
     setLoading(true);
+    setProofStatus(null);
     try {
-      const nullifierHash = computeNullifierHash(note.nullifierSecret);
-      const withdrawAmountBig = BigInt(note.amount);
-      const u = uint256.bnToUint256(withdrawAmountBig);
+      // Generate ZK proof locally
+      setProofStatus("Building Merkle tree...");
+      const tree = new MerkleTree();
+      await tree.initialize();
 
-      const result = await sendAsync([
-        buildCall(ADDRESSES.SHIELDED_POOL, "prepare_withdraw", [
-          note.commitment,
-          nullifierHash,
-          note.amount,
-          note.secret,
-          note.nullifierSecret,
-          u.low.toString(), u.high.toString(),
-        ]),
-      ]);
-      const t = txToast(result.transaction_hash);
+      // Insert this note's commitment (simplified — in production, reconstruct full tree from events)
+      const leafIndex = await tree.insert(BigInt(note.commitment));
+
+      setProofStatus("Generating ZK proof...");
+      const path = await tree.getPath(leafIndex);
+      const { fullProofWithHints, publicSignals } = await generatePoolWithdrawProof(note, path);
+
+      const root = publicSignals[0];
+      const nullifierHash = computeNullifierHash(note.nullifierSecret);
+
+      setProofStatus("Sending to relayer...");
+      const { transactionHash } = await relayPrepareWithdraw(relayerUrl, {
+        contract: "pool",
+        fullProofWithHints,
+        root,
+        nullifierHash,
+        withdrawAmount: note.amount,
+      });
+
+      const t = txToast(transactionHash);
       markPoolNoteSpent(note.commitment);
-      t.success();
       setPoolNotes(getPoolNotes().filter((n) => !n.spent));
-      setPendingClaim({ nullifierHash, source: "pool" });
+      setPendingClaim({ nullifierHash, source: "pool", amount: note.amount, tokenLabel: "mBTC" });
       setSelectedPool(null);
+      setProofStatus(null);
+
+      const finalStatus = await pollTxStatus(transactionHash);
+      if (finalStatus === "ACCEPTED_ON_L2") {
+        t.success();
+      } else if (finalStatus === "REJECTED") {
+        errorToast("Prepare withdraw transaction was rejected");
+      }
     } catch (e: unknown) {
       errorToast(e instanceof Error ? e.message : "Prepare withdraw failed");
     } finally {
       setLoading(false);
+      setTxStatus(null);
+      setProofStatus(null);
     }
   }
 
   async function prepareAmmWithdraw() {
-    if (!address || selectedAmm === null) return;
+    if (selectedAmm === null || relayerDisabled) return;
     const note = ammNotes[selectedAmm];
     setLoading(true);
+    setProofStatus(null);
     try {
-      const nullifierHash = computeNullifierHash(note.nullifierSecret);
-      const withdrawAmountBig = BigInt(note.amount);
-      const u = uint256.bnToUint256(withdrawAmountBig);
+      const tokenLabel = note.tokenType === TOKEN_TYPE_BTC ? "mBTC" : "mSTRK";
 
-      const result = await sendAsync([
-        buildCall(ADDRESSES.SHIELDED_AMM, "prepare_withdraw", [
-          note.commitment,
-          nullifierHash,
-          note.amount,
-          note.tokenType,
-          note.secret,
-          note.nullifierSecret,
-          u.low.toString(), u.high.toString(),
-        ]),
-      ]);
-      const t = txToast(result.transaction_hash);
+      // Generate ZK proof locally
+      setProofStatus("Building Merkle tree...");
+      const tree = new MerkleTree();
+      await tree.initialize();
+      const leafIndex = await tree.insert(BigInt(note.commitment));
+
+      setProofStatus("Generating ZK proof...");
+      const path = await tree.getPath(leafIndex);
+      const { fullProofWithHints, publicSignals } = await generateAmmWithdrawProof(note, path);
+
+      const root = publicSignals[0];
+      const nullifierHash = computeNullifierHash(note.nullifierSecret);
+
+      setProofStatus("Sending to relayer...");
+      const { transactionHash } = await relayPrepareWithdraw(relayerUrl, {
+        contract: "amm",
+        fullProofWithHints,
+        root,
+        nullifierHash,
+        withdrawAmount: note.amount,
+        tokenType: note.tokenType,
+      });
+
+      const t = txToast(transactionHash);
       markAmmNoteSpent(note.commitment);
-      t.success();
       setAmmNotes(getAmmNotes().filter((n) => !n.spent));
-      setPendingClaim({ nullifierHash, source: "amm" });
+      setPendingClaim({ nullifierHash, source: "amm", amount: note.amount, tokenLabel });
       setSelectedAmm(null);
+      setProofStatus(null);
+
+      const finalStatus = await pollTxStatus(transactionHash);
+      if (finalStatus === "ACCEPTED_ON_L2") {
+        t.success();
+      } else if (finalStatus === "REJECTED") {
+        errorToast("AMM prepare withdraw transaction was rejected");
+      }
     } catch (e: unknown) {
       errorToast(e instanceof Error ? e.message : "AMM prepare withdraw failed");
     } finally {
       setLoading(false);
+      setTxStatus(null);
+      setProofStatus(null);
     }
   }
 
   async function claimWithdrawal() {
-    if (!address || !pendingClaim) return;
-    const recip = recipient || address;
+    if (!pendingClaim || !recipient || relayerDisabled) return;
     setLoading(true);
     try {
-      const contractAddr = pendingClaim.source === "pool"
-        ? ADDRESSES.SHIELDED_POOL
-        : ADDRESSES.SHIELDED_AMM;
+      const { transactionHash } = await relayClaimWithdrawal(relayerUrl, {
+        contract: pendingClaim.source,
+        nullifierHash: pendingClaim.nullifierHash,
+        recipient,
+      });
 
-      const result = await sendAsync([
-        buildCall(contractAddr, "claim_withdrawal", [
-          pendingClaim.nullifierHash,
-          recip,
-        ]),
-      ]);
-      const t = txToast(result.transaction_hash);
-      t.success();
-      setPendingClaim(null);
+      const t = txToast(transactionHash);
+
+      const finalStatus = await pollTxStatus(transactionHash);
+      if (finalStatus === "ACCEPTED_ON_L2") {
+        t.success();
+        setPendingClaim(null);
+      } else if (finalStatus === "REJECTED") {
+        errorToast("Claim withdrawal transaction was rejected");
+      }
     } catch (e: unknown) {
       errorToast(e instanceof Error ? e.message : "Claim failed");
     } finally {
       setLoading(false);
+      setTxStatus(null);
     }
+  }
+
+  function renderFeeBreakdown(amount: string, tokenLabel: string) {
+    if (!selectedRelayer) return null;
+    const amt = BigInt(amount);
+    const feeBps = selectedRelayer.feeBps;
+    const fee = (amt * BigInt(feeBps)) / 10000n;
+    const received = amt - fee;
+    const feeTokens = fee / 10n ** 18n;
+    const receivedTokens = received / 10n ** 18n;
+    return (
+      <p className="text-xs text-muted-foreground">
+        You receive: {receivedTokens.toString()} {tokenLabel} ({feeTokens.toString()} {tokenLabel} relayer fee @ {formatFee(feeBps)})
+      </p>
+    );
   }
 
   function renderNoteList(
@@ -152,13 +238,24 @@ export default function WithdrawPage() {
           }`}
         >
           <div className="flex items-center justify-between">
-            <span className="text-sm font-mono">{note.commitment.slice(0, 16)}...</span>
             <Badge variant="secondary">{amtTokens.toString()} {tokenLabel}</Badge>
           </div>
+          {selected === i && renderFeeBreakdown(note.amount, tokenLabel)}
         </button>
       );
     });
   }
+
+  const relayerCard = (
+    <Card>
+      <CardHeader>
+        <CardTitle>Select Relayer</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <RelayerSelect selectedRelayer={selectedRelayer} onSelect={setSelectedRelayer} />
+      </CardContent>
+    </Card>
+  );
 
   if (pendingClaim) {
     return (
@@ -167,9 +264,11 @@ export default function WithdrawPage() {
           <h1 className="text-2xl font-bold">Claim Withdrawal</h1>
           <p className="text-muted-foreground">
             Step 2: Send the escrowed funds to a recipient address.
-            This can be called from any wallet for privacy.
+            The relayer submits this transaction — your wallet stays hidden.
           </p>
         </div>
+
+        {relayerCard}
 
         <Card>
           <CardHeader>
@@ -177,15 +276,21 @@ export default function WithdrawPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <Input
-              placeholder="0x... (defaults to your wallet)"
+              placeholder="0x... (enter recipient address)"
               value={recipient}
               onChange={(e) => setRecipient(e.target.value)}
             />
             <p className="text-xs text-muted-foreground">
               For maximum privacy, use a fresh wallet address that is not linked to your main account.
             </p>
-            <Button className="w-full" disabled={loading || !address} onClick={claimWithdrawal}>
-              {loading ? "Processing..." : "Claim Withdrawal"}
+            {renderFeeBreakdown(pendingClaim.amount, pendingClaim.tokenLabel)}
+            {txStatus && (
+              <p className="text-sm text-muted-foreground">
+                Transaction status: <Badge variant="outline">{txStatus}</Badge>
+              </p>
+            )}
+            <Button className="w-full" disabled={loading || !recipient || relayerDisabled} onClick={claimWithdrawal}>
+              {loading ? `Processing${txStatus ? ` (${txStatus})` : ""}...` : "Claim Withdrawal"}
             </Button>
             <Button variant="outline" className="w-full" onClick={() => setPendingClaim(null)}>
               Cancel
@@ -201,10 +306,27 @@ export default function WithdrawPage() {
       <div>
         <h1 className="text-2xl font-bold">Withdraw</h1>
         <p className="text-muted-foreground">
-          Step 1: Prepare withdrawal — proves note ownership and escrows funds.
-          No recipient address is revealed on-chain.
+          Step 1: Generate a ZK proof locally, then the relayer submits it on-chain.
+          Your secrets never leave your browser.
         </p>
       </div>
+
+      {relayerCard}
+
+      {(txStatus || proofStatus) && (
+        <Card>
+          <CardContent className="py-3">
+            {proofStatus && (
+              <p className="text-sm text-muted-foreground">{proofStatus}</p>
+            )}
+            {txStatus && (
+              <p className="text-sm text-muted-foreground">
+                Transaction status: <Badge variant="outline">{txStatus}</Badge>
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <Tabs defaultValue="pool">
         <TabsList className="w-full">
@@ -220,8 +342,8 @@ export default function WithdrawPage() {
             <CardContent className="space-y-2">
               {renderNoteList(poolNotes, selectedPool, setSelectedPool, false)}
               {selectedPool !== null && (
-                <Button className="mt-4 w-full" disabled={loading || !address} onClick={preparePoolWithdraw}>
-                  {loading ? "Processing..." : "Prepare Withdrawal"}
+                <Button className="mt-4 w-full" disabled={loading || relayerDisabled} onClick={preparePoolWithdraw}>
+                  {loading ? `Processing${proofStatus ? ` — ${proofStatus}` : ""}...` : "Generate Proof & Withdraw"}
                 </Button>
               )}
             </CardContent>
@@ -236,8 +358,8 @@ export default function WithdrawPage() {
             <CardContent className="space-y-2">
               {renderNoteList(ammNotes, selectedAmm, setSelectedAmm, true)}
               {selectedAmm !== null && (
-                <Button className="mt-4 w-full" disabled={loading || !address} onClick={prepareAmmWithdraw}>
-                  {loading ? "Processing..." : "Prepare Withdrawal"}
+                <Button className="mt-4 w-full" disabled={loading || relayerDisabled} onClick={prepareAmmWithdraw}>
+                  {loading ? `Processing${proofStatus ? ` — ${proofStatus}` : ""}...` : "Generate Proof & Withdraw"}
                 </Button>
               )}
             </CardContent>

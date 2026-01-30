@@ -4,26 +4,21 @@ pub trait IShieldedAMM<TContractState> {
     fn deposit(ref self: TContractState, token_type: felt252, amount: u256, commitment: felt252);
     fn swap(
         ref self: TContractState,
-        old_commitment: felt252,
+        full_proof_with_hints: Span<felt252>,
+        root: felt252,
         nullifier_hash: felt252,
-        amount_in: felt252,
         token_type_in: felt252,
-        old_secret: felt252,
-        old_nullifier_secret: felt252,
+        amount_in: felt252,
+        token_type_out: felt252,
         new_commitment: felt252,
         amount_out: felt252,
-        token_type_out: felt252,
-        new_secret: felt252,
-        new_nullifier_secret: felt252,
     );
     fn prepare_withdraw(
         ref self: TContractState,
-        commitment: felt252,
+        full_proof_with_hints: Span<felt252>,
+        root: felt252,
         nullifier_hash: felt252,
-        amount: felt252,
         token_type: felt252,
-        secret: felt252,
-        nullifier_secret: felt252,
         withdraw_amount: u256,
     );
     fn claim_withdrawal(
@@ -36,12 +31,12 @@ pub trait IShieldedAMM<TContractState> {
     ) -> u256;
     fn get_btc_reserve(self: @TContractState) -> u256;
     fn get_strk_reserve(self: @TContractState) -> u256;
-    fn is_commitment_valid(self: @TContractState, commitment: felt252) -> bool;
     fn is_nullifier_used(self: @TContractState, nullifier_hash: felt252) -> bool;
     fn get_commitment_count(self: @TContractState) -> u64;
     fn is_seeded(self: @TContractState) -> bool;
     fn get_btc_token(self: @TContractState) -> starknet::ContractAddress;
     fn get_strk_token(self: @TContractState) -> starknet::ContractAddress;
+    fn get_last_root(self: @TContractState) -> felt252;
 }
 
 #[starknet::contract]
@@ -52,24 +47,32 @@ pub mod ShieldedAMM {
         StorageMapWriteAccess,
     };
     use openzeppelin_interfaces::token::erc20::{IERC20Dispatcher, IERC20DispatcherTrait};
-    use lisan_contracts::verifier::{verify_swap_proof, verify_amm_withdraw_proof};
+    use lisan_contracts::verifier::{verify_amm_swap, verify_amm_withdraw};
+    use lisan_contracts::merkle_tree::MerkleTreeComponent;
 
     const TOKEN_TYPE_BTC: felt252 = 1;
     const TOKEN_TYPE_STRK: felt252 = 2;
+
+    component!(path: MerkleTreeComponent, storage: tree, event: TreeEvent);
+
+    impl MerkleTreeInternalImpl = MerkleTreeComponent::InternalImpl<ContractState>;
 
     #[storage]
     struct Storage {
         owner: ContractAddress,
         btc_token: ContractAddress,
         strk_token: ContractAddress,
+        swap_verifier: ContractAddress,
+        withdraw_verifier: ContractAddress,
         btc_reserve: u256,
         strk_reserve: u256,
-        commitments: Map<felt252, bool>,
         nullifiers: Map<felt252, bool>,
         commitment_count: u64,
         seeded: bool,
         pending_withdrawals: Map<felt252, u256>,
         pending_token_type: Map<felt252, felt252>,
+        #[substorage(v0)]
+        tree: MerkleTreeComponent::Storage,
     }
 
     #[event]
@@ -80,6 +83,8 @@ pub mod ShieldedAMM {
         Swap: Swap,
         PrepareWithdraw: PrepareWithdraw,
         Claim: Claim,
+        #[flat]
+        TreeEvent: MerkleTreeComponent::Event,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -95,6 +100,7 @@ pub mod ShieldedAMM {
         pub token_type: felt252,
         pub amount: u256,
         pub commitment: felt252,
+        pub leaf_index: u32,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -103,6 +109,7 @@ pub mod ShieldedAMM {
         pub token_type_in: felt252,
         pub token_type_out: felt252,
         pub new_commitment: felt252,
+        pub leaf_index: u32,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -126,10 +133,15 @@ pub mod ShieldedAMM {
         owner: ContractAddress,
         btc_token: ContractAddress,
         strk_token: ContractAddress,
+        swap_verifier: ContractAddress,
+        withdraw_verifier: ContractAddress,
     ) {
         self.owner.write(owner);
         self.btc_token.write(btc_token);
         self.strk_token.write(strk_token);
+        self.swap_verifier.write(swap_verifier);
+        self.withdraw_verifier.write(withdraw_verifier);
+        self.tree.initialize();
     }
 
     #[abi(embed_v0)]
@@ -165,7 +177,6 @@ pub mod ShieldedAMM {
                 token_type == TOKEN_TYPE_BTC || token_type == TOKEN_TYPE_STRK,
                 'Invalid token type',
             );
-            assert(!self.commitments.read(commitment), 'Commitment already exists');
 
             let caller = get_caller_address();
             let token_address = if token_type == TOKEN_TYPE_BTC {
@@ -178,25 +189,24 @@ pub mod ShieldedAMM {
             let success = token.transfer_from(caller, get_contract_address(), amount);
             assert(success, 'Token transfer failed');
 
-            self.commitments.write(commitment, true);
+            // Insert commitment into Merkle tree
+            let leaf_index = self.tree.insert(commitment);
+
             self.commitment_count.write(self.commitment_count.read() + 1);
 
-            self.emit(Deposit { depositor: caller, token_type, amount, commitment });
+            self.emit(Deposit { depositor: caller, token_type, amount, commitment, leaf_index });
         }
 
         fn swap(
             ref self: ContractState,
-            old_commitment: felt252,
+            full_proof_with_hints: Span<felt252>,
+            root: felt252,
             nullifier_hash: felt252,
-            amount_in: felt252,
             token_type_in: felt252,
-            old_secret: felt252,
-            old_nullifier_secret: felt252,
+            amount_in: felt252,
+            token_type_out: felt252,
             new_commitment: felt252,
             amount_out: felt252,
-            token_type_out: felt252,
-            new_secret: felt252,
-            new_nullifier_secret: felt252,
         ) {
             // Must be seeded before swapping
             assert(self.seeded.read(), 'AMM not seeded');
@@ -211,27 +221,24 @@ pub mod ShieldedAMM {
                 'Invalid output token type',
             );
 
-            // Check old commitment exists
-            assert(self.commitments.read(old_commitment), 'Commitment does not exist');
+            // Check root is known
+            assert(self.tree.is_known_root(root), 'Unknown Merkle root');
 
             // Check nullifier not already used
             assert(!self.nullifiers.read(nullifier_hash), 'Nullifier already used');
 
-            // Verify swap proof (commitment integrity, nullifier, token types, amounts > 0)
-            let valid = verify_swap_proof(
-                old_commitment,
-                amount_in,
-                token_type_in,
-                old_secret,
-                old_nullifier_secret,
+            // Verify ZK proof via Garaga verifier contract
+            verify_amm_swap(
+                self.swap_verifier.read(),
+                full_proof_with_hints,
+                root,
                 nullifier_hash,
+                token_type_in,
+                amount_in,
+                token_type_out,
                 new_commitment,
                 amount_out,
-                token_type_out,
-                new_secret,
-                new_nullifier_secret,
             );
-            assert(valid, 'Invalid swap proof');
 
             // Calculate expected output using constant product formula: x * y = k
             let amount_in_u256: u256 = amount_in.into();
@@ -260,29 +267,26 @@ pub mod ShieldedAMM {
                 self.btc_reserve.write(reserve_out - calculated_out);
             };
 
-            // Nullify old commitment
-            self.commitments.write(old_commitment, false);
+            // Mark nullifier as used
             self.nullifiers.write(nullifier_hash, true);
 
-            // Store new commitment
-            self.commitments.write(new_commitment, true);
+            // Insert new commitment into Merkle tree
+            let leaf_index = self.tree.insert(new_commitment);
 
             self
                 .emit(
                     Swap {
-                        nullifier_hash, token_type_in, token_type_out, new_commitment,
+                        nullifier_hash, token_type_in, token_type_out, new_commitment, leaf_index,
                     },
                 );
         }
 
         fn prepare_withdraw(
             ref self: ContractState,
-            commitment: felt252,
+            full_proof_with_hints: Span<felt252>,
+            root: felt252,
             nullifier_hash: felt252,
-            amount: felt252,
             token_type: felt252,
-            secret: felt252,
-            nullifier_secret: felt252,
             withdraw_amount: u256,
         ) {
             // Validate token type
@@ -291,20 +295,24 @@ pub mod ShieldedAMM {
                 'Invalid token type',
             );
 
-            // Check commitment exists
-            assert(self.commitments.read(commitment), 'Commitment does not exist');
+            // Check root is known
+            assert(self.tree.is_known_root(root), 'Unknown Merkle root');
 
             // Check nullifier not already used
             assert(!self.nullifiers.read(nullifier_hash), 'Nullifier already used');
 
-            // Verify withdraw proof
-            let valid = verify_amm_withdraw_proof(
-                commitment, amount, token_type, secret, nullifier_secret, nullifier_hash, amount,
+            // Verify ZK proof via Garaga verifier contract
+            let withdraw_amount_felt: felt252 = withdraw_amount.try_into().expect('Amount too large');
+            verify_amm_withdraw(
+                self.withdraw_verifier.read(),
+                full_proof_with_hints,
+                root,
+                nullifier_hash,
+                token_type,
+                withdraw_amount_felt,
             );
-            assert(valid, 'Invalid withdraw proof');
 
-            // Invalidate commitment
-            self.commitments.write(commitment, false);
+            // Mark nullifier as used
             self.nullifiers.write(nullifier_hash, true);
 
             // Escrow funds: store pending withdrawal keyed by nullifier_hash
@@ -381,10 +389,6 @@ pub mod ShieldedAMM {
             self.strk_reserve.read()
         }
 
-        fn is_commitment_valid(self: @ContractState, commitment: felt252) -> bool {
-            self.commitments.read(commitment)
-        }
-
         fn is_nullifier_used(self: @ContractState, nullifier_hash: felt252) -> bool {
             self.nullifiers.read(nullifier_hash)
         }
@@ -403,6 +407,10 @@ pub mod ShieldedAMM {
 
         fn get_strk_token(self: @ContractState) -> ContractAddress {
             self.strk_token.read()
+        }
+
+        fn get_last_root(self: @ContractState) -> felt252 {
+            self.tree.get_last_root()
         }
     }
 }
