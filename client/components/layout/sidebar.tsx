@@ -22,11 +22,10 @@ const NAV_GROUPS = [
     ],
   },
   {
-    label: "Shielded Pool",
+    label: "Privacy",
     items: [
-      { href: "/deposit", label: "Deposit", icon: ArrowDownToLine },
+      { href: "/deposit", label: "Privacy Hub", icon: Shield },
       { href: "/transfer", label: "Transfer", icon: ArrowRightLeft },
-      { href: "/withdraw", label: "Withdraw", icon: ArrowUpFromLine },
     ],
   },
   {
