@@ -21,6 +21,25 @@ pub fn verify_commitment(
     commitment == compute_commitment(amount, secret, nullifier_secret)
 }
 
+/// Compute a BN254 Poseidon commitment for multi-asset pool.
+/// commitment = Poseidon(amount, token_address, secret, nullifier_secret)
+pub fn compute_pool_commitment(
+    amount: felt252, token_address: felt252, secret: felt252, nullifier_secret: felt252,
+) -> felt252 {
+    bn254_poseidon_hash_4(amount, token_address, secret, nullifier_secret)
+}
+
+/// Verify that a pool commitment matches the given inputs.
+pub fn verify_pool_commitment(
+    commitment: felt252,
+    amount: felt252,
+    token_address: felt252,
+    secret: felt252,
+    nullifier_secret: felt252,
+) -> bool {
+    commitment == compute_pool_commitment(amount, token_address, secret, nullifier_secret)
+}
+
 /// Compute a BN254 Poseidon commitment for AMM with token type.
 /// commitment = Poseidon(amount, token_type, secret, nullifier_secret)
 pub fn compute_amm_commitment(

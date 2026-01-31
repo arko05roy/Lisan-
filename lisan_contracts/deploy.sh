@@ -28,11 +28,11 @@ echo "MockGroth16Verifier class hash: $MOCK_VERIFIER_CLASS"
 echo ""
 echo "=== Step 2: Deploy 5 MockGroth16Verifier instances ==="
 
-# pool_withdraw: 3 public inputs (root, nullifierHash, withdrawAmount)
-echo "Deploying pool_withdraw_verifier (n=3)..."
+# pool_withdraw: 4 public inputs (root, nullifierHash, tokenAddress, withdrawAmount)
+echo "Deploying pool_withdraw_verifier (n=4)..."
 POOL_WITHDRAW_VERIFIER_RESULT=$(sncast -p $PROFILE deploy \
   --class-hash "$MOCK_VERIFIER_CLASS" \
-  --constructor-calldata 3 2>&1)
+  --constructor-calldata 4 2>&1)
 echo "$POOL_WITHDRAW_VERIFIER_RESULT"
 POOL_WITHDRAW_VERIFIER=$(echo "$POOL_WITHDRAW_VERIFIER_RESULT" | grep -oE "contract_address: 0x[0-9a-fA-F]+" | awk '{print $2}')
 echo "pool_withdraw_verifier: $POOL_WITHDRAW_VERIFIER"
@@ -106,11 +106,11 @@ echo "PredictionMarket class: $PM_CLASS"
 echo ""
 echo "=== Step 4: Deploy main contracts ==="
 
-# ShieldedPool(btc_token, withdraw_verifier, transfer_verifier)
-echo "Deploying ShieldedPool..."
+# ShieldedPool(withdraw_verifier, transfer_verifier) — no btc_token, pool is token-agnostic
+echo "Deploying ShieldedPool (multi-asset)..."
 POOL_DEPLOY=$(sncast -p $PROFILE deploy \
   --class-hash "$POOL_CLASS" \
-  --constructor-calldata "$MOCK_BTC" "$POOL_WITHDRAW_VERIFIER" "$POOL_TRANSFER_VERIFIER" 2>&1)
+  --constructor-calldata "$POOL_WITHDRAW_VERIFIER" "$POOL_TRANSFER_VERIFIER" 2>&1)
 echo "$POOL_DEPLOY"
 POOL_ADDR=$(echo "$POOL_DEPLOY" | grep -oE "contract_address: 0x[0-9a-fA-F]+" | awk '{print $2}')
 echo "ShieldedPool: $POOL_ADDR"

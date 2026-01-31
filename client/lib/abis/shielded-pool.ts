@@ -3,6 +3,7 @@ export const SHIELDED_POOL_ABI = [
     type: "function",
     name: "deposit",
     inputs: [
+      { name: "token_address", type: "core::starknet::contract_address::ContractAddress" },
       { name: "amount", type: "core::integer::u256" },
       { name: "commitment", type: "core::felt252" },
     ],
@@ -29,6 +30,7 @@ export const SHIELDED_POOL_ABI = [
       { name: "full_proof_with_hints", type: "core::array::Span::<core::felt252>" },
       { name: "root", type: "core::felt252" },
       { name: "nullifier_hash", type: "core::felt252" },
+      { name: "token_address", type: "core::starknet::contract_address::ContractAddress" },
       { name: "withdraw_amount", type: "core::integer::u256" },
     ],
     outputs: [],
@@ -40,6 +42,23 @@ export const SHIELDED_POOL_ABI = [
     inputs: [
       { name: "nullifier_hash", type: "core::felt252" },
       { name: "recipient", type: "core::starknet::contract_address::ContractAddress" },
+    ],
+    outputs: [],
+    state_mutability: "external",
+  },
+  {
+    type: "function",
+    name: "private_execute",
+    inputs: [
+      { name: "full_proof_with_hints", type: "core::array::Span::<core::felt252>" },
+      { name: "root", type: "core::felt252" },
+      { name: "nullifier_hash", type: "core::felt252" },
+      { name: "token_address", type: "core::starknet::contract_address::ContractAddress" },
+      { name: "amount", type: "core::integer::u256" },
+      { name: "target_contract", type: "core::starknet::contract_address::ContractAddress" },
+      { name: "call_data", type: "core::array::Span::<core::felt252>" },
+      { name: "change_commitment", type: "core::felt252" },
+      { name: "change_amount", type: "core::integer::u256" },
     ],
     outputs: [],
     state_mutability: "external",
@@ -60,16 +79,11 @@ export const SHIELDED_POOL_ABI = [
   },
   {
     type: "function",
-    name: "get_total_deposited",
-    inputs: [],
+    name: "get_token_balance",
+    inputs: [
+      { name: "token_address", type: "core::starknet::contract_address::ContractAddress" },
+    ],
     outputs: [{ type: "core::integer::u256" }],
-    state_mutability: "view",
-  },
-  {
-    type: "function",
-    name: "get_btc_token",
-    inputs: [],
-    outputs: [{ type: "core::starknet::contract_address::ContractAddress" }],
     state_mutability: "view",
   },
   {

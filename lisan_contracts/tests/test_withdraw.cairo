@@ -5,8 +5,9 @@ use snforge_std::{
 };
 use openzeppelin_interfaces::token::erc20::{IERC20Dispatcher, IERC20DispatcherTrait};
 use lisan_contracts::mock_btc::{IMockBTCDispatcher, IMockBTCDispatcherTrait};
+use lisan_contracts::mock_strk::{IMockSTRKDispatcher, IMockSTRKDispatcherTrait};
 use lisan_contracts::shielded_pool::{IShieldedPoolDispatcher, IShieldedPoolDispatcherTrait};
-use lisan_contracts::commitment::{compute_commitment, compute_nullifier_hash};
+use lisan_contracts::commitment::{compute_pool_commitment, compute_nullifier_hash};
 
 fn OWNER() -> ContractAddress {
     0x1.try_into().unwrap()
@@ -20,22 +21,38 @@ fn USER2() -> ContractAddress {
     0x3.try_into().unwrap()
 }
 
-fn setup() -> (ContractAddress, ContractAddress) {
+fn setup() -> (ContractAddress, ContractAddress, ContractAddress) {
+    // Deploy MockBTC
     let btc_class = declare("MockBTC").unwrap().contract_class();
     let mut btc_calldata = array![];
     OWNER().serialize(ref btc_calldata);
     let (btc_address, _) = btc_class.deploy(@btc_calldata).unwrap();
 
+    // Deploy MockSTRK
+    let strk_class = declare("MockSTRK").unwrap().contract_class();
+    let mut strk_calldata = array![];
+    OWNER().serialize(ref strk_calldata);
+    let (strk_address, _) = strk_class.deploy(@strk_calldata).unwrap();
+
+    // Deploy mock verifiers
+    let verifier_class = declare("MockGroth16Verifier").unwrap().contract_class();
+    let mut wv_calldata = array![4];
+    let (withdraw_verifier, _) = verifier_class.deploy(@wv_calldata).unwrap();
+    let mut tv_calldata = array![4];
+    let (transfer_verifier, _) = verifier_class.deploy(@tv_calldata).unwrap();
+
+    // Deploy ShieldedPool
     let pool_class = declare("ShieldedPool").unwrap().contract_class();
     let mut pool_calldata = array![];
-    btc_address.serialize(ref pool_calldata);
+    withdraw_verifier.serialize(ref pool_calldata);
+    transfer_verifier.serialize(ref pool_calldata);
     let (pool_address, _) = pool_class.deploy(@pool_calldata).unwrap();
 
-    (btc_address, pool_address)
+    (btc_address, strk_address, pool_address)
 }
 
-fn setup_with_deposit() -> (ContractAddress, ContractAddress) {
-    let (btc_address, pool_address) = setup();
+fn setup_with_btc_deposit() -> (ContractAddress, ContractAddress, ContractAddress) {
+    let (btc_address, strk_address, pool_address) = setup();
 
     let mock_btc = IMockBTCDispatcher { contract_address: btc_address };
     start_cheat_caller_address(btc_address, OWNER());
@@ -48,413 +65,216 @@ fn setup_with_deposit() -> (ContractAddress, ContractAddress) {
     stop_cheat_caller_address(btc_address);
 
     let pool = IShieldedPoolDispatcher { contract_address: pool_address };
-    let commitment = compute_commitment(1000, 42, 99);
+    let token_felt: felt252 = btc_address.into();
+    let commitment = compute_pool_commitment(1000, token_felt, 42, 99);
 
     start_cheat_caller_address(pool_address, USER1());
-    pool.deposit(1000, commitment);
+    pool.deposit(btc_address, 1000, commitment);
     stop_cheat_caller_address(pool_address);
 
-    (btc_address, pool_address)
+    (btc_address, strk_address, pool_address)
+}
+
+/// Build mock proof (full_proof_with_hints) for pool withdraw.
+/// MockGroth16Verifier reads these as public inputs: [root, nullifier, tokenAddress, amount]
+fn build_withdraw_proof(
+    root: felt252, nullifier_hash: felt252, token_address: felt252, amount: felt252,
+) -> Array<felt252> {
+    array![root, nullifier_hash, token_address, amount]
 }
 
 #[test]
-fn test_basic_withdraw() {
-    let (btc_address, pool_address) = setup_with_deposit();
+fn test_basic_withdraw_btc() {
+    let (btc_address, _, pool_address) = setup_with_btc_deposit();
     let pool = IShieldedPoolDispatcher { contract_address: pool_address };
     let erc20 = IERC20Dispatcher { contract_address: btc_address };
 
-    // Verify pre-conditions
     assert!(pool.get_commitment_count() == 1, "Count should be 1 before withdraw");
-    assert!(pool.get_total_deposited() == 1000, "Total should be 1000 before withdraw");
-    assert!(erc20.balance_of(USER1()) == 9000, "User should have 9000 before withdraw");
-    assert!(erc20.balance_of(pool_address) == 1000, "Pool should have 1000 before withdraw");
+    assert!(pool.get_token_balance(btc_address) == 1000, "Token balance should be 1000");
 
-    let commitment = compute_commitment(1000, 42, 99);
     let nullifier_hash = compute_nullifier_hash(99);
+    let root = pool.get_last_root();
+    let token_felt: felt252 = btc_address.into();
+
+    let proof = build_withdraw_proof(root, nullifier_hash, token_felt, 1000);
 
     // Phase 1: prepare_withdraw
-    start_cheat_caller_address(pool_address, USER1());
-    pool.prepare_withdraw(commitment, nullifier_hash, 1000, 42, 99, 1000);
-    stop_cheat_caller_address(pool_address);
+    pool.prepare_withdraw(proof.span(), root, nullifier_hash, btc_address, 1000);
 
-    // Commitment should be invalidated
-    assert!(!pool.is_commitment_valid(commitment), "Commitment should be invalid after prepare");
+    assert!(pool.is_nullifier_used(nullifier_hash), "Nullifier should be used");
+    assert!(pool.get_commitment_count() == 0, "Count should be 0");
+    assert!(pool.get_token_balance(btc_address) == 0, "Token balance should be 0");
+    assert!(erc20.balance_of(pool_address) == 1000, "Pool should still hold tokens");
 
-    // Nullifier should be marked as used
-    assert!(pool.is_nullifier_used(nullifier_hash), "Nullifier should be used after prepare");
-
-    // Commitment count should be decremented
-    assert!(pool.get_commitment_count() == 0, "Count should be 0 after prepare");
-
-    // Total deposited should be decremented
-    assert!(pool.get_total_deposited() == 0, "Total should be 0 after prepare");
-
-    // Tokens still in pool (escrowed)
-    assert!(erc20.balance_of(pool_address) == 1000, "Pool should still have 1000 after prepare");
-
-    // Phase 2: claim_withdrawal (can be called from any address)
+    // Phase 2: claim_withdrawal
     pool.claim_withdrawal(nullifier_hash, USER1());
 
-    // Tokens should be sent to recipient
     assert!(erc20.balance_of(USER1()) == 10000, "User should have 10000 after claim");
     assert!(erc20.balance_of(pool_address) == 0, "Pool should have 0 after claim");
 }
 
 #[test]
 fn test_withdraw_to_different_recipient() {
-    let (btc_address, pool_address) = setup_with_deposit();
+    let (btc_address, _, pool_address) = setup_with_btc_deposit();
     let pool = IShieldedPoolDispatcher { contract_address: pool_address };
     let erc20 = IERC20Dispatcher { contract_address: btc_address };
 
-    // USER2 starts with 0 tokens
-    assert!(erc20.balance_of(USER2()) == 0, "USER2 should have 0 before withdraw");
+    assert!(erc20.balance_of(USER2()) == 0, "USER2 should have 0");
 
-    let commitment = compute_commitment(1000, 42, 99);
     let nullifier_hash = compute_nullifier_hash(99);
+    let root = pool.get_last_root();
+    let token_felt: felt252 = btc_address.into();
 
-    // USER1 deposited, prepares withdraw
-    start_cheat_caller_address(pool_address, USER1());
-    pool.prepare_withdraw(commitment, nullifier_hash, 1000, 42, 99, 1000);
-    stop_cheat_caller_address(pool_address);
+    let proof = build_withdraw_proof(root, nullifier_hash, token_felt, 1000);
+    pool.prepare_withdraw(proof.span(), root, nullifier_hash, btc_address, 1000);
 
-    // Claim to USER2 (can be called from any address)
+    // Claim to USER2
     pool.claim_withdrawal(nullifier_hash, USER2());
 
-    // USER2 receives the tokens
-    assert!(erc20.balance_of(USER2()) == 1000, "USER2 should have 1000 after claim");
-
-    // USER1 still has 9000 (deposited 1000 from 10000, didn't get them back)
-    assert!(erc20.balance_of(USER1()) == 9000, "USER1 should still have 9000");
-
-    // Pool balance should be 0
-    assert!(erc20.balance_of(pool_address) == 0, "Pool should have 0 after claim");
-
-    // Pool state should be updated
-    assert!(pool.get_commitment_count() == 0, "Count should be 0");
-    assert!(pool.get_total_deposited() == 0, "Total should be 0");
+    assert!(erc20.balance_of(USER2()) == 1000, "USER2 should have 1000");
+    assert!(erc20.balance_of(USER1()) == 9000, "USER1 should have 9000");
+    assert!(erc20.balance_of(pool_address) == 0, "Pool should have 0");
 }
 
 #[test]
-#[should_panic(expected: 'Commitment does not exist')]
-fn test_withdraw_nonexistent_commitment() {
-    let (_, pool_address) = setup_with_deposit();
+fn test_multi_asset_deposit_withdraw() {
+    let (btc_address, strk_address, pool_address) = setup();
     let pool = IShieldedPoolDispatcher { contract_address: pool_address };
 
-    // Try to withdraw a commitment that was never deposited
-    let fake_commitment = compute_commitment(1000, 999, 888);
-    let nullifier_hash = compute_nullifier_hash(888);
+    // Mint and approve both tokens
+    let mock_btc = IMockBTCDispatcher { contract_address: btc_address };
+    start_cheat_caller_address(btc_address, OWNER());
+    mock_btc.mint(USER1(), 10000);
+    stop_cheat_caller_address(btc_address);
+
+    let mock_strk = IMockSTRKDispatcher { contract_address: strk_address };
+    start_cheat_caller_address(strk_address, OWNER());
+    mock_strk.mint(USER1(), 10000);
+    stop_cheat_caller_address(strk_address);
+
+    let btc_erc20 = IERC20Dispatcher { contract_address: btc_address };
+    start_cheat_caller_address(btc_address, USER1());
+    btc_erc20.approve(pool_address, 10000);
+    stop_cheat_caller_address(btc_address);
+
+    let strk_erc20 = IERC20Dispatcher { contract_address: strk_address };
+    start_cheat_caller_address(strk_address, USER1());
+    strk_erc20.approve(pool_address, 10000);
+    stop_cheat_caller_address(strk_address);
+
+    let btc_felt: felt252 = btc_address.into();
+    let strk_felt: felt252 = strk_address.into();
+
+    // Deposit BTC and STRK into same pool
+    let c1 = compute_pool_commitment(1000, btc_felt, 42, 99);
+    let c2 = compute_pool_commitment(500, strk_felt, 43, 100);
 
     start_cheat_caller_address(pool_address, USER1());
-    pool.prepare_withdraw(fake_commitment, nullifier_hash, 1000, 999, 888, 1000);
+    pool.deposit(btc_address, 1000, c1);
+    pool.deposit(strk_address, 500, c2);
     stop_cheat_caller_address(pool_address);
+
+    assert!(pool.get_commitment_count() == 2, "Count should be 2");
+    assert!(pool.get_token_balance(btc_address) == 1000, "BTC balance 1000");
+    assert!(pool.get_token_balance(strk_address) == 500, "STRK balance 500");
+
+    // Withdraw BTC
+    let n1 = compute_nullifier_hash(99);
+    let root = pool.get_last_root();
+    let proof1 = build_withdraw_proof(root, n1, btc_felt, 1000);
+    pool.prepare_withdraw(proof1.span(), root, n1, btc_address, 1000);
+    pool.claim_withdrawal(n1, USER1());
+
+    assert!(btc_erc20.balance_of(USER1()) == 10000, "BTC back to user");
+    assert!(pool.get_token_balance(btc_address) == 0, "BTC balance 0");
+    assert!(pool.get_token_balance(strk_address) == 500, "STRK balance still 500");
+
+    // Withdraw STRK
+    let n2 = compute_nullifier_hash(100);
+    let root2 = pool.get_last_root();
+    let proof2 = build_withdraw_proof(root2, n2, strk_felt, 500);
+    pool.prepare_withdraw(proof2.span(), root2, n2, strk_address, 500);
+    pool.claim_withdrawal(n2, USER1());
+
+    assert!(strk_erc20.balance_of(USER1()) == 10000, "STRK back to user");
+    assert!(pool.get_token_balance(strk_address) == 0, "STRK balance 0");
+    assert!(pool.get_commitment_count() == 0, "Count should be 0");
 }
 
 #[test]
 #[should_panic(expected: 'Nullifier already used')]
-fn test_withdraw_double_spend() {
-    let (btc_address, pool_address) = setup();
+fn test_double_spend_fails() {
+    let (btc_address, _, pool_address) = setup();
     let pool = IShieldedPoolDispatcher { contract_address: pool_address };
-    let erc20 = IERC20Dispatcher { contract_address: btc_address };
-    let mock_btc = IMockBTCDispatcher { contract_address: btc_address };
 
+    let mock_btc = IMockBTCDispatcher { contract_address: btc_address };
     start_cheat_caller_address(btc_address, OWNER());
     mock_btc.mint(USER1(), 10000);
     stop_cheat_caller_address(btc_address);
 
+    let erc20 = IERC20Dispatcher { contract_address: btc_address };
     start_cheat_caller_address(btc_address, USER1());
     erc20.approve(pool_address, 10000);
     stop_cheat_caller_address(btc_address);
 
-    // Deposit two separate commitments that share the same nullifier_secret
-    let commitment1 = compute_commitment(500, 42, 99);
-    let commitment2 = compute_commitment(500, 77, 99); // same nullifier_secret=99
+    let token_felt: felt252 = btc_address.into();
+
+    // Deposit two commitments with the same nullifier_secret
+    let c1 = compute_pool_commitment(500, token_felt, 42, 99);
+    let c2 = compute_pool_commitment(500, token_felt, 77, 99);
 
     start_cheat_caller_address(pool_address, USER1());
-    pool.deposit(500, commitment1);
-    pool.deposit(500, commitment2);
+    pool.deposit(btc_address, 500, c1);
+    pool.deposit(btc_address, 500, c2);
     stop_cheat_caller_address(pool_address);
 
     let nullifier_hash = compute_nullifier_hash(99);
+    let root = pool.get_last_root();
 
-    // First withdraw succeeds (commitment1)
-    start_cheat_caller_address(pool_address, USER1());
-    pool.prepare_withdraw(commitment1, nullifier_hash, 500, 42, 99, 500);
-    stop_cheat_caller_address(pool_address);
+    // First withdraw succeeds
+    let proof1 = build_withdraw_proof(root, nullifier_hash, token_felt, 500);
+    pool.prepare_withdraw(proof1.span(), root, nullifier_hash, btc_address, 500);
 
-    // Second withdraw with same nullifier should fail, even though commitment2 is valid
-    start_cheat_caller_address(pool_address, USER1());
-    pool.prepare_withdraw(commitment2, nullifier_hash, 500, 77, 99, 500);
-    stop_cheat_caller_address(pool_address);
+    // Second withdraw with same nullifier should fail
+    let proof2 = build_withdraw_proof(root, nullifier_hash, token_felt, 500);
+    pool.prepare_withdraw(proof2.span(), root, nullifier_hash, btc_address, 500);
 }
 
 #[test]
-#[should_panic(expected: 'Invalid withdraw proof')]
-fn test_withdraw_wrong_secret() {
-    let (_, pool_address) = setup_with_deposit();
+#[should_panic(expected: 'No pending withdrawal')]
+fn test_claim_without_prepare_fails() {
+    let (_, _, pool_address) = setup();
     let pool = IShieldedPoolDispatcher { contract_address: pool_address };
 
-    let commitment = compute_commitment(1000, 42, 99);
-    let nullifier_hash = compute_nullifier_hash(99);
-
-    // Try to withdraw with wrong secret (999 instead of 42)
-    start_cheat_caller_address(pool_address, USER1());
-    pool.prepare_withdraw(commitment, nullifier_hash, 1000, 999, 99, 1000);
-    stop_cheat_caller_address(pool_address);
+    let fake_nullifier: felt252 = 12345;
+    pool.claim_withdrawal(fake_nullifier, USER1());
 }
 
 #[test]
-#[should_panic(expected: 'Invalid withdraw proof')]
-fn test_withdraw_wrong_nullifier_secret() {
-    let (_, pool_address) = setup_with_deposit();
+fn test_withdraw_multiple_deposits() {
+    let (btc_address, _, pool_address) = setup();
     let pool = IShieldedPoolDispatcher { contract_address: pool_address };
 
-    let commitment = compute_commitment(1000, 42, 99);
-    let nullifier_hash = compute_nullifier_hash(99);
-
-    // Try to withdraw with wrong nullifier_secret (88 instead of 99)
-    start_cheat_caller_address(pool_address, USER1());
-    pool.prepare_withdraw(commitment, nullifier_hash, 1000, 42, 88, 1000);
-    stop_cheat_caller_address(pool_address);
-}
-
-#[test]
-#[should_panic(expected: 'Invalid withdraw proof')]
-fn test_withdraw_wrong_amount() {
-    let (_, pool_address) = setup_with_deposit();
-    let pool = IShieldedPoolDispatcher { contract_address: pool_address };
-
-    let commitment = compute_commitment(1000, 42, 99);
-    let nullifier_hash = compute_nullifier_hash(99);
-
-    // Try to withdraw with wrong amount (500 instead of 1000) -- partial withdraw not supported
-    start_cheat_caller_address(pool_address, USER1());
-    pool.prepare_withdraw(commitment, nullifier_hash, 500, 42, 99, 500);
-    stop_cheat_caller_address(pool_address);
-}
-
-#[test]
-#[should_panic(expected: 'Invalid withdraw proof')]
-fn test_withdraw_zero_amount() {
-    let (_, pool_address) = setup_with_deposit();
-    let pool = IShieldedPoolDispatcher { contract_address: pool_address };
-
-    let commitment = compute_commitment(1000, 42, 99);
-    let nullifier_hash = compute_nullifier_hash(99);
-
-    // Try to withdraw with amount=0
-    start_cheat_caller_address(pool_address, USER1());
-    pool.prepare_withdraw(commitment, nullifier_hash, 0, 42, 99, 0);
-    stop_cheat_caller_address(pool_address);
-}
-
-#[test]
-fn test_withdraw_after_transfer() {
-    let (btc_address, pool_address) = setup_with_deposit();
-    let pool = IShieldedPoolDispatcher { contract_address: pool_address };
-    let erc20 = IERC20Dispatcher { contract_address: btc_address };
-
-    // Deposit was 1000 with secret=42, nullifier_secret=99
-    let old_commitment = compute_commitment(1000, 42, 99);
-    let nullifier_hash_transfer = compute_nullifier_hash(99);
-
-    // Transfer: sender keeps 700, sends 300
-    let sender_change = compute_commitment(700, 100, 200);
-    let recipient_commitment = compute_commitment(300, 101, 201);
-
-    start_cheat_caller_address(pool_address, USER1());
-    pool
-        .transfer(
-            old_commitment,
-            nullifier_hash_transfer,
-            1000, 42, 99,
-            sender_change,
-            recipient_commitment,
-            700, 300,
-            100, 200, 101, 201,
-        );
-    stop_cheat_caller_address(pool_address);
-
-    // Now withdraw the 700 change commitment
-    let nullifier_hash_withdraw = compute_nullifier_hash(200);
-
-    start_cheat_caller_address(pool_address, USER1());
-    pool.prepare_withdraw(sender_change, nullifier_hash_withdraw, 700, 100, 200, 700);
-    stop_cheat_caller_address(pool_address);
-
-    pool.claim_withdrawal(nullifier_hash_withdraw, USER1());
-
-    // Commitment should be invalidated
-    assert!(!pool.is_commitment_valid(sender_change), "Change commitment should be invalid");
-
-    // Nullifier should be used
-    assert!(
-        pool.is_nullifier_used(nullifier_hash_withdraw),
-        "Withdraw nullifier should be used",
-    );
-
-    // Tokens returned to user
-    assert!(erc20.balance_of(USER1()) == 9700, "User should have 9700 after withdrawing 700");
-    assert!(erc20.balance_of(pool_address) == 300, "Pool should have 300 remaining");
-
-    // Pool state: started with 1 deposit, transfer made 2, withdraw removed 1 => 1 remaining
-    assert!(pool.get_commitment_count() == 1, "Count should be 1");
-    assert!(pool.get_total_deposited() == 300, "Total deposited should be 300");
-
-    // The recipient commitment should still be valid
-    assert!(
-        pool.is_commitment_valid(recipient_commitment),
-        "Recipient commitment should still be valid",
-    );
-}
-
-#[test]
-fn test_withdraw_received_transfer() {
-    let (btc_address, pool_address) = setup();
-    let pool = IShieldedPoolDispatcher { contract_address: pool_address };
-    let erc20 = IERC20Dispatcher { contract_address: btc_address };
     let mock_btc = IMockBTCDispatcher { contract_address: btc_address };
-
-    // Mint tokens for Alice and set up approvals
     start_cheat_caller_address(btc_address, OWNER());
     mock_btc.mint(USER1(), 10000);
     stop_cheat_caller_address(btc_address);
 
-    start_cheat_caller_address(btc_address, USER1());
-    erc20.approve(pool_address, 10000);
-    stop_cheat_caller_address(btc_address);
-
-    // Alice deposits 1000
-    let alice_commitment = compute_commitment(1000, 11, 22);
-    start_cheat_caller_address(pool_address, USER1());
-    pool.deposit(1000, alice_commitment);
-    stop_cheat_caller_address(pool_address);
-
-    // Alice transfers 300 to Bob's commitment
-    let nullifier_hash_transfer = compute_nullifier_hash(22);
-    let alice_change = compute_commitment(700, 33, 44);
-    let bob_commitment = compute_commitment(300, 55, 66);
-
-    start_cheat_caller_address(pool_address, USER1());
-    pool
-        .transfer(
-            alice_commitment,
-            nullifier_hash_transfer,
-            1000, 11, 22,
-            alice_change,
-            bob_commitment,
-            700, 300,
-            33, 44, 55, 66,
-        );
-    stop_cheat_caller_address(pool_address);
-
-    // Bob withdraws his 300 to USER2 address
-    let bob_nullifier_hash = compute_nullifier_hash(66);
-
-    start_cheat_caller_address(pool_address, USER2());
-    pool.prepare_withdraw(bob_commitment, bob_nullifier_hash, 300, 55, 66, 300);
-    stop_cheat_caller_address(pool_address);
-
-    pool.claim_withdrawal(bob_nullifier_hash, USER2());
-
-    // Bob (USER2) receives 300 tokens
-    assert!(erc20.balance_of(USER2()) == 300, "Bob should have 300 after withdraw");
-
-    // Pool still has 700 (Alice's change)
-    assert!(erc20.balance_of(pool_address) == 700, "Pool should have 700 remaining");
-
-    // Bob's commitment is invalidated
-    assert!(!pool.is_commitment_valid(bob_commitment), "Bob commitment should be invalid");
-
-    // Alice's change commitment is still valid
-    assert!(pool.is_commitment_valid(alice_change), "Alice change should still be valid");
-
-    // Nullifier used
-    assert!(pool.is_nullifier_used(bob_nullifier_hash), "Bob nullifier should be used");
-
-    // Pool state
-    assert!(pool.get_commitment_count() == 1, "Count should be 1");
-    assert!(pool.get_total_deposited() == 700, "Total deposited should be 700");
-}
-
-#[test]
-fn test_multiple_deposits_withdraw_one() {
-    let (btc_address, pool_address) = setup();
-    let pool = IShieldedPoolDispatcher { contract_address: pool_address };
     let erc20 = IERC20Dispatcher { contract_address: btc_address };
-    let mock_btc = IMockBTCDispatcher { contract_address: btc_address };
-
-    start_cheat_caller_address(btc_address, OWNER());
-    mock_btc.mint(USER1(), 10000);
-    stop_cheat_caller_address(btc_address);
-
     start_cheat_caller_address(btc_address, USER1());
     erc20.approve(pool_address, 10000);
     stop_cheat_caller_address(btc_address);
 
-    // Deposit 3 commitments
-    let c1 = compute_commitment(500, 1, 10);
-    let c2 = compute_commitment(300, 2, 20);
-    let c3 = compute_commitment(200, 3, 30);
+    let token_felt: felt252 = btc_address.into();
+
+    let c1 = compute_pool_commitment(500, token_felt, 1, 10);
+    let c2 = compute_pool_commitment(300, token_felt, 2, 20);
+    let c3 = compute_pool_commitment(200, token_felt, 3, 30);
 
     start_cheat_caller_address(pool_address, USER1());
-    pool.deposit(500, c1);
-    pool.deposit(300, c2);
-    pool.deposit(200, c3);
-    stop_cheat_caller_address(pool_address);
-
-    assert!(pool.get_commitment_count() == 3, "Count should be 3 after deposits");
-    assert!(pool.get_total_deposited() == 1000, "Total should be 1000 after deposits");
-
-    // Withdraw only c2 (300)
-    let n2 = compute_nullifier_hash(20);
-
-    start_cheat_caller_address(pool_address, USER1());
-    pool.prepare_withdraw(c2, n2, 300, 2, 20, 300);
-    stop_cheat_caller_address(pool_address);
-
-    pool.claim_withdrawal(n2, USER1());
-
-    // c2 should be invalidated, c1 and c3 still valid
-    assert!(pool.is_commitment_valid(c1), "c1 should still be valid");
-    assert!(!pool.is_commitment_valid(c2), "c2 should be invalid after withdraw");
-    assert!(pool.is_commitment_valid(c3), "c3 should still be valid");
-
-    // Nullifier used
-    assert!(pool.is_nullifier_used(n2), "Nullifier for c2 should be used");
-
-    // Counts
-    assert!(pool.get_commitment_count() == 2, "Count should be 2 after one withdraw");
-    assert!(pool.get_total_deposited() == 700, "Total should be 700 after withdrawing 300");
-
-    // Balances
-    assert!(erc20.balance_of(USER1()) == 9300, "User should have 9300");
-    assert!(erc20.balance_of(pool_address) == 700, "Pool should have 700");
-}
-
-#[test]
-fn test_withdraw_all_deposits() {
-    let (btc_address, pool_address) = setup();
-    let pool = IShieldedPoolDispatcher { contract_address: pool_address };
-    let erc20 = IERC20Dispatcher { contract_address: btc_address };
-    let mock_btc = IMockBTCDispatcher { contract_address: btc_address };
-
-    start_cheat_caller_address(btc_address, OWNER());
-    mock_btc.mint(USER1(), 10000);
-    stop_cheat_caller_address(btc_address);
-
-    start_cheat_caller_address(btc_address, USER1());
-    erc20.approve(pool_address, 10000);
-    stop_cheat_caller_address(btc_address);
-
-    // Deposit 3 commitments
-    let c1 = compute_commitment(500, 1, 10);
-    let c2 = compute_commitment(300, 2, 20);
-    let c3 = compute_commitment(200, 3, 30);
-
-    start_cheat_caller_address(pool_address, USER1());
-    pool.deposit(500, c1);
-    pool.deposit(300, c2);
-    pool.deposit(200, c3);
+    pool.deposit(btc_address, 500, c1);
+    pool.deposit(btc_address, 300, c2);
+    pool.deposit(btc_address, 200, c3);
     stop_cheat_caller_address(pool_address);
 
     // Withdraw all three
@@ -462,33 +282,26 @@ fn test_withdraw_all_deposits() {
     let n2 = compute_nullifier_hash(20);
     let n3 = compute_nullifier_hash(30);
 
-    start_cheat_caller_address(pool_address, USER1());
-    pool.prepare_withdraw(c1, n1, 500, 1, 10, 500);
-    pool.prepare_withdraw(c2, n2, 300, 2, 20, 300);
-    pool.prepare_withdraw(c3, n3, 200, 3, 30, 200);
-    stop_cheat_caller_address(pool_address);
+    let root = pool.get_last_root();
+
+    let proof1 = build_withdraw_proof(root, n1, token_felt, 500);
+    pool.prepare_withdraw(proof1.span(), root, n1, btc_address, 500);
+
+    let proof2 = build_withdraw_proof(root, n2, token_felt, 300);
+    pool.prepare_withdraw(proof2.span(), root, n2, btc_address, 300);
+
+    let proof3 = build_withdraw_proof(root, n3, token_felt, 200);
+    pool.prepare_withdraw(proof3.span(), root, n3, btc_address, 200);
 
     pool.claim_withdrawal(n1, USER1());
     pool.claim_withdrawal(n2, USER1());
     pool.claim_withdrawal(n3, USER1());
 
-    // All commitments invalid
-    assert!(!pool.is_commitment_valid(c1), "c1 should be invalid");
-    assert!(!pool.is_commitment_valid(c2), "c2 should be invalid");
-    assert!(!pool.is_commitment_valid(c3), "c3 should be invalid");
-
-    // All nullifiers used
     assert!(pool.is_nullifier_used(n1), "n1 should be used");
     assert!(pool.is_nullifier_used(n2), "n2 should be used");
     assert!(pool.is_nullifier_used(n3), "n3 should be used");
-
-    // Pool balance zero
     assert!(erc20.balance_of(pool_address) == 0, "Pool should have 0");
-
-    // User got all tokens back
     assert!(erc20.balance_of(USER1()) == 10000, "User should have 10000");
-
-    // Pool state
     assert!(pool.get_commitment_count() == 0, "Count should be 0");
-    assert!(pool.get_total_deposited() == 0, "Total should be 0");
+    assert!(pool.get_token_balance(btc_address) == 0, "Token balance should be 0");
 }

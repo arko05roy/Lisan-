@@ -17,24 +17,48 @@ fn call_verifier(
 }
 
 /// Verify pool withdraw proof and check public inputs match expected values.
-/// Expected public inputs (as u256): [root, nullifierHash, withdrawAmount]
+/// Expected public inputs (as u256): [root, nullifierHash, tokenAddress, withdrawAmount]
 pub fn verify_pool_withdraw(
     verifier_address: ContractAddress,
     full_proof_with_hints: Span<felt252>,
     expected_root: felt252,
     expected_nullifier_hash: felt252,
+    expected_token_address: felt252,
     expected_withdraw_amount: felt252,
 ) {
     let public_inputs = call_verifier(verifier_address, full_proof_with_hints);
-    assert(public_inputs.len() == 3, 'Wrong number of public inputs');
+    assert(public_inputs.len() == 4, 'Wrong number of public inputs');
 
     let root_u256: u256 = expected_root.into();
     let nullifier_u256: u256 = expected_nullifier_hash.into();
+    let token_u256: u256 = expected_token_address.into();
     let amount_u256: u256 = expected_withdraw_amount.into();
 
     assert(*public_inputs.at(0) == root_u256, 'Root mismatch');
     assert(*public_inputs.at(1) == nullifier_u256, 'Nullifier mismatch');
-    assert(*public_inputs.at(2) == amount_u256, 'Withdraw amount mismatch');
+    assert(*public_inputs.at(2) == token_u256, 'Token address mismatch');
+    assert(*public_inputs.at(3) == amount_u256, 'Withdraw amount mismatch');
+}
+
+/// Verify pool execute proof and check public inputs match expected values.
+/// Reuses the same circuit as pool withdraw — public inputs: [root, nullifierHash, tokenAddress, totalAmount]
+pub fn verify_pool_execute(
+    verifier_address: ContractAddress,
+    full_proof_with_hints: Span<felt252>,
+    expected_root: felt252,
+    expected_nullifier_hash: felt252,
+    expected_token_address: felt252,
+    expected_total_amount: felt252,
+) {
+    // Same verification as withdraw — the circuit proves ownership of a commitment
+    verify_pool_withdraw(
+        verifier_address,
+        full_proof_with_hints,
+        expected_root,
+        expected_nullifier_hash,
+        expected_token_address,
+        expected_total_amount,
+    );
 }
 
 /// Verify pool transfer proof and check public inputs match expected values.

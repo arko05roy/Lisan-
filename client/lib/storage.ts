@@ -4,6 +4,7 @@ export interface PoolNote {
   type: "pool";
   commitment: string;
   amount: string;
+  tokenAddress: string;
   secret: string;
   nullifierSecret: string;
   leafIndex?: number;

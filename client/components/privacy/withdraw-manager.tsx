@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Wallet, RefreshCw, Key, ArrowUpRight } from "lucide-react";
 import { WithdrawFlow } from "./withdraw-flow";
-import { TOKEN_TYPE_BTC } from "@/lib/addresses";
+import { ADDRESSES, TOKEN_TYPE_BTC } from "@/lib/addresses";
 import { cn } from "@/lib/utils";
 
 export function WithdrawManager() {
@@ -79,7 +79,10 @@ export function WithdrawManager() {
                             const isAmm = "_source" in note && note._source === "amm";
                             const tokenLabel = isAmm
                                 ? ((note as AmmNote).tokenType === TOKEN_TYPE_BTC ? "mBTC" : "mSTRK")
-                                : "mBTC";
+                                : ((note as PoolNote).tokenAddress === ADDRESSES.MOCK_BTC ? "mBTC"
+                                    : (note as PoolNote).tokenAddress === ADDRESSES.MOCK_STRK ? "mSTRK"
+                                    : (note as PoolNote).tokenAddress === ADDRESSES.DEMO_TOKEN ? "DEMO"
+                                    : (note as PoolNote).tokenAddress.slice(0, 8) + "...");
                             const amountDisplay = (BigInt(note.amount) / 10n ** 18n).toString();
 
                             return (
@@ -88,9 +91,12 @@ export function WithdrawManager() {
                                         <div className="flex items-center gap-4">
                                             <div className={cn(
                                                 "h-10 w-10 rounded-full flex items-center justify-center font-bold text-sm",
-                                                tokenLabel === "mBTC" ? "bg-orange-500/10 text-orange-500" : "bg-blue-500/10 text-blue-500"
+                                                tokenLabel === "mBTC" ? "bg-orange-500/10 text-orange-500"
+                                                    : tokenLabel === "mSTRK" ? "bg-blue-500/10 text-blue-500"
+                                                    : tokenLabel === "DEMO" ? "bg-green-500/10 text-green-500"
+                                                    : "bg-purple-500/10 text-purple-500"
                                             )}>
-                                                {tokenLabel === "mBTC" ? "₿" : "S"}
+                                                {tokenLabel === "mBTC" ? "₿" : tokenLabel === "mSTRK" ? "S" : tokenLabel[0]}
                                             </div>
                                             <div>
                                                 <div className="font-bold text-lg leading-none">{amountDisplay} {tokenLabel}</div>

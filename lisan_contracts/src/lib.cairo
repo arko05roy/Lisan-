@@ -11,3 +11,4 @@ pub mod mock_pragma_oracle;
 pub mod prediction_market;
 pub mod private_voting;
 pub mod mock_groth16_verifier;
+pub mod mock_erc20;

@@ -5,6 +5,7 @@ export interface PrepareWithdrawParams {
   nullifierHash: string;
   withdrawAmount: string;
   tokenType?: string;
+  tokenAddress?: string;
 }
 
 export interface TransferParams {
@@ -32,6 +33,18 @@ export interface ClaimBetParams {
   betCommitment: string;
   nullifierHash: string;
   recipient: string;
+}
+
+export interface PrivateExecuteParams {
+  fullProofWithHints: string[];
+  root: string;
+  nullifierHash: string;
+  tokenAddress: string;
+  amount: string;
+  targetContract: string;
+  callData: string[];
+  changeCommitment: string;
+  changeAmount: string;
 }
 
 export interface ClaimWithdrawalParams {
@@ -75,6 +88,10 @@ export function relaySwap(relayerUrl: string, params: SwapParams) {
 
 export function relayClaimBet(relayerUrl: string, params: ClaimBetParams) {
   return relayFetch<RelayResponse>(`${relayerUrl}/api/relay/claim-bet`, params);
+}
+
+export function relayPrivateExecute(relayerUrl: string, params: PrivateExecuteParams) {
+  return relayFetch<RelayResponse>(`${relayerUrl}/api/relay/private-execute`, params);
 }
 
 export function relayClaimWithdrawal(relayerUrl: string, params: ClaimWithdrawalParams) {

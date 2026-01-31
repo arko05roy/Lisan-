@@ -1135,32 +1135,35 @@ Prioritize video production FIRST. Match winning title/one-liner formulas. Use R
 
 ### CHOSEN PROJECT: Lisan — Private Bitcoin DeFi Platform on Starknet
 
-**Narrative:** "Every DeFi primitive leaks your intent. We made them all private."
+**Narrative:** "Every DeFi primitive leaks your intent. We made them all private — for any token, through any contract."
 
-**One-liner:** "Every DeFi primitive leaks your intent. We made them all private. Transfers, swaps, predictions, votes — all instant, all private, all on Starknet."
+**One-liner:** "Every DeFi primitive leaks your intent. We made them all private. Transfers, swaps, predictions, votes — any ERC20, any contract, all instant, all private, all on Starknet."
 
 **The Problem:**
 - Every DeFi action leaks information: transfers, swaps, bets, votes
 - Front-runners exploit your swaps, copycats mirror your bets, vote-buyers see your choices
 - Tornado Cash/mixers require batching, waiting, other participants — slow and fragmented
-- Existing privacy solutions only cover transfers, not other DeFi primitives
+- Existing privacy solutions only cover transfers for one token, not other DeFi primitives or arbitrary tokens
 
 **The Solution — The Octopus Architecture:**
-- **ShieldedPool (Core):** Deposit BTC once, all operations happen privately inside
-- **Private Transfers:** Send BTC instantly, no batching, mempool-blind
+- **ShieldedPool (Core, Multi-Asset):** Deposit ANY ERC20 token, all operations happen privately inside. Per-token balance tracking. Permissionless — no whitelist.
+- **Private Transfers:** Send any token instantly, no batching, mempool-blind
 - **Private Swaps (Arm 1):** Shielded AMM — swap BTC↔STRK privately, no front-running (x*y=k)
 - **Private Prediction Market (Arm 2):** Hidden bets, oracle-resolved (Pragma interface)
 - **Private Voting (Arm 3):** Hidden votes, time-locked trustless tally
+- **Private Execute (Composability):** Interact with ANY external Starknet contract using shielded funds. Pool acts as private proxy — nobody knows who called the contract.
 
-Two commitment schemes (core pool + AMM pool). Shared nullifier pattern. Four DeFi primitives. All private. All instant.
+Two commitment schemes (core pool 4-input w/ token_address + AMM pool). Shared nullifier pattern. Five DeFi primitives. All private. All instant.
 
 **Why It Wins:**
-1. Platform, not feature — Four primitives show this is a privacy LAYER
-2. Clear demos — Prediction market and voting are Tier 1 (judges interact)
-3. Fits narrative — "Bitcoin DeFi Layer" needs privacy for EVERYTHING
-4. Technical depth — ZK proofs, commitment schemes, oracle integration, time-locks
-5. Breadth — Covers most "Private BTC DeFi" problem statements from the hackathon
-6. Real logic — Only tokens are mocked (testnet). All DeFi logic is real.
+1. Platform, not feature — Five primitives show this is a privacy LAYER
+2. Multi-asset — Not just Bitcoin. Any ERC20 works. Privacy layer for ALL of Starknet DeFi.
+3. Composability — Private Execute lets users interact with ANY Starknet contract using shielded funds. First privacy-preserving composability layer.
+4. Clear demos — Prediction market and voting are Tier 1 (judges interact). Multi-asset deposit + private execute are Tier 1 differentiators.
+5. Fits narrative — "Bitcoin DeFi Layer" needs privacy for EVERYTHING — and for every token
+6. Technical depth — ZK proofs, commitment schemes, oracle integration, time-locks, cross-contract calls
+7. Breadth — Covers most "Private BTC DeFi" problem statements from the hackathon
+8. Real logic — Only tokens are mocked (testnet). All DeFi logic (swaps, predictions, voting, composability) is real.
 
 **Track:** Bitcoin (with strong Privacy implementation)
 
@@ -1175,16 +1178,17 @@ Two commitment schemes (core pool + AMM pool). Shared nullifier pattern. Four De
 - ✅ Pattern #5: Platform approach means 4 different demo moments in the video. Not just "trust me the transfer is private." PASS.
 
 ### Technical Approach
-- **Core pool commitment:** `Poseidon(amount, secret, nullifier_secret)` — for transfers/withdrawals
+- **Core pool commitment (multi-asset):** `Poseidon(amount, token_address, secret, nullifier_secret)` — 4-input, includes token address for cross-token safety
 - **AMM commitment:** `Poseidon(amount, token_type, secret, nullifier_secret)` — token_type distinguishes BTC vs STRK
-- ZK proofs via inline Cairo constraints (Starknet execution is STARK-proven)
+- ZK proofs via MockGroth16Verifier (DEMO_MODE) — reads public inputs from proof array. Production: Garaga BN254 verifier.
 - Nullifiers prevent double-spending across ALL primitives
-- **ShieldedPool (Core):** deposit/transfer/withdraw for BTC
-- **ShieldedAMM (Arm 1):** Separate contract, own reserves, own commitments. BTC/STRK pair. Constant product (x*y=k). Pre-seeded liquidity. Exact amounts only (no change commitments).
-- **MockSTRK:** ERC20 token for STRK side of AMM (same pattern as MockBTC)
+- **ShieldedPool (Core, Multi-Asset):** deposit(token_address)/transfer/prepare_withdraw(token_address)/claim_withdrawal/private_execute for ANY ERC20. Per-token `token_balances` map. No whitelist — permissionless.
+- **Private Execute:** ZK proof → nullifier → approve tokens to target → `call_contract_syscall` with user calldata → optional change commitment. Reuses withdraw verifier circuit.
+- **ShieldedAMM (Arm 1):** Separate contract, own reserves, own commitments. BTC/STRK pair. Constant product (x*y=k). Pre-seeded liquidity. Exact amounts only.
+- **MockSTRK, MockERC20 (DEMO):** ERC20 tokens for testing multi-asset deposits
 - Oracle: Pragma interface (mock data, real integration pattern)
-- Voting: Time-locked by block number, trustless tally
-- **Architecture:** ShieldedAMM is self-contained — does NOT call ShieldedPool. Clean separation.
+- Voting: Time-locked by block timestamp, trustless tally
+- **Architecture:** ShieldedAMM is self-contained — does NOT call ShieldedPool. Pool is the privacy layer for all tokens + composability.
 
 ### Build Plan (Revised — 30 days from Jan 29)
 - Day 1 (Jan 29): Foundation + Transfer + Withdraw (Phase 1-3)

@@ -51,7 +51,10 @@ export function WithdrawFlow({ note, isOpen, onOpenChange, relayer, onWithdrawCo
     const isAmm = "tokenType" in note;
     const tokenLabel = isAmm
         ? ((note as AmmNote).tokenType === TOKEN_TYPE_BTC ? "mBTC" : "mSTRK")
-        : "mBTC";
+        : ((note as PoolNote).tokenAddress === ADDRESSES.MOCK_BTC ? "mBTC"
+            : (note as PoolNote).tokenAddress === ADDRESSES.MOCK_STRK ? "mSTRK"
+            : (note as PoolNote).tokenAddress === ADDRESSES.DEMO_TOKEN ? "DEMO"
+            : (note as PoolNote).tokenAddress.slice(0, 8) + "...");
 
     // Reset state when dialog opens
     useEffect(() => {
@@ -142,7 +145,11 @@ export function WithdrawFlow({ note, isOpen, onOpenChange, relayer, onWithdrawCo
                 nullifierHash,
                 withdrawAmount: note.amount,
             };
-            if (isAmm) preparePayload.tokenType = (note as AmmNote).tokenType;
+            if (isAmm) {
+                preparePayload.tokenType = (note as AmmNote).tokenType;
+            } else {
+                preparePayload.tokenAddress = (note as PoolNote).tokenAddress;
+            }
 
             const { transactionHash } = await relayPrepareWithdraw(relayerUrl, preparePayload);
 

@@ -17,6 +17,7 @@ export async function POST(req: NextRequest) {
       nullifierHash,
       withdrawAmount,
       tokenType,
+      tokenAddress,
     } = body;
 
     if (!contract || !fullProofWithHints || !root || !nullifierHash || !withdrawAmount) {
@@ -29,6 +30,10 @@ export async function POST(req: NextRequest) {
 
     if (contract === "amm" && !tokenType) {
       return NextResponse.json({ error: "tokenType required for AMM withdrawals" }, { status: 400 });
+    }
+
+    if (contract === "pool" && !tokenAddress) {
+      return NextResponse.json({ error: "tokenAddress required for pool withdrawals" }, { status: 400 });
     }
 
     if (!Array.isArray(fullProofWithHints)) {
@@ -49,6 +54,7 @@ export async function POST(req: NextRequest) {
           ...proofSpan,
           root,
           nullifierHash,
+          tokenAddress,
           u.low.toString(), u.high.toString(),
         ]
       : [

@@ -134,7 +134,7 @@ function convertProof(proof: any, publicSignals: string[]) {
  * Must match the `component main {public [...]}` in each .circom file.
  */
 const CIRCUIT_PUBLIC_SIGNALS: Record<string, string[]> = {
-  pool_withdraw: ["root", "nullifierHash", "withdrawAmount"],
+  pool_withdraw: ["root", "nullifierHash", "tokenAddress", "withdrawAmount"],
   pool_transfer: ["root", "nullifierHash", "newCommitmentSender", "newCommitmentRecipient"],
   amm_withdraw: ["root", "nullifierHash", "tokenType", "withdrawAmount"],
   amm_swap: ["root", "nullifierHash", "tokenTypeIn", "amountIn", "tokenTypeOut", "newCommitment", "amountOut"],
@@ -205,6 +205,7 @@ export async function generatePoolWithdrawProof(
     // Public inputs
     root,
     nullifierHash,
+    tokenAddress: note.tokenAddress,
     withdrawAmount: note.amount,
 
     // Private inputs

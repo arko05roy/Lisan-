@@ -24,10 +24,23 @@ export function generateSecret(): string {
 }
 
 /**
- * Pool commitment = Poseidon(amount, secret, nullifier_secret)
+ * Legacy pool commitment = Poseidon(amount, secret, nullifier_secret)
+ * @deprecated Use computePoolCommitment for multi-asset pool
  */
 export async function computeCommitment(amount: string, secret: string, nullifierSecret: string): Promise<string> {
   return poseidonHash([amount, secret, nullifierSecret]);
+}
+
+/**
+ * Multi-asset pool commitment = Poseidon(amount, tokenAddress, secret, nullifier_secret)
+ */
+export async function computePoolCommitment(
+  amount: string,
+  tokenAddress: string,
+  secret: string,
+  nullifierSecret: string,
+): Promise<string> {
+  return poseidonHash([amount, tokenAddress, secret, nullifierSecret]);
 }
 
 /**
