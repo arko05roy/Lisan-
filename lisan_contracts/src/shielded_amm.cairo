@@ -1,6 +1,7 @@
 #[starknet::interface]
 pub trait IShieldedAMM<TContractState> {
     fn seed_liquidity(ref self: TContractState, btc_amount: u256, strk_amount: u256);
+    fn add_liquidity(ref self: TContractState, btc_amount: u256, strk_amount: u256);
     fn deposit(ref self: TContractState, token_type: felt252, amount: u256, commitment: felt252);
     fn swap(
         ref self: TContractState,
@@ -165,6 +166,28 @@ pub mod ShieldedAMM {
             self.btc_reserve.write(btc_amount);
             self.strk_reserve.write(strk_amount);
             self.seeded.write(true);
+
+            self.emit(LiquiditySeeded { btc_amount, strk_amount });
+        }
+
+        fn add_liquidity(ref self: ContractState, btc_amount: u256, strk_amount: u256) {
+            assert(self.seeded.read(), 'AMM not seeded yet');
+            assert(btc_amount > 0, 'BTC amount must be > 0');
+            assert(strk_amount > 0, 'STRK amount must be > 0');
+
+            let caller = get_caller_address();
+
+            let btc = IERC20Dispatcher { contract_address: self.btc_token.read() };
+            let strk = IERC20Dispatcher { contract_address: self.strk_token.read() };
+
+            let success_btc = btc.transfer_from(caller, get_contract_address(), btc_amount);
+            assert(success_btc, 'BTC transfer failed');
+
+            let success_strk = strk.transfer_from(caller, get_contract_address(), strk_amount);
+            assert(success_strk, 'STRK transfer failed');
+
+            self.btc_reserve.write(self.btc_reserve.read() + btc_amount);
+            self.strk_reserve.write(self.strk_reserve.read() + strk_amount);
 
             self.emit(LiquiditySeeded { btc_amount, strk_amount });
         }

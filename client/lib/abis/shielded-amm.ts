@@ -11,6 +11,16 @@ export const SHIELDED_AMM_ABI = [
   },
   {
     type: "function",
+    name: "add_liquidity",
+    inputs: [
+      { name: "btc_amount", type: "core::integer::u256" },
+      { name: "strk_amount", type: "core::integer::u256" },
+    ],
+    outputs: [],
+    state_mutability: "external",
+  },
+  {
+    type: "function",
     name: "deposit",
     inputs: [
       { name: "token_type", type: "core::felt252" },

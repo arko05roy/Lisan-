@@ -9,6 +9,8 @@ export interface PoolNote {
   leafIndex?: number;
   spent: boolean;
   createdAt: number;
+  txHash?: string;
+  confirmed?: boolean;
 }
 
 export interface AmmNote {
@@ -21,6 +23,8 @@ export interface AmmNote {
   leafIndex?: number;
   spent: boolean;
   createdAt: number;
+  txHash?: string;
+  confirmed?: boolean;
 }
 
 export interface BetNote {
@@ -33,6 +37,8 @@ export interface BetNote {
   nullifierSecret: string;
   claimed: boolean;
   createdAt: number;
+  txHash?: string;
+  confirmed?: boolean;
 }
 
 export interface VoteNote {
@@ -103,6 +109,15 @@ export function markBetNoteClaimed(commitment: string) {
   const notes = getAllNotes();
   const note = notes.find(n => n.type === "bet" && n.commitment === commitment) as BetNote | undefined;
   if (note) note.claimed = true;
+  saveAllNotes(notes);
+}
+
+export function markNoteConfirmed(commitment: string) {
+  const notes = getAllNotes();
+  const note = notes.find(n => n.commitment === commitment);
+  if (note && "confirmed" in note) {
+    (note as PoolNote | AmmNote | BetNote).confirmed = true;
+  }
   saveAllNotes(notes);
 }
 

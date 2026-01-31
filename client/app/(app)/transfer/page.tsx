@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { getPoolNotes, addNote, markPoolNoteSpent, PoolNote } from "@/lib/storage";
+import { getPoolNotes, addNote, markPoolNoteSpent, markNoteConfirmed, PoolNote } from "@/lib/storage";
 import { generateSecret, computeCommitment, computeNullifierHash } from "@/lib/crypto";
 import { txToast, errorToast } from "@/components/tx-toast";
 import { buildTreeFromChain } from "@/lib/merkle";
@@ -70,19 +70,36 @@ export default function TransferPage() {
         newNullifierSecretRecipient,
       );
 
-      // Build Merkle tree from on-chain events and generate ZK proof
+      // Build Merkle tree from on-chain events (auto-waits for unconfirmed deposits)
       setProofStatus("Building Merkle tree from on-chain events...");
-      const { tree, commitmentToLeafIndex } = await buildTreeFromChain(
-        ADDRESSES.SHIELDED_POOL,
-        "pool",
-      );
       const normalizedCommitment = "0x" + BigInt(selectedNote.commitment).toString(16);
-      const leafIndex = commitmentToLeafIndex.get(normalizedCommitment);
-      if (leafIndex === undefined) throw new Error("Note commitment not found on-chain. Has the deposit been confirmed?");
+      let treeResult = await buildTreeFromChain(ADDRESSES.SHIELDED_POOL, "pool");
+      let leafIndex = treeResult.commitmentToLeafIndex.get(normalizedCommitment);
+
+      if (leafIndex === undefined) {
+        setProofStatus("Deposit not yet confirmed on-chain. Waiting for confirmation...");
+        for (let attempt = 0; attempt < 12; attempt++) {
+          await new Promise((r) => setTimeout(r, 5000));
+          setProofStatus(`Waiting for on-chain confirmation... (${(attempt + 1) * 5}s)`);
+          treeResult = await buildTreeFromChain(ADDRESSES.SHIELDED_POOL, "pool");
+          leafIndex = treeResult.commitmentToLeafIndex.get(normalizedCommitment);
+          if (leafIndex !== undefined) {
+            markNoteConfirmed(selectedNote.commitment);
+            break;
+          }
+        }
+        if (leafIndex === undefined) {
+          throw new Error(
+            "Your deposit transaction hasn't been confirmed on-chain yet. " +
+            "This usually takes 30-60 seconds on Starknet Sepolia. " +
+            "Please wait and try again in a moment."
+          );
+        }
+      }
 
       setProofStatus("Generating ZK proof...");
-      const path = await tree.getPath(leafIndex);
-      const root = tree.getRoot().toString();
+      const path = await treeResult.tree.getPath(leafIndex);
+      const root = treeResult.tree.getRoot().toString();
       const nullifierHash = await computeNullifierHash(selectedNote.nullifierSecret);
       const { fullProofWithHints } = await generatePoolTransferProof(
         selectedNote,
@@ -122,6 +139,8 @@ export default function TransferPage() {
           nullifierSecret: newNullifierSecretSender,
           spent: false,
           createdAt: Date.now(),
+          txHash: transactionHash,
+          confirmed: false,
         });
       }
 
@@ -134,6 +153,8 @@ export default function TransferPage() {
         nullifierSecret: newNullifierSecretRecipient,
         spent: false,
         createdAt: Date.now(),
+        txHash: transactionHash,
+        confirmed: false,
       });
 
       // Display recipient secrets for sharing

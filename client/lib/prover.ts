@@ -8,6 +8,7 @@
  */
 import type { MerklePath } from "./merkle";
 import type { PoolNote, AmmNote, BetNote } from "./storage";
+import { computeBetCommitment, computeNullifierHash } from "./crypto";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type SnarkJS = any;
@@ -16,6 +17,7 @@ let snarkjs: SnarkJS | null = null;
 
 async function getSnarkJS(): Promise<SnarkJS> {
   if (snarkjs) return snarkjs;
+  // @ts-expect-error snarkjs has no type declarations
   snarkjs = await import("snarkjs");
   return snarkjs;
 }
@@ -327,13 +329,20 @@ export async function generateBetClaimProof(
   note: BetNote,
   winningOutcome: string,
 ): Promise<ProofResult> {
+  // Pre-compute public signals for DEMO_MODE (circuit would compute these internally)
+  const betCommitment = await computeBetCommitment(note.outcome, note.amount, note.secret, note.nullifierSecret);
+  const nullifierHash = await computeNullifierHash(note.nullifierSecret);
+
   const inputs = {
+    // Public signals (read by DEMO_MODE)
+    betCommitment,
+    nullifierHash,
+    winningOutcome,
+    // Private inputs (used by real circuit)
     outcome: note.outcome,
     amount: note.amount,
     secret: note.secret,
     nullifierSecret: note.nullifierSecret,
-    // betCommitment, nullifierHash, winningOutcome are computed by circuit
-    winningOutcome,
   };
 
   return generateProof("bet_claim", inputs);

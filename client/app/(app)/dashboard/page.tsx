@@ -13,37 +13,23 @@ import { FaucetModal } from "@/components/dashboard/faucet-modal";
 import { OnboardingBanner } from "@/components/dashboard/onboarding-banner";
 import { QuickActions } from "@/components/dashboard/quick-actions";
 import { HowItWorks } from "@/components/dashboard/how-it-works";
+import { u256ToBigInt } from "@/lib/utils";
 
 function formatU256(data: unknown): string {
-  if (!data) return "0";
-  try {
-    return BigInt(data as string | number | bigint).toString();
-  } catch {
-    return "0";
-  }
+  return u256ToBigInt(data).toString();
 }
 
 function formatTokens(data: unknown): string {
-  if (!data) return "0.00";
-  try {
-    const raw = BigInt(data as string | number | bigint);
-    const whole = raw / 10n ** 18n;
-    const frac = raw % 10n ** 18n;
-    if (frac === 0n) return `${whole}.00`;
-    const fracStr = frac.toString().padStart(18, "0").replace(/0+$/, "").slice(0, 4);
-    return `${whole}.${fracStr}`;
-  } catch {
-    return "0.00";
-  }
+  const raw = u256ToBigInt(data);
+  const whole = raw / 10n ** 18n;
+  const frac = raw % 10n ** 18n;
+  if (frac === 0n) return `${whole}.00`;
+  const fracStr = frac.toString().padStart(18, "0").replace(/0+$/, "").slice(0, 4);
+  return `${whole}.${fracStr}`;
 }
 
 function hasBalance(data: unknown): boolean {
-  if (!data) return false;
-  try {
-    return BigInt(data as string | number | bigint) > 0n;
-  } catch {
-    return false;
-  }
+  return u256ToBigInt(data) > 0n;
 }
 
 export default function DashboardPage() {

@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   getPoolNotes, getAmmNotes,
   markPoolNoteSpent, markAmmNoteSpent,
+  markNoteConfirmed,
   PoolNote, AmmNote,
 } from "@/lib/storage";
 import { computeNullifierHash } from "@/lib/crypto";
@@ -70,21 +71,51 @@ export default function WithdrawPage() {
     return "PENDING";
   }, [relayerUrl]);
 
+  async function waitForCommitment(commitment: string, contractType: "pool" | "amm"): Promise<{ tree: Awaited<ReturnType<typeof buildTreeFromChain>>["tree"]; leafIndex: number }> {
+    const normalized = "0x" + BigInt(commitment).toString(16);
+
+    // First attempt
+    setProofStatus("Building Merkle tree from on-chain events...");
+    let result = await buildTreeFromChain(
+      contractType === "pool" ? ADDRESSES.SHIELDED_POOL : ADDRESSES.SHIELDED_AMM,
+      contractType,
+    );
+    let leafIndex = result.commitmentToLeafIndex.get(normalized);
+
+    if (leafIndex !== undefined) {
+      return { tree: result.tree, leafIndex };
+    }
+
+    // Auto-wait: poll for up to 60 seconds
+    setProofStatus("Deposit not yet confirmed on-chain. Waiting for confirmation...");
+    for (let i = 0; i < 12; i++) {
+      await new Promise((r) => setTimeout(r, 5000));
+      setProofStatus(`Waiting for on-chain confirmation... (${(i + 1) * 5}s)`);
+      result = await buildTreeFromChain(
+        contractType === "pool" ? ADDRESSES.SHIELDED_POOL : ADDRESSES.SHIELDED_AMM,
+        contractType,
+      );
+      leafIndex = result.commitmentToLeafIndex.get(normalized);
+      if (leafIndex !== undefined) {
+        markNoteConfirmed(commitment);
+        return { tree: result.tree, leafIndex };
+      }
+    }
+
+    throw new Error(
+      "Your deposit transaction hasn't been confirmed on-chain yet. " +
+      "This usually takes 30-60 seconds on Starknet Sepolia. " +
+      "Please wait and try again in a moment."
+    );
+  }
+
   async function preparePoolWithdraw() {
     if (selectedPool === null || relayerDisabled) return;
     const note = poolNotes[selectedPool];
     setLoading(true);
     setProofStatus(null);
     try {
-      // Generate ZK proof locally
-      setProofStatus("Building Merkle tree from on-chain events...");
-      const { tree, commitmentToLeafIndex } = await buildTreeFromChain(
-        ADDRESSES.SHIELDED_POOL,
-        "pool",
-      );
-      const normalizedCommitment = "0x" + BigInt(note.commitment).toString(16);
-      const leafIndex = commitmentToLeafIndex.get(normalizedCommitment);
-      if (leafIndex === undefined) throw new Error("Note commitment not found on-chain. Has the deposit been confirmed?");
+      const { tree, leafIndex } = await waitForCommitment(note.commitment, "pool");
 
       setProofStatus("Generating ZK proof...");
       const path = await tree.getPath(leafIndex);
@@ -132,15 +163,7 @@ export default function WithdrawPage() {
     try {
       const tokenLabel = note.tokenType === TOKEN_TYPE_BTC ? "mBTC" : "mSTRK";
 
-      // Generate ZK proof locally
-      setProofStatus("Building Merkle tree from on-chain events...");
-      const { tree, commitmentToLeafIndex } = await buildTreeFromChain(
-        ADDRESSES.SHIELDED_AMM,
-        "amm",
-      );
-      const normalizedCommitment = "0x" + BigInt(note.commitment).toString(16);
-      const leafIndex = commitmentToLeafIndex.get(normalizedCommitment);
-      if (leafIndex === undefined) throw new Error("Note commitment not found on-chain. Has the deposit been confirmed?");
+      const { tree, leafIndex } = await waitForCommitment(note.commitment, "amm");
 
       setProofStatus("Generating ZK proof...");
       const path = await tree.getPath(leafIndex);
@@ -235,17 +258,55 @@ export default function WithdrawPage() {
     return noteList.map((note, i) => {
       const amtTokens = BigInt(note.amount) / 10n ** 18n;
       const tokenLabel = isAmm ? ((note as AmmNote).tokenType === TOKEN_TYPE_BTC ? "mBTC" : "mSTRK") : "mBTC";
+      const isPending = !note.confirmed;
       return (
         <button
           key={note.commitment}
           onClick={() => setSelected(i)}
-          className={`w-full rounded-md border p-3 text-left transition-colors ${selected === i ? "border-primary bg-accent" : "hover:bg-accent/50"
-            }`}
+          className={`w-full rounded-lg border p-4 text-left transition-colors ${
+            selected === i
+              ? "border-primary bg-accent"
+              : isPending
+                ? "border-yellow-500/20 bg-yellow-500/[0.02] hover:bg-yellow-500/[0.04]"
+                : "hover:bg-accent/50"
+          }`}
         >
           <div className="flex items-center justify-between">
-            <Badge variant="secondary">{amtTokens.toString()} {tokenLabel}</Badge>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-mono text-muted-foreground">
+                  {note.commitment.slice(0, 14)}...
+                </span>
+                {isPending && (
+                  <Badge className="bg-yellow-600/20 text-yellow-400 border-yellow-500/30 text-[9px] px-1.5 py-0">
+                    Pending
+                  </Badge>
+                )}
+              </div>
+              {isAmm && (
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Token: {tokenLabel}
+                </p>
+              )}
+            </div>
+            <Badge variant="secondary" className="text-base px-3 py-1">
+              {amtTokens.toString()} {tokenLabel}
+            </Badge>
           </div>
-          {selected === i && renderFeeBreakdown(note.amount, tokenLabel)}
+          {isPending && selected !== i && (
+            <p className="text-[10px] text-yellow-400/60 mt-1">
+              Deposit is being confirmed on-chain. You can still try to withdraw — it will auto-wait.
+            </p>
+          )}
+          {selected === i && (
+            <div className="mt-3 pt-3 border-t space-y-1">
+              {renderFeeBreakdown(note.amount, tokenLabel)}
+              <p className="text-xs text-muted-foreground">
+                Withdraw this note to receive {tokenLabel} at a fresh address.
+                {isPending && " Your deposit will be auto-confirmed before withdrawal proceeds."}
+              </p>
+            </div>
+          )}
         </button>
       );
     });

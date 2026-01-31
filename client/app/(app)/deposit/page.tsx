@@ -45,9 +45,6 @@ export default function DepositPage() {
       const result = await sendAsync(calls);
       const t = txToast(result.transaction_hash);
 
-      // TODO: Parse leaf_index from Deposit event once transaction is confirmed.
-      // For now, store without leafIndex. The client can reconstruct the tree
-      // from on-chain events when generating proofs.
       addNote({
         type: "pool",
         commitment,
@@ -56,6 +53,8 @@ export default function DepositPage() {
         nullifierSecret,
         spent: false,
         createdAt: Date.now(),
+        txHash: result.transaction_hash,
+        confirmed: false,
       });
 
       t.success();
@@ -93,7 +92,6 @@ export default function DepositPage() {
       const result = await sendAsync(calls);
       const t = txToast(result.transaction_hash);
 
-      // TODO: Parse leaf_index from Deposit event once transaction is confirmed.
       addNote({
         type: "amm",
         commitment,
@@ -103,6 +101,8 @@ export default function DepositPage() {
         nullifierSecret,
         spent: false,
         createdAt: Date.now(),
+        txHash: result.transaction_hash,
+        confirmed: false,
       });
 
       t.success();
