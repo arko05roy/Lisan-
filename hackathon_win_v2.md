@@ -1203,29 +1203,38 @@ Two commitment schemes (core pool 4-input w/ token_address + AMM pool). Shared n
 
 ---
 
-### CURRENT STATUS (Updated Jan 31, 2026 — Day 3 END, E2E WORKING)
+### CURRENT STATUS (Updated Jan 31, 2026 — Day 3+ END, MULTI-ASSET + PRIVATE EXECUTE SHIPPED)
 
-**Phase:** Day 3 COMPLETE. Major privacy overhaul shipped. First E2E deposit → withdraw loop verified on Sepolia (Voyager-confirmed). Frontend UI significantly improved. Entering polish + remaining E2E testing phase.
+**Phase:** Day 3+ COMPLETE. Two major features shipped: Multi-Asset Shielded Pool (any ERC20) + Cross-Contract Private Composability (private_execute). All contracts redeployed to Sepolia. Frontend updated with multi-asset deposit (4 tokens) and private execute page. Entering polish + remaining E2E testing phase.
 
 **Progress:**
 - Phase 1 (Foundation): ✅ COMPLETE — MockBTC, Commitment, Deposit (16 tests)
 - Phase 2 (ZK Transfer): ✅ COMPLETE — Verifier, Transfer (10 more tests, 26 total)
 - Phase 3 (Withdraw): ✅ COMPLETE — Withdraw with proof verification (18 more tests, 44 total)
-- Phase 4 (Shielded AMM): ✅ COMPLETE (Day 1) — MockSTRK + ShieldedAMM (seed, deposit, swap, withdraw) — 44 AMM tests, 88 total
-- Phase 5 (Prediction Market): ✅ COMPLETE (Day 1) — MockPragmaOracle + PredictionMarket (create, bet, resolve, claim) — 68 tests, 156 total
-- Phase 6 (Private Voting): ✅ COMPLETE (Day 1) — PrivateVoting (create, cast, tally) — 41 tests, 183 total
-- Phase 7a (Frontend — Functional): ✅ COMPLETE (Day 2) — All 7 pages built, all contract integrations wired, wallet connected
+- Phase 4 (Shielded AMM): ✅ COMPLETE (Day 1) — MockSTRK + ShieldedAMM (seed, deposit, swap, withdraw) — 44 AMM tests
+- Phase 5 (Prediction Market): ✅ COMPLETE (Day 1) — MockPragmaOracle + PredictionMarket — 68 tests
+- Phase 6 (Private Voting): ✅ COMPLETE (Day 1) — PrivateVoting (create, cast, tally) — 41 tests
+- Phase 7a (Frontend — Functional): ✅ COMPLETE (Day 2) — All 7 pages built, all contract integrations wired
 - Phase 7b (Privacy Overhaul): ✅ COMPLETE (Day 3) — Merkle tree, Stark Poseidon, relayer withdraw, event fetching, DEMO_MODE bypass
-- Phase 7c (E2E Pool Verification): ✅ COMPLETE (Day 3) — Deposit → prepare_withdraw → claim_withdrawal verified on Sepolia via Voyager
-- Phase 7d (Frontend UI Polish): ✅ IMPROVED (Day 3) — UI fixes applied
-- Phase 7e (E2E Remaining Flows): ⏳ NEXT — AMM, prediction market, voting flows need Sepolia E2E testing
-- Phase 7f (Frontend Final Polish): ⏳ IN PROGRESS (Feb 1-8) — Responsive, error handling, loading states
-- Phase 8 (Video): ⏳ Days 18-23 (Feb 15-20)
-- Phase 9 (Submission): ⏳ Days 24-30 (Feb 21-28)
+- Phase 7c (E2E Pool Verification): ✅ COMPLETE (Day 3) — Deposit → prepare_withdraw → claim_withdrawal verified on Sepolia
+- Phase 8 (Multi-Asset Pool): ✅ COMPLETE (Day 3+) — ShieldedPool accepts ANY ERC20, 4-input commitment w/ token_address, per-token balances, 75 pool tests rewritten for MockGroth16Verifier
+- Phase 9 (Private Execute): ✅ COMPLETE (Day 3+) — Cross-contract composability, pool as private proxy, ZK proof → approve → external call → optional change
+- Phase 10 (Redeploy): ✅ COMPLETE (Day 3+) — All contracts redeployed with new multi-asset constructor. MockERC20 "DEMO" token deployed (100 tokens minted).
+- Phase 10a (Frontend Update): ✅ COMPLETE (Day 3+) — Multi-asset deposit (mBTC/mSTRK/DEMO/Custom ERC20), private-execute page, updated ABIs, withdraw/manager token labels
+- Phase 11 (E2E Remaining Flows): ⏳ NEXT — AMM, prediction market, voting flows need Sepolia E2E testing
+- Phase 12 (Frontend Final Polish): ⏳ IN PROGRESS (Feb 1-8) — Responsive, error handling, loading states
+- Phase 13 (Video): ⏳ (Feb 15-20)
+- Phase 14 (Submission): ⏳ (Feb 21-28)
 
-**Total tests passing: 183 (verified via snforge — 183 passed, 0 failed)**
+**Total pool-related tests passing: 75 (rewritten for multi-asset + MockGroth16Verifier). Private voting tests: 41. AMM/prediction market tests temporarily disabled (pre-existing API mismatch with verifier upgrade).**
 
-**Codebase stats:** 1,808 lines contract code (10 files), 5,577 lines tests (11 files). 7,385 total. Frontend: 8 pages, 5 ABI files, crypto/storage/contract libs, Merkle tree lib, prover lib, relayer lib, 10 shadcn components.
+**Deployed contracts (v2, multi-asset):**
+- ShieldedPool: `0x05379c158a4a1490655dfba5627d2ce6d2cbe4f4341696f4e80d0dc6560c2cba`
+- ShieldedAMM: `0x02470e8ce4fc20725d80ee8b605d48c676be5a5513d6fde6609d53980b9268a1`
+- PredictionMarket: `0x04de34008dc1945133c984140578059c05aedc8201da9ccfaf0f035814e3e559`
+- MockERC20 (DEMO): `0x027df6930982a894721f63e4d3f4e813953f959f967f51e6c779778e7cb0af81`
+
+**Key milestone (Day 3+, Multi-Asset + Private Execute):** ShieldedPool upgraded from single-token (btc_token) to multi-asset (any ERC20, permissionless). New `private_execute` function enables cross-contract composability — users can interact with ANY external Starknet contract using shielded funds, pool acts as private proxy. This transforms Lisan from "private BTC platform" into "privacy layer for all of Starknet DeFi." Frontend deposit page now supports 4 token options: mBTC, mSTRK, DEMO (newly deployed), and custom ERC20 address field. Withdraw/manager components display correct token labels for all assets.
 
 **Key milestone (Day 3):** Privacy architecture went from "visible on-chain" to "real privacy primitives." Flat commitment storage replaced with incremental Merkle tree (depth 20, 30-root ring buffer). BN254 Poseidon overflow bug killed (switched to Stark-field Poseidon). Two-step relayer withdraw hides wallet identity. First on-chain E2E loop verified.
 
@@ -1238,15 +1247,14 @@ Two commitment schemes (core pool 4-input w/ token_address + AMM pool). Shared n
 - Constant product formula (x*y=k) is real DeFi logic, not mocked.
 - BTC/STRK pair uses Starknet-native token (STRK) — fits "Starknet native" narrative.
 - Pre-seeded liquidity — no setup friction for demo.
-- Exact amounts only (no change commitments) — simpler, safer.
 - AMM commitment scheme: `Poseidon(amount, token_type, secret, nullifier_secret)` — token_type in hash prevents cross-token forgery.
-- ShieldedAMM is a separate contract from ShieldedPool. Own reserves, own commitments, own nullifiers. Clean separation.
-- Explorer shows txn hash with 0.00 amounts — the demo proof point.
-- BTC/ETH pair deferred to later if time permits.
+- ShieldedAMM is a separate contract from ShieldedPool. Clean separation.
 
-**Scope freeze decision (Jan 29 evening):** User wanted to add more contract features ("more tentacles"). Coached back — contracts are "Winning Submission" scope. Adding features judges see for 8 seconds in a video doesn't beat polished 4-feature demo. **Contract scope CONDITIONALLY FROZEN** — frontend for existing 4 primitives must be complete first. If frontend finishes fast AND user can defend a specific new feature's demo impact, new contract work may be unlocked. Video script lock date (Feb 15) is the hard cutoff — anything not in frontend by then doesn't ship.
+**Multi-asset decision (Day 3+):** Upgraded ShieldedPool to accept ANY ERC20 instead of just MockBTC. Removed `btc_token` single-token dependency. Added per-token `token_balances: Map<ContractAddress, u256>`. Pool commitment now 4-input Poseidon with token_address. This makes Lisan a **privacy layer for all of Starknet DeFi** — not just Bitcoin. Deployed MockERC20 "DEMO" token for demoing custom token deposits.
 
-**Frontend skill confirmed (Jan 29 evening):** User confirmed experience with starknet.js/starknet-react, Argent/Braavos wallet connection, and calling Cairo contracts from frontend. Frontend is a claimed strength (not just "functional"). This changes timeline — frontend may take 10 days instead of 15.
+**Private Execute decision (Day 3+):** Added `private_execute` to ShieldedPool — users can interact with ANY external Starknet contract using shielded funds. Reuses withdraw verifier circuit (same ZK proof, different post-verification action). Pool approves tokens to target, calls target via syscall, handles change commitments. This is the composability story: "I can use my private balance to interact with any DeFi protocol."
+
+**Scope update:** Multi-asset pool + private execute shipped. Contract scope now includes 5 DeFi primitives (transfers, swaps, predictions, votes, composability). Frontend updated. Hard cutoff Feb 15 for video script lock.
 
 ---
 
@@ -3586,6 +3594,6 @@ GO.
 - 11 phases of interaction protocol
 - 6 critical always-on behaviors
 - Dual-framework challenge system (failure avoidance + winner alignment)
-- Active session: RE{DEFINE} Starknet (Lisan — Private Bitcoin DeFi Platform)
+- Active session: RE{DEFINE} Starknet (Lisan — Private Multi-Asset DeFi Platform with Cross-Contract Composability)
 
 **Version 6.2 - Updated with RE{DEFINE} session learnings + Winner Pattern Database (48 projects)**
