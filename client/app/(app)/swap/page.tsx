@@ -366,9 +366,25 @@ export default function SwapPage() {
   );
 
   return (
-    <SwapLayout
-      chart={<SwapChart btcRes={btcRes} strkRes={strkRes} />}
-      actions={actionPanel}
-    />
+    <div className="max-w-[1600px] mx-auto space-y-6">
+      <div>
+        <div className="flex items-center gap-2.5 mb-2">
+          <span className="inline-flex items-center gap-1.5 bg-[#8B8CFF]/8 text-[#8B8CFF] px-2.5 py-1 rounded-full text-[10px] uppercase tracking-widest font-semibold border border-[#8B8CFF]/10">
+            Private AMM
+          </span>
+        </div>
+        <h1 className="text-[28px] font-bold tracking-tight text-white">
+          Trade
+        </h1>
+        <p className="text-[13px] text-white/40 mt-1">
+          Swap privately between mBTC and mSTRK using high-speed ZK proofs.
+        </p>
+      </div>
+
+      <SwapLayout
+        chart={<SwapChart btcRes={btcRes} strkRes={strkRes} />}
+        actions={actionPanel}
+      />
+    </div>
   );
 }

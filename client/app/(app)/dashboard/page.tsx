@@ -153,7 +153,7 @@ export default function DashboardPage() {
             )}
           </div>
           <h1 className="text-[32px] font-bold tracking-tight text-white leading-none">
-            Overview
+            Portfolio
           </h1>
         </div>
 

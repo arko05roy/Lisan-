@@ -102,13 +102,12 @@ function MarketCard({
 
   return (
     <div
-      className={`rounded-2xl border bg-[#151B23] overflow-hidden transition-all ${
-        resolved
+      className={`rounded-2xl border bg-[#151B23] overflow-hidden transition-all ${resolved
           ? "border-green-500/20"
           : canResolve
             ? "border-yellow-500/20"
             : "border-white/[0.06] hover:border-white/[0.12]"
-      }`}
+        }`}
       style={{ boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}
     >
       {/* Card Header */}
@@ -198,11 +197,10 @@ function MarketCard({
             <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={() => { setSelectedOutcome("0"); setExpanded(true); }}
-                className={`rounded-xl border-2 py-3 px-4 text-center transition-all ${
-                  selectedOutcome === "0"
+                className={`rounded-xl border-2 py-3 px-4 text-center transition-all ${selectedOutcome === "0"
                     ? "border-green-500 bg-green-500/10"
                     : "border-white/[0.06] hover:border-green-500/40 bg-white/[0.02]"
-                }`}
+                  }`}
               >
                 <p className={`text-xl font-black ${selectedOutcome === "0" ? "text-green-400" : "text-green-500/60"}`}>
                   YES
@@ -210,11 +208,10 @@ function MarketCard({
               </button>
               <button
                 onClick={() => { setSelectedOutcome("1"); setExpanded(true); }}
-                className={`rounded-xl border-2 py-3 px-4 text-center transition-all ${
-                  selectedOutcome === "1"
+                className={`rounded-xl border-2 py-3 px-4 text-center transition-all ${selectedOutcome === "1"
                     ? "border-red-500 bg-red-500/10"
                     : "border-white/[0.06] hover:border-red-500/40 bg-white/[0.02]"
-                }`}
+                  }`}
               >
                 <p className={`text-xl font-black ${selectedOutcome === "1" ? "text-red-400" : "text-red-500/60"}`}>
                   NO
@@ -227,11 +224,10 @@ function MarketCard({
                 <button
                   key={i}
                   onClick={() => { setSelectedOutcome(i.toString()); setExpanded(true); }}
-                  className={`rounded-xl border-2 py-2.5 px-3 text-center transition-all ${
-                    selectedOutcome === i.toString()
+                  className={`rounded-xl border-2 py-2.5 px-3 text-center transition-all ${selectedOutcome === i.toString()
                       ? "border-[#8B8CFF] bg-[#8B8CFF]/10"
                       : "border-white/[0.06] hover:border-[#8B8CFF]/40 bg-white/[0.02]"
-                  }`}
+                    }`}
                 >
                   <p className={`text-sm font-bold ${selectedOutcome === i.toString() ? "text-[#8B8CFF]" : "text-white/50"}`}>
                     Option {i}
@@ -345,15 +341,14 @@ function BetCard({
   return (
     <button
       onClick={onSelect}
-      className={`w-full rounded-xl border p-4 text-left transition-all ${
-        selected
+      className={`w-full rounded-xl border p-4 text-left transition-all ${selected
           ? "border-[#8B8CFF] bg-[#8B8CFF]/5"
           : won
             ? "border-green-500/30 hover:border-green-500/50"
             : lost
               ? "border-red-500/20 opacity-60"
               : "border-white/[0.06] hover:border-white/[0.12]"
-      }`}
+        }`}
     >
       <div className="flex items-center justify-between">
         <div>
@@ -590,7 +585,7 @@ export default function PredictPage() {
           </span>
         </div>
         <h1 className="text-[28px] font-bold tracking-tight text-white">
-          Prediction Markets
+          Explore
         </h1>
         <p className="text-[13px] text-white/40 mt-1">
           Private bets on future outcomes — no one can see your position.

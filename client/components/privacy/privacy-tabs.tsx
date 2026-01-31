@@ -24,10 +24,10 @@ export function PrivacyTabs({ children }: PrivacyTabsProps) {
         <div className="mx-auto max-w-xl space-y-8">
             <div className="flex flex-col items-center space-y-4 text-center">
                 <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
-                    Privacy Hub
+                    Pool
                 </h1>
                 <p className="text-muted-foreground max-w-md">
-                    Shield your assets for private DeFi interactions, or unshield them back to your public wallet.
+                    Deposit assets into the Shielded Pool for private DeFi interactions, or withdraw them back.
                 </p>
             </div>
 
