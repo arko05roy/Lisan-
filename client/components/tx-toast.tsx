@@ -22,6 +22,7 @@ export function txToast(txHash: string) {
           label: "View",
           onClick: () => window.open(EXPLORER_BASE + txHash, "_blank"),
         },
+        duration: 10000,
       });
     },
     error: (msg?: string) => {

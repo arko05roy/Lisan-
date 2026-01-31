@@ -211,7 +211,12 @@ export function WithdrawFlow({ note, isOpen, onOpenChange, relayer, onWithdrawCo
 
     return (
         <Dialog open={isOpen} onOpenChange={(v) => { if (!loading) onOpenChange(v); }}>
-            <DialogContent className="sm:max-w-md">
+            <DialogContent
+                className="sm:max-w-md"
+                onInteractOutside={(e) => {
+                    e.preventDefault();
+                }}
+            >
                 <DialogHeader>
                     <DialogTitle>Withdraw {tokenLabel}</DialogTitle>
                     <DialogDescription>
