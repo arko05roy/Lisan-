@@ -49,8 +49,9 @@ A simple counter contract designed to demonstrate **private execute** functional
 2. Select relayer (must be online)
 3. Select your shielded note
 4. **Target Contract:** `0x05cd6bf538cce43d878333acd194d24365808810bad5ae3cf1b65e043da94fde`
-5. **Amount:** `0` (this call doesn't require tokens)
-6. **Calldata:** *(leave empty for increment)*
+5. **Function Name:** `increment`
+6. **Amount:** `0` (this call doesn't require tokens)
+7. **Calldata:** *(leave empty - increment takes no parameters)*
 
 ### Step 3: Verify Privacy
 After transaction confirms:
@@ -61,9 +62,16 @@ After transaction confirms:
 
 ---
 
+## Updated Contract Information (Feb 1, 2026)
+
+**New ShieldedPool Address:** `0x01156462ef834c9224596cbb8d9bba9d3a8645b8866349f376c7210f1d961ff2`
+
+⚠️ **Important**: If you have existing deposits from before this update, you'll need to make fresh deposits to the new pool contract. Old notes won't work with the updated contract.
+
 ## Calldata Reference
 
 ### Call: `increment()`
+**Function Name:** `increment`
 **Calldata:** *(empty)* or just leave the field blank
 
 The increment function takes no parameters, so no calldata is needed.
@@ -100,6 +108,7 @@ NARRATOR: "I'll call this counter contract privately."
 
 [Fill form]
 Target: 0x05cd...4fde
+Function Name: increment
 Amount: 0
 Calldata: (empty)
 

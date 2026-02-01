@@ -90,9 +90,10 @@ export function TransferForm() {
 
             if (leafIndex === undefined) {
                 setStatusMessage("Waiting for deposit confirmation...");
-                for (let attempt = 0; attempt < 12; attempt++) {
-                    await new Promise((r) => setTimeout(r, 5000));
-                    setStatusMessage(`Waiting for on-chain confirmation... (${(attempt + 1) * 5}s)`);
+                // Faster polling: 2s intervals for up to 60s (30 attempts)
+                for (let attempt = 0; attempt < 30; attempt++) {
+                    await new Promise((r) => setTimeout(r, 2000));
+                    setStatusMessage(`Waiting for confirmation... (${(attempt + 1) * 2}s)`);
                     treeResult = await buildTreeFromChain(ADDRESSES.SHIELDED_POOL, "pool");
                     leafIndex = treeResult.commitmentToLeafIndex.get(normalizedCommitment);
                     if (leafIndex !== undefined) {
@@ -101,7 +102,9 @@ export function TransferForm() {
                     }
                 }
                 if (leafIndex === undefined) {
-                    throw new Error("Deposit not found on-chain. Please try again later.");
+                    throw new Error(
+                        "Deposit not found on-chain after 60s. Note may be from old contract. Try depositing fresh funds."
+                    );
                 }
             }
 

@@ -93,10 +93,10 @@ export function WithdrawFlow({ note, isOpen, onOpenChange, relayer, onWithdrawCo
         if (leafIndex !== undefined) return { tree: result.tree, leafIndex };
 
         setStatusMessage("Waiting for deposit confirmation...");
-        // Extended Polling
-        for (let i = 0; i < 15; i++) {
-            await new Promise((r) => setTimeout(r, 5000));
-            setStatusMessage(`Waiting for deposit confirmation... (${(i + 1) * 5}s)`);
+        // Faster polling: 2s intervals for up to 60s (30 attempts)
+        for (let i = 0; i < 30; i++) {
+            await new Promise((r) => setTimeout(r, 2000));
+            setStatusMessage(`Waiting for confirmation... (${(i + 1) * 2}s)`);
             result = await buildTreeFromChain(
                 contractType === "pool" ? ADDRESSES.SHIELDED_POOL : ADDRESSES.SHIELDED_AMM,
                 contractType,
@@ -107,7 +107,9 @@ export function WithdrawFlow({ note, isOpen, onOpenChange, relayer, onWithdrawCo
                 return { tree: result.tree, leafIndex };
             }
         }
-        throw new Error("Deposit not found on-chain. Please try again later.");
+        throw new Error(
+            "Deposit not found on-chain after 60s. Note may be from old contract. Try depositing fresh funds."
+        );
     };
 
     const handleStartWithdraw = async () => {

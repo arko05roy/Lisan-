@@ -92,8 +92,10 @@ export function PrivateExecute({ relayer }: PrivateExecuteProps) {
 
             if (leafIndex === undefined) {
                 setStatusMessage("Waiting for deposit confirmation...");
-                for (let i = 0; i < 15; i++) {
-                    await new Promise((r) => setTimeout(r, 5000));
+                // Faster polling: 2s intervals for up to 60s (30 attempts)
+                for (let i = 0; i < 30; i++) {
+                    await new Promise((r) => setTimeout(r, 2000));
+                    setStatusMessage(`Waiting for confirmation... (${(i + 1) * 2}s)`);
                     const r2 = await buildTreeFromChain(ADDRESSES.SHIELDED_POOL, "pool");
                     leafIndex = r2.commitmentToLeafIndex.get(normalized);
                     if (leafIndex !== undefined) {
@@ -102,7 +104,9 @@ export function PrivateExecute({ relayer }: PrivateExecuteProps) {
                     }
                 }
                 if (leafIndex === undefined) {
-                    throw new Error("Deposit not found on-chain");
+                    throw new Error(
+                        "Deposit not found on-chain after 60s. Note may be from old contract. Try depositing fresh funds."
+                    );
                 }
             }
 
