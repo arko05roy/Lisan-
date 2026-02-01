@@ -93,16 +93,22 @@ fn private_execute(
 
 **3. Target Contract Address**
 - Enter the Starknet contract you want to call
-- Example: `0x1234...` (could be an AMM, lending protocol, NFT contract, etc.)
+- Example: `0x05cd6bf538cce43d878333acd194d24365808810bad5ae3cf1b65e043da94fde` (DemoCounter)
 
-**4. Amount to Send**
+**4. Function Name**
+- The name of the function to call on the target contract
+- Example: `increment`, `transfer`, `approve`
+- The selector is computed automatically from the function name
+
+**5. Amount to Send**
 - How much to send to the target contract
 - Must be ≤ your shielded note balance
+- For demo: use `0` for increment (no tokens needed)
 
-**5. Calldata**
-- Comma-separated felt252 values
+**6. Calldata**
+- Comma-separated felt252 values for function parameters
 - Example: `0x123, 0x456, 0x789`
-- This is the raw calldata passed to the target contract's function
+- Leave empty for functions with no parameters (like `increment`)
 
 ### Step 4: Execute
 1. Click **Execute Privately**
@@ -113,6 +119,12 @@ fn private_execute(
    - Target contract receives approved tokens and executes your call
    - Change (if any) is returned as a new shielded note
    - Your identity remains hidden
+
+### Step 5: Verify Privacy (Optional)
+1. Go to [Starkscan](https://sepolia.starkscan.co) and search for your transaction hash
+2. Check the **Events** tab
+3. Look for events from the target contract (e.g., `Incremented` from DemoCounter)
+4. Verify the `caller` is the **ShieldedPool address**, not your wallet!
 
 ---
 
@@ -173,12 +185,17 @@ Calldata: [vote_selector, proposal_id, choice, ...]
 
 ## Contract Addresses (Sepolia Testnet)
 
+**Updated Feb 1, 2026** - New ShieldedPool deployment with function selector fix
+
 ```
-ShieldedPool:      0x05379c158a4a1490655dfba5627d2ce6d2cbe4f4341696f4e80d0dc6560c2cba
+ShieldedPool:      0x01156462ef834c9224596cbb8d9bba9d3a8645b8866349f376c7210f1d961ff2
+DemoCounter:       0x05cd6bf538cce43d878333acd194d24365808810bad5ae3cf1b65e043da94fde
 MockBTC:           0x03ffc3ab1419ed9daa9cc49d0f000b13f23c47b42bb931d1cf1cbbb22639ba8f
 MockSTRK:          0x023de67f0eaa413e33173e040bfbaa25c5e0a47d74c69e7acaecedd64afbd37f
 Demo Token (DEMO): 0x027df6930982a894721f63e4d3f4e813953f959f967f51e6c779778e7cb0af81
 ```
+
+**Old Pool (Deprecated):** `0x05379c158a4a1490655dfba5627d2ce6d2cbe4f4341696f4e80d0dc6560c2cba`
 
 ---
 
@@ -213,26 +230,28 @@ After executing, you can verify the transaction on [Voyager Explorer](https://se
 
 For complex contract interactions, you need to construct the calldata manually:
 
-### Example: ERC20 Approve
+### Example 1: DemoCounter increment()
+```
+Target Contract: 0x05cd6bf538cce43d878333acd194d24365808810bad5ae3cf1b65e043da94fde
+Function Name: increment
+Amount: 0
+Calldata: (leave empty)
+```
+
+### Example 2: ERC20 Approve
+```
+Target Contract: 0x03ffc3ab1419ed9daa9cc49d0f000b13f23c47b42bb931d1cf1cbbb22639ba8f (MockBTC)
+Function Name: approve
+Amount: 0
+Calldata: <spender_address>, <amount_low>, <amount_high>
+```
+
+For u256 amounts, split into low/high:
 ```typescript
-// Target: any ERC20 token
-// Function: approve(spender: ContractAddress, amount: u256)
-
-const spenderAddress = "0x1234...";
 const approveAmount = 1000n * 10n**18n; // 1000 tokens
-
-// Split u256 into low/high
 const low = approveAmount & ((1n << 128n) - 1n);
 const high = approveAmount >> 128n;
-
-// Calldata
-const calldata = [
-  spenderAddress,  // felt252
-  low.toString(),  // u128
-  high.toString(), // u128
-];
-
-// In UI, paste: 0x1234..., <low>, <high>
+// Calldata: spenderAddress, low, high
 ```
 
 ### Example: AMM Swap
