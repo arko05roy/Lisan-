@@ -22,6 +22,7 @@ import { buildTreeFromChain } from "@/lib/merkle";
 import { txToast, errorToast } from "@/components/tx-toast";
 import { Loader2, Zap, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { hash } from "starknet";
 
 interface PrivateExecuteProps {
     relayer: Relayer | null;
@@ -35,6 +36,7 @@ export function PrivateExecute({ relayer }: PrivateExecuteProps) {
     // Form state
     const [selectedNote, setSelectedNote] = useState<PoolNote | null>(null);
     const [targetContract, setTargetContract] = useState("");
+    const [entrypoint, setEntrypoint] = useState("");
     const [callData, setCallData] = useState("");
     const [amount, setAmount] = useState("");
 
@@ -69,7 +71,7 @@ export function PrivateExecute({ relayer }: PrivateExecuteProps) {
     );
 
     const handleExecute = async () => {
-        if (!selectedNote || !targetContract || !amount || !relayer) return;
+        if (!selectedNote || !targetContract || !entrypoint || !amount || !relayer) return;
         setLoading(true);
 
         try {
@@ -131,11 +133,13 @@ export function PrivateExecute({ relayer }: PrivateExecuteProps) {
                 );
             }
 
-            // Parse calldata
-            const callDataArray = callData
+            // Parse calldata: prepend function selector, then user params
+            const selector = hash.getSelectorFromName(entrypoint);
+            const userParams = callData
                 .split(",")
                 .map((s) => s.trim())
                 .filter((s) => s.length > 0);
+            const callDataArray = [selector, ...userParams];
 
             setStatusMessage("Submitting to Relayer...");
 
@@ -162,6 +166,7 @@ export function PrivateExecute({ relayer }: PrivateExecuteProps) {
             txToast(transactionHash).success();
             setSelectedNote(null);
             setTargetContract("");
+            setEntrypoint("");
             setCallData("");
             setAmount("");
         } catch (e: unknown) {
@@ -235,6 +240,20 @@ export function PrivateExecute({ relayer }: PrivateExecuteProps) {
                     />
                 </div>
 
+                {/* Function Name */}
+                <div className="space-y-2">
+                    <Label>Function Name</Label>
+                    <Input
+                        placeholder="e.g. increment, transfer, approve"
+                        value={entrypoint}
+                        onChange={(e) => setEntrypoint(e.target.value)}
+                        disabled={loading}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                        The name of the function to call on the target contract.
+                    </p>
+                </div>
+
                 {/* Amount */}
                 <div className="space-y-2">
                     <Label>Amount to Send</Label>
@@ -286,6 +305,7 @@ export function PrivateExecute({ relayer }: PrivateExecuteProps) {
                         !address ||
                         !selectedNote ||
                         !targetContract ||
+                        !entrypoint ||
                         !amount ||
                         !relayer
                     }

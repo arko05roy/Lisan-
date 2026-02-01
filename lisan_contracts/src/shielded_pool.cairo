@@ -321,8 +321,12 @@ pub mod ShieldedPool {
             token.approve(target_contract, amount);
 
             // Call target contract with provided calldata
+            // First element is the function selector, rest is calldata
+            assert(call_data.len() > 0, 'Calldata must include selector');
+            let entry_point_selector = *call_data.at(0);
+
             let mut calldata_arr: Array<felt252> = array![];
-            let mut i: u32 = 0;
+            let mut i: u32 = 1; // Start from index 1 (skip selector)
             loop {
                 if i >= call_data.len() {
                     break;
@@ -331,7 +335,7 @@ pub mod ShieldedPool {
                 i += 1;
             };
             starknet::syscalls::call_contract_syscall(
-                target_contract, 0, calldata_arr.span(),
+                target_contract, entry_point_selector, calldata_arr.span(),
             )
                 .unwrap_syscall();
 

@@ -9,6 +9,7 @@ import { WalletButton } from "@/components/wallet-button";
 const NAV_ITEMS = [
     { href: "/deposit", label: "Pool" },
     { href: "/swap", label: "Trade" },
+    { href: "/execute", label: "Execute" },
     { href: "/predict", label: "Explore" },
     { href: "/dashboard", label: "Portfolio" },
 ];
