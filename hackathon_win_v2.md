@@ -3,8 +3,8 @@ Claude Code's Complete Operating Manual - AGGRESSIVE VERSION
 System Version: 6.2 - WITH RE{DEFINE} SESSION + WINNER PATTERN DATABASE
 Date: January 2026
 
-Status: RE{DEFINE} Hackathon Day 5 (Feb 2) — Wallet UI shipped ✅ | DUAL VALIDATION COMPLETE ✅✅ | DUAL-TRACK + RELAYER ARCHITECTURE CONFIRMED 🟢🟢
-Last Check-in: Feb 2, 2026 — ADRIEN: "Worth building and needed in Starknet" + dual-track approved | RICHARD: "Relayers really really good idea" + extra credit opportunity | Technical depth validated by both Foundation leads
+Status: RE{DEFINE} Hackathon Day 5 (Feb 2) — TRIPLE VALIDATION ✅✅✅ | BUILDING DECENTRALIZED RELAYER NETWORK 🚀 | 18 DAYS TO SUBMISSION
+Last Check-in: Feb 2, 2026 — ADRIEN: "Needed in Starknet" + dual-track | RICHARD: "Relayers really really good idea" + extra point | DECISION: Building decentralized relayer network (Days 6-11) | Kill switch Feb 8 | Teddy session tomorrow with Private MEV question
 ═══════════════════════════════════════════════════════════
 CLAUDE'S CORE IDENTITY - READ THIS FIRST
 You are NOT a helpful assistant who does research for the user.
@@ -1931,6 +1931,197 @@ The infra side issue is relayers have no incentive to process complex DeFi calls
 
 ---
 
+### 🚀 STRATEGIC DECISION — BUILDING DECENTRALIZED RELAYER NETWORK (Feb 2, 11:00 PM)
+
+**CONTEXT:**
+- Feb 20 deadline = 18 days remaining
+- Adrien validation: "Worth building and needed in Starknet"
+- Richard validation: "Relayers really really good idea" + "extra point if you build it"
+- Technical judges confirmed (Adrien, Richard both super technical)
+
+**DECISION: GO — Build Decentralized Relayer Network**
+
+**Timeline:**
+- **Days 6-11 (Feb 3-8):** Relayer network build sprint
+- **Day 11 (Feb 8 EOD):** KILL SWITCH checkpoint — GO/NO-GO decision
+- **Days 12-14 (Feb 9-11):** E2E testing + frontend polish
+- **Days 15-18 (Feb 12-15):** Video + dual-track submission
+- **Days 19-20 (Feb 16-20):** Buffer
+
+**Scope (What We're Building):**
+
+✅ **IN SCOPE:**
+- Multiple relayer system (3-5 relayers)
+- Relayer registration + staking mechanism (1 BTC stake)
+- Fee-based incentives (relayers earn 0.1% per submission)
+- Slashing mechanism (10% penalty for failed submissions, 3 strikes = full slash)
+- Round-robin selection logic (can upgrade to stake-weighted later)
+- Relayer Dashboard frontend (stats, earnings, registration/unregistration)
+
+❌ **OUT OF SCOPE (Post-Hackathon):**
+- Complex reputation systems
+- Decentralized discovery (P2P/DHT)
+- Governance mechanisms
+- Dynamic fee markets
+- Advanced anti-collusion beyond staking
+
+**KILL SWITCH CRITERIA (Day 11 — Feb 8 EOD):**
+
+**✅ CONTINUE IF:**
+- 3+ relayers active on Sepolia
+- Proof submission routing works reliably
+- Fee distribution functional
+- Slashing mechanism tested
+- Dashboard shows accurate stats
+- No critical bugs in existing features
+- **Confidence: 80%+ it will demo well**
+
+**❌ CUT IF:**
+- Relayer coordination unreliable
+- Fee distribution buggy
+- Slashing breaks proof flow
+- Dashboard non-functional
+- Existing features broken
+- **Confidence: <80% or major blockers**
+
+**IF CUT:** Revert to single-relayer model, add "Future Work: Decentralized Relayer Network" to README, proceed to Phase 2 (polish/video). No shame—protected working project.
+
+**RATIONALE FOR BUILDING:**
+1. **Time available:** 18 days = feasible to build properly (not rushed)
+2. **Richard's validation:** Foundation explicitly said "extra point if you build it"
+3. **Differentiation depth:** Beyond "Tornado but composable" → "Privacy DeFi infrastructure"
+4. **Grants positioning:** Building it (not just pitching) = credibility for post-hackathon Foundation grants
+5. **Technical judges:** Adrien + Richard appreciate infrastructure depth, can evaluate it
+6. **Risk mitigation:** Kill switch on Day 11 protects working project if things go wrong
+
+**IMPLEMENTATION PLAN:**
+Detailed day-by-day breakdown: `RELAYER_NETWORK_BUILD_PLAN.md`
+- Day 6 (Feb 3): Architecture design + Teddy office hours
+- Day 7 (Feb 4): Core contracts (Registry + Coordinator) + Jonathan office hours
+- Day 8 (Feb 5): Integration with PrivatePool
+- Day 9 (Feb 6): Deploy to Sepolia + testing
+- Day 10 (Feb 7): Frontend (Relayer Dashboard)
+- Day 11 (Feb 8): Final testing + KILL SWITCH decision
+
+**DAILY CHECK-INS (MANDATORY):**
+Every day at 10:00 PM IST, report:
+- What built today
+- What's working/broken
+- Blockers
+- Tomorrow's target
+- On track for Day 11 checkpoint? (YES/NO)
+
+**CONTRACTS TO BUILD:**
+1. **RelayerRegistry.cairo:** Registration, staking, slashing, relayer management
+2. **RelayerCoordinator.cairo:** Selection logic, proof submission routing, fee distribution
+3. **PrivatePool.cairo (Updated):** Integrate with coordinator, fee deduction from user balance
+
+**FRONTEND TO BUILD:**
+- Relayer Dashboard page (registration, stats, earnings display)
+- Integration with main wallet (show selected relayer during execution)
+
+**REFERENCES:**
+- Build plan: `/Users/arkoroy/Desktop/lisan/RELAYER_NETWORK_BUILD_PLAN.md`
+- Teddy question: `/Users/arkoroy/Desktop/lisan/TEDDY_QUESTION.md`
+
+---
+
+### 🎯 DAY 6 PREP — TEDDY OFFICE HOURS (Feb 3, 10:00 PM IST)
+
+**WHO:** Teddy Woodward (@franklyteddy) — Privacy Lead
+**FORMAT:** Zoom group session, drop question in chat box, Teddy picks and answers verbally
+**GOAL:** Make his eyes raise with technical depth, validate privacy approach
+
+**INTELLIGENCE:**
+- Teddy is a "privacy geek" — deeply technical (confirmed pattern: Adrien + Richard both super technical)
+- Can handle advanced privacy primitives discussion
+- Judges are evaluating infrastructure-level thinking, not just apps
+
+**THE QUESTION (COPY-PASTE TO ZOOM CHAT):**
+
+```
+Teddy — I built a shielded pool for Bitcoin on Starknet with cross-contract execution: balance hidden via Merkle commitments, SNARK proofs verify Merkle inclusion + nullifier for spend prevention, relayers submit proofs to preserve user anonymity.
+
+The problem: relayers see proof calldata (target contract + function selector) before submission. For private swaps, relayers learn: "someone is swapping X→Y at time T" even if amounts/identity stay hidden.
+
+This creates a private MEV problem: relayers can front-run based on calldata pattern recognition, even without knowing exact amounts. Encrypted calldata solves this but breaks composability (target contract can't parse encrypted calls).
+
+For privacy DeFi beyond transfers—does privacy track value solving the private MEV problem (encrypted compute, TEE-based relayers, delayed execution), or is calldata leakage acceptable if identity+amounts stay hidden?
+
+What gets privacy judges excited: maximum anonymity or practical composability with acceptable leakage?
+```
+
+**WHY THIS KILLS:**
+- ✅ Technical depth: Merkle commitments, SNARK proofs, nullifiers, MEV, encrypted compute, TEEs
+- ✅ Novel problem: Private MEV in DeFi composability (cutting-edge research)
+- ✅ Shows systems thinking: You understand relayer trust model creates attack vectors
+- ✅ Tradeoff clarity: Encrypted calldata vs composability
+- ✅ Connects to build: Directly relevant to relayer network architecture
+- ✅ Forces engagement: Not yes/no—requires nuanced technical answer
+- ✅ "Eye raise" factor: 🔥🔥🔥 Privacy researchers love this problem space
+
+**EXPECTED RESPONSE PATHS:**
+
+| Teddy Says | What It Means | Your Action |
+|------------|---------------|-------------|
+| "Calldata leakage acceptable if amounts stay hidden" | 🟢 GREEN — Practical composability > perfect privacy | Keep current architecture, mention awareness of tradeoff |
+| "Private MEV is real problem, needs solving" | 🟡 YELLOW — Deeper privacy expected | Consider encrypted compute as future work |
+| "TEE-based relayers or delayed execution" | 🟢 GREEN — He's engaging deeply | Note for future work section |
+| "Most DeFi doesn't need perfect privacy" | 🟢 GREEN — Your approach validated | Lead with composability in Privacy track |
+| Asks YOU follow-up question | 🟢🟢 JACKPOT — Real interest | Answer + ask "Should I prioritize this for submission?" |
+
+**DELIVERY STRATEGY:**
+1. Join Zoom 2-3 min early (test chat functionality)
+2. Listen to first 2-3 questions (gauge tone, avoid duplicates)
+3. Wait for natural pause after Teddy finishes answer
+4. Paste question in chat (no preamble, no apology)
+5. Take notes on Teddy's EXACT words (no interpretation)
+
+**AFTER TEDDY ANSWERS:**
+Send ONE follow-up in chat:
+```
+Got it. [1-sentence summary]. Composability with acceptable leakage makes sense for practical DeFi. Thanks Teddy.
+```
+
+**POST-SESSION (10:00 PM IST CHECK-IN):**
+Report to Claude:
+1. Teddy's exact words (no interpretation)
+2. His tone (excited, neutral, redirecting)
+3. Any follow-up questions he asked YOU
+4. What other builders asked (privacy track priorities)
+5. Your read on whether he was impressed
+
+**VALIDATION SEEKING:**
+1. Is calldata leakage acceptable? (Architecture decision)
+2. Does privacy track care about MEV in private systems? (Differentiation)
+3. Composability vs perfect privacy: which matters more? (Narrative direction)
+
+**FULL DETAILS:** See `TEDDY_QUESTION.md` for 3 question options, backup questions, and delivery strategy
+
+---
+
+**WHAT THIS GETS US:**
+
+**Pitch upgrade:**
+- **OLD:** "Private Bitcoin wallet that can call any Starknet contract. Relayers submit proofs for privacy."
+- **NEW:** "Privacy DeFi infrastructure for Bitcoin on Starknet. Decentralized relayer network with economic incentives. Any user, any protocol, full composability."
+
+**Differentiation:**
+- **Tornado Cash:** Privacy transfers only, no relayer incentives
+- **Lisan:** Privacy infrastructure + decentralized relayer network + full DeFi composability + economic incentives
+
+**Validation secured:**
+- Adrien (Bitcoin Lead): "Worth building and needed"
+- Richard (Foundation): "Relayers really really good idea" + "extra point"
+- Teddy (Privacy Lead): Session tomorrow — validate privacy approach
+
+**Post-hackathon:**
+- Foundation grants pathway (Richard opened door)
+- "We built relayer network, seeking grants to scale" = strong story
+- ZK Passport idea noted (Adrien praised it)
+
+---
+
 ### 🟢 ADRIEN OFFICE HOURS — ACTUAL RESULTS (Feb 2, 9:30 PM IST)
 
 **ATTENDANCE:** 26 people joined the session.
@@ -2110,39 +2301,80 @@ Recommended: **Option A** — "Private Bitcoin wallet. Call any Starknet smart c
 - ⏳ Prediction market create → bet → resolve → claim flow
 - ⏳ Voting create → cast → tally flow
 
-**Day 5 check-in: ✅ MAJOR VALIDATION COMPLETE**
+**Day 5 check-in: ✅ TRIPLE VALIDATION + STRATEGIC DECISION**
 - ✅ Wallet UI reorganized (MetaMask-style, single unified view)
 - ✅ All flows tested (deposit → execute path verified)
 - ✅ Narrative framework locked (problem/solution/why BTC track cares)
-- ✅ 60-second pitch structure finalized
-- ✅ Adrien office hours question finalized (BTCFi-aligned, 35 seconds, strategic)
-- ✅ Decoder ring built (response interpretation strategy)
-- ✅ Richard session strategy (listen-only mode for grants intel)
 - ✅ **ADRIEN VALIDATION COMPLETE** — "Worth building and needed in Starknet" 🟢🟢
-- ✅ **DUAL-TRACK SUBMISSION APPROVED** — Bitcoin + Privacy tracks both confirmed 🟢🟢
-- ✅ One-liner selected (Option A recommended based on dual-track validation)
-- ⏳ Office Hours — Richard session 10:00 PM (LISTEN mode for grants intel)
-- ⏳ E2E testing remaining flows (AMM, predictions, voting) — scheduled for Feb 3-4
+- ✅ **RICHARD VALIDATION COMPLETE** — "Relayers really really good idea" + "extra point" 🟢🟢
+- ✅ **DUAL-TRACK SUBMISSION APPROVED** — Bitcoin + Privacy tracks both confirmed
+- ✅ One-liner selected: "Private Bitcoin wallet. Call any Starknet smart contract."
+- ✅ **STRATEGIC DECISION:** Building decentralized relayer network (18 days available)
+- ✅ Implementation plan created: `RELAYER_NETWORK_BUILD_PLAN.md` (day-by-day)
+- ✅ Teddy question prepared: Private MEV problem (technical depth for privacy validation)
+- ⏳ **DAY 6 STARTS TOMORROW** — Relayer architecture design + Teddy session
+- ⏳ Kill switch set: Day 11 (Feb 8) — GO/NO-GO decision on relayer network
 
-**Next priorities (Feb 2-4):**
-1. ✅ Adrien validation COMPLETE — dual-track approved, "needed in Starknet" confirmed
-2. ✅ One-liner selected (Option A) — "Private Bitcoin wallet. Call any Starknet smart contract."
-3. ⏳ Continue Office Hours validation (Feb 3 Teddy/Privacy, Feb 4 Jonathan/BTC #2)
-4. ⏳ Prepare dual-track submission strategy (Bitcoin narrative + Privacy narrative)
-5. ⏳ E2E test remaining flows (AMM, predictions, voting)
-6. ⏳ Frontend polish for video recording quality
-7. ⏳ Post-validation synthesis (Feb 4 evening) — finalize submission approach
-8. ⏳ Note ZK Passport idea for post-hackathon (Adrien loved it — "very good app")
+**Next priorities (Feb 3-20 — 18 DAYS TO SUBMISSION):**
 
-**Skill gap update (Day 5):**
+**🚀 PHASE 1: RELAYER NETWORK BUILD (Days 6-11: Feb 3-8)**
+1. ⏳ **Day 6 (Feb 3):** Design relayer architecture + Teddy office hours (Private MEV question)
+2. ⏳ **Day 7 (Feb 4):** Build RelayerRegistry + RelayerCoordinator + Jonathan office hours
+3. ⏳ **Day 8 (Feb 5):** Integrate with PrivatePool (fee deduction, routing)
+4. ⏳ **Day 9 (Feb 6):** Deploy to Sepolia + test E2E
+5. ⏳ **Day 10 (Feb 7):** Build Relayer Dashboard frontend
+6. ⏳ **Day 11 (Feb 8):** Final testing + KILL SWITCH decision (GO/NO-GO)
+
+**⚡ PHASE 2: E2E TESTING + POLISH (Days 12-14: Feb 9-11)**
+7. ⏳ E2E test AMM, Predictions, Voting flows
+8. ⏳ Frontend polish (error handling, responsive, visual quality)
+9. ⏳ Cross-browser testing + bug fixes
+
+**🎬 PHASE 3: VIDEO + SUBMISSION (Days 15-18: Feb 12-15)**
+10. ⏳ Record demo video (60-second pitch + relayer network demo)
+11. ⏳ Write dual-track submission materials (Bitcoin + Privacy narratives)
+12. ⏳ Submit to both tracks
+13. ⏳ Buffer (Days 19-20: Feb 16-20)
+
+**✅ COMPLETED:**
+- Adrien validation: "Needed in Starknet" + dual-track approved
+- Richard validation: "Relayers really really good idea" + "extra point"
+- One-liner selected: "Private Bitcoin wallet. Call any Starknet smart contract."
+- Decision to build relayer network (18 days available, kill switch Day 11)
+
+**📋 POST-HACKATHON:**
+- ZK Passport idea (Adrien loved it — "very good app")
+- Foundation grants for relayer network infrastructure
+- Scale decentralized relayer network (reputation, advanced anti-collusion)
+
+**Skill gap update (Day 5 → Day 6):**
 | Skill | Status | Risk Level |
 |-------|--------|------------|
-| UI reorganization for narrative clarity | VERIFIED — wallet UI shipped, tested, narrative clearer | 🟢 LOW (proven) |
-| Narrative framework | LOCKED — problem/solution/pitch structure finalized | 🟢 LOW (ready for validation) |
-| One-liner | PENDING — 3 options drafted, needs selection | 🟡 MEDIUM (deciding tonight) |
-| Office Hours validation | IN PROGRESS — first session tonight 9:30 PM IST | 🟡 MEDIUM (critical window) |
+| UI reorganization for narrative clarity | ✅ VERIFIED — wallet UI shipped, tested, narrative clearer | 🟢 LOW (proven) |
+| Narrative framework | ✅ LOCKED — problem/solution/pitch structure finalized | 🟢 LOW (validated by Adrien + Richard) |
+| One-liner | ✅ SELECTED — "Private Bitcoin wallet. Call any Starknet smart contract." | 🟢 LOW (finalized) |
+| Office Hours validation | ✅ 2/3 COMPLETE — Adrien + Richard validated, Teddy tomorrow | 🟢 LOW (strong validation secured) |
+| **Relayer network architecture** | ⏳ **STARTING DAY 6** — Design phase, kill switch Day 11 | 🟡 MEDIUM (new infrastructure build) |
+| **Economic incentive design** | ⏳ **STARTING DAY 6** — Staking, fees, slashing mechanisms | 🟡 MEDIUM (first time building incentive system) |
+| **Multi-contract coordination** | ⏳ **DAYS 7-8** — Coordinator routing, Registry management | 🟡 MEDIUM (complexity in contract integration) |
 
 **Key learning (Day 5):** Wallet UI reframe = narrative simplification. "Private Bitcoin wallet" is 3 words that explain the entire platform. Judges see wallet → immediately understand use case. Private Execute goes from buried feature to obvious capability. 2-3 hour UI reorganization was correct call for narrative clarity.
+
+**Key decision (Day 5):** Building decentralized relayer network based on:
+1. **Time available:** 18 days (Feb 20 deadline) = feasible to build properly
+2. **Validation secured:** Adrien ("needed in Starknet") + Richard ("extra point if you build it")
+3. **Differentiation:** From "Tornado but composable" to "Privacy DeFi infrastructure"
+4. **Risk mitigation:** Kill switch Day 11 (GO/NO-GO) protects working project
+5. **Technical judges:** Appreciate infrastructure depth, can evaluate it properly
+
+**Day 6 targets (Feb 3 — TOMORROW):**
+1. ✅ Design RelayerRegistry contract (registration, staking, slashing)
+2. ✅ Design RelayerCoordinator contract (selection, routing, fees)
+3. ✅ Design incentive model (1 BTC stake, 0.1% fees, 10% slashing)
+4. ✅ Design integration with PrivatePool (fee deduction, proof routing)
+5. ✅ Write architecture document
+6. ✅ Attend Teddy office hours (10:00 PM IST) — Ask Private MEV question
+7. ✅ Report Day 6 results (10:00 PM IST check-in)
 
 ---
 
@@ -2155,18 +2387,26 @@ Recommended: **Option A** — "Private Bitcoin wallet. Call any Starknet smart c
 | Jan 30 | Day 2: Deploy to Sepolia + Frontend ALL pages functional | ✅ Complete |
 | Jan 31 | Day 3: Major privacy overhaul + E2E pool withdraw verified on Sepolia | ✅ Complete |
 | Feb 1 | Day 4: Private Execute frontend + demo contracts deployed + tested on Sepolia | ✅ Complete |
-| Feb 2 | Day 5: Wallet UI shipped (MetaMask-style), narrative locked, all flows tested | ✅ COMPLETE |
-| Feb 2-8 | Days 5-11: E2E testing remaining flows (AMM, prediction, voting) + frontend polish | ⏳ IN PROGRESS |
-| Feb 2 | Office Hours — Bitcoin Lead (Adrien) — 9:30 PM IST | ✅ COMPLETE — DUAL-TRACK APPROVED 🟢🟢 |
-| Feb 3 | Office Hours — Privacy Lead (Teddy) — 10:00 PM IST | ⏳ Scheduled |
-| Feb 4 | Office Hours — Bitcoin Lead #2 (Jonathan) — 9:30 PM IST | ⏳ Scheduled |
-| Feb 4 evening | Post-office-hours synthesis — proceed/pivot decision | ⏳ Pending |
-| Feb 9-11 | Days 12-14: **CONDITIONAL** — New features if frontend polished + feature pitched + approved | ⏳ Conditional |
-| Feb 12-14 | Days 15-17: Frontend for new features (if any) + final polish | ⏳ Pending |
-| Feb 15 | Day 18: **VIDEO SCRIPT LOCKED — HARD CUTOFF** | ⏳ Pending |
-| Feb 15-20 | Days 18-23: Video production (script + record + edit) | ⏳ Pending |
-| Feb 21-25 | Days 24-28: README, GitHub theater, DoraHacks submission | ⏳ Pending |
-| Feb 26-28 | Days 29-30: Buffer | ⏳ Pending |
+| Feb 2 | Day 5: Wallet UI shipped, Adrien + Richard validation, relayer network decision | ✅ COMPLETE |
+| Feb 2 | Office Hours — Bitcoin Lead (Adrien) — 9:30 PM IST | ✅ COMPLETE — "Needed in Starknet" + dual-track 🟢🟢 |
+| Feb 2 | Office Hours — Starknet Foundation (Richard) — 10:00 PM IST | ✅ COMPLETE — "Relayers really really good idea" + extra point 🟢🟢 |
+| **Feb 3-8** | **Days 6-11: PHASE 1 — Decentralized Relayer Network Build** | ⏳ **IN PROGRESS** |
+| Feb 3 | Day 6: Relayer architecture design + Teddy office hours (Private MEV question) | ⏳ TOMORROW |
+| Feb 4 | Day 7: RelayerRegistry + RelayerCoordinator contracts + Jonathan office hours | ⏳ Scheduled |
+| Feb 5 | Day 8: PrivatePool integration (fee deduction, routing) | ⏳ Scheduled |
+| Feb 6 | Day 9: Deploy to Sepolia + E2E testing | ⏳ Scheduled |
+| Feb 7 | Day 10: Relayer Dashboard frontend | ⏳ Scheduled |
+| Feb 8 | Day 11: Final testing + **KILL SWITCH decision (GO/NO-GO)** | ⏳ CRITICAL CHECKPOINT |
+| **Feb 9-11** | **Days 12-14: PHASE 2 — E2E Testing + Polish** | ⏳ Pending |
+| Feb 9 | Day 12: E2E test AMM + Predictions | ⏳ Pending |
+| Feb 10 | Day 13: E2E test Voting + Frontend polish | ⏳ Pending |
+| Feb 11 | Day 14: Cross-browser testing + bug fixes | ⏳ Pending |
+| **Feb 12-15** | **Days 15-18: PHASE 3 — Video + Submission** | ⏳ Pending |
+| Feb 12 | Day 15: Record demo video (60-sec pitch + relayer demo) | ⏳ Pending |
+| Feb 13 | Day 16: Write dual-track submission materials | ⏳ Pending |
+| Feb 14 | Day 17: Final review + video editing | ⏳ Pending |
+| Feb 15 | Day 18: **SUBMIT TO BOTH TRACKS** (Bitcoin + Privacy) | ⏳ DEADLINE |
+| Feb 16-20 | Days 19-20: Buffer / judge Q&A response | ⏳ Buffer |
 
 ---
 
@@ -2193,7 +2433,7 @@ Recommended: **Option A** — "Private Bitcoin wallet. Call any Starknet smart c
 16. **Feb 4-5:** E2E test voting create → cast → tally on Sepolia
 17. **Feb 2-8:** Frontend polish — responsive design, error handling, loading states, visual polish for video
 18. ~~**Feb 2 (9:30 PM IST):** Office Hours — Bitcoin Lead (Adrien).~~ ✅ DONE — Result: "Worth building and needed in Starknet" | Dual-track submission approved | ZK Passport idea praised
-15. **Feb 3 (10:00 PM IST):** Office Hours — Privacy Lead (Teddy). Ask: "If someone builds private DeFi beyond transfers — private swaps, predictions, voting — is that 'finding value in privacy apps'?"
+15. **Feb 3 (10:00 PM IST):** Office Hours — Privacy Lead (Teddy). Ask PRIVATE MEV QUESTION (see TEDDY_QUESTION.md) — technical depth, infrastructure-level thinking, "eye raise" target
 16. **Feb 4 (9:30 PM IST):** Office Hours — Bitcoin Lead #2 (Jonathan). Ask: "Platform covering multiple BTC primitives vs one deep feature — which is stronger?"
 17. **After each session:** Report exact mentor words + what other builders asked. No interpretation. Claude decodes.
 18. **Feb 9-11:** CONDITIONAL new contract features (only if frontend polished + specific feature pitched + approved)

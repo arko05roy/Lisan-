@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useAccount } from "@starknet-react/core";
+import { useAccount, useProvider } from "@starknet-react/core";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Copy, Loader2, CheckCircle2, Shield, ShieldCheck, Unlock, RefreshCw } from "lucide-react";
+import { Copy, Loader2, CheckCircle2, Shield, ShieldCheck, Unlock, RefreshCw, Network } from "lucide-react";
 import { getPoolNotes, getAmmNotes, addNote, markPoolNoteSpent, markNoteConfirmed, PoolNote, AmmNote } from "@/lib/storage";
 import { generateSecret, computeCommitment, computeNullifierHash } from "@/lib/crypto";
 import { txToast, errorToast } from "@/components/tx-toast";
@@ -18,9 +18,12 @@ import { RelayerSelect } from "@/components/relayer-select";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { WithdrawFlow } from "@/components/privacy/withdraw-flow";
+import { isCoordinatorAvailable, selectRelayer, coordinatorTransfer, calculateFee, getFeeBps } from "@/lib/coordinator-relay";
+import { RpcProvider } from "starknet";
 
 export default function TransferPage() {
-  const { address } = useAccount();
+  const { address, account } = useAccount();
+  const { provider } = useProvider();
   const [activeTab, setActiveTab] = useState<"send" | "withdraw" | "receive">("send");
 
   // Transfer state
@@ -43,10 +46,26 @@ export default function TransferPage() {
   const [activeWithdrawNote, setActiveWithdrawNote] = useState<PoolNote | AmmNote | null>(null);
   const [isWithdrawFlowOpen, setIsWithdrawFlowOpen] = useState(false);
 
+  // On-chain coordinator state
+  const [useCoordinator, setUseCoordinator] = useState(false);
+  const [coordinatorReady, setCoordinatorReady] = useState(false);
+  const [feeBps, setFeeBps] = useState(10); // default 0.1%
+
   useEffect(() => {
     setNotes(getPoolNotes().filter((n) => !n.spent));
     refreshWithdrawNotes();
-  }, []);
+
+    // Check if on-chain coordinator is available
+    if (provider) {
+      isCoordinatorAvailable(provider as unknown as RpcProvider).then((available) => {
+        setCoordinatorReady(available);
+        if (available) {
+          setUseCoordinator(true);
+          getFeeBps(provider as unknown as RpcProvider).then((bps) => setFeeBps(bps)).catch(() => {});
+        }
+      }).catch(() => {});
+    }
+  }, [provider]);
 
   const refreshWithdrawNotes = () => {
     const poolNotes = getPoolNotes().filter((n) => !n.spent);
@@ -70,7 +89,10 @@ export default function TransferPage() {
   };
 
   async function handleTransfer() {
-    if (!address || !selectedNote || !transferAmount || relayerDisabled) return;
+    const canSubmit = useCoordinator
+      ? (!!account && !!selectedNote && !!transferAmount)
+      : (!relayerDisabled && !!address && !!selectedNote && !!transferAmount);
+    if (!canSubmit || !selectedNote) return;
     setLoading(true);
     setRecipientSecrets(null);
     setWizardStep("PREPARE");
@@ -79,10 +101,13 @@ export default function TransferPage() {
     try {
       const transferAmountWei = BigInt(transferAmount) * 10n ** 18n;
       const oldAmountBig = BigInt(selectedNote.amount);
-      const changeAmount = oldAmountBig - transferAmountWei;
+
+      // Calculate relayer fee if using coordinator
+      const relayerFee = useCoordinator ? calculateFee(transferAmountWei, feeBps) : 0n;
+      const changeAmount = oldAmountBig - transferAmountWei - relayerFee;
 
       if (changeAmount < 0n) {
-        throw new Error("Transfer amount exceeds note balance");
+        throw new Error("Transfer amount (+ fee) exceeds note balance");
       }
 
       setStatusMessage("Generating new secrets...");
@@ -156,32 +181,75 @@ export default function TransferPage() {
         newNullifierSecretRecipient,
       );
 
-      setStatusMessage("Submitting to Relayer...");
       setWizardStep("RELAY");
 
-      const { transactionHash } = await relayTransfer(relayerUrl, {
-        fullProofWithHints,
-        root,
-        nullifierHash,
-        newCommitmentSender,
-        newCommitmentRecipient,
-      });
+      let transactionHash: string;
+      let usedCoordinator = false;
+
+      if (useCoordinator && account) {
+        // On-chain coordinator path (with fallback to default relayer)
+        try {
+          setStatusMessage("Selecting relayer from network...");
+          const relayerId = await selectRelayer(account);
+
+          setStatusMessage(`Submitting via Relayer #${relayerId}... (fee: ${(feeBps / 100).toFixed(1)}%)`);
+          const result = await coordinatorTransfer(account, {
+            fullProofWithHints,
+            root,
+            nullifierHash,
+            newCommitmentSender,
+            newCommitmentRecipient,
+            relayerId,
+            feeAmount: relayerFee,
+          });
+          transactionHash = result.transactionHash;
+          usedCoordinator = true;
+        } catch (coordError) {
+          console.warn("[Coordinator fallback] On-chain coordinator failed, falling back to default relayer:", coordError);
+          setStatusMessage("Coordinator unavailable, falling back to default relayer...");
+          const result = await relayTransfer("", {
+            fullProofWithHints,
+            root,
+            nullifierHash,
+            newCommitmentSender,
+            newCommitmentRecipient,
+          });
+          transactionHash = result.transactionHash;
+        }
+      } else {
+        // Legacy off-chain relayer path
+        setStatusMessage("Submitting to Relayer...");
+        const result = await relayTransfer(relayerUrl, {
+          fullProofWithHints,
+          root,
+          nullifierHash,
+          newCommitmentSender,
+          newCommitmentRecipient,
+        });
+        transactionHash = result.transactionHash;
+      }
 
       setTxHash(transactionHash);
       setStatusMessage("Waiting for confirmation...");
 
-      const maxAttempts = 60;
-      let finalStatus = "PENDING";
-      for (let i = 0; i < maxAttempts; i++) {
-        await new Promise(r => setTimeout(r, 3000));
-        try {
-          const res = await getRelayTxStatus(relayerUrl, transactionHash);
-          finalStatus = res.status;
-          if (finalStatus === "ACCEPTED_ON_L2" || finalStatus === "REJECTED") break;
-        } catch (e) { }
+      if (usedCoordinator) {
+        // For on-chain coordinator, just wait for tx receipt
+        await (provider as unknown as RpcProvider).waitForTransaction(transactionHash);
+      } else {
+        // Legacy polling for off-chain relayer
+        const fallbackRelayerUrl = relayerUrl || "";
+        const maxAttempts = 60;
+        let finalStatus = "PENDING";
+        for (let i = 0; i < maxAttempts; i++) {
+          await new Promise(r => setTimeout(r, 3000));
+          try {
+            const res = await getRelayTxStatus(fallbackRelayerUrl, transactionHash);
+            finalStatus = res.status;
+            if (finalStatus === "ACCEPTED_ON_L2" || finalStatus === "REJECTED") break;
+          } catch (e) { }
+        }
+        if (finalStatus !== "ACCEPTED_ON_L2") throw new Error("Transaction rejected");
       }
-
-      if (finalStatus !== "ACCEPTED_ON_L2") throw new Error("Transaction rejected");
 
       txToast(transactionHash).success();
       markPoolNoteSpent(selectedNote.commitment);
@@ -281,11 +349,38 @@ export default function TransferPage() {
         <div className="p-8 space-y-6">
           {activeTab === "send" && (
             <>
-              {/* Relayer Configuration */}
-              <div className="space-y-3">
-                <Label className="text-sm font-semibold text-white/80">Relayer</Label>
-                <RelayerSelect selectedRelayer={selectedRelayer} onSelect={setSelectedRelayer} />
-              </div>
+              {/* Relayer Mode Toggle */}
+              {coordinatorReady && (
+                <div className="flex items-center justify-between p-3 rounded-xl border border-[#8B8CFF]/20 bg-[#8B8CFF]/5">
+                  <div className="flex items-center gap-2">
+                    <Network className="h-4 w-4 text-[#8B8CFF]" />
+                    <span className="text-sm font-medium text-white/80">On-Chain Relayer Network</span>
+                    <span className="text-xs text-white/40">(fee: {(feeBps / 100).toFixed(1)}%)</span>
+                  </div>
+                  <button
+                    onClick={() => setUseCoordinator(!useCoordinator)}
+                    className={cn(
+                      "relative inline-flex h-6 w-11 items-center rounded-full transition-colors",
+                      useCoordinator ? "bg-[#8B8CFF]" : "bg-white/20"
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "inline-block h-4 w-4 transform rounded-full bg-white transition-transform",
+                        useCoordinator ? "translate-x-6" : "translate-x-1"
+                      )}
+                    />
+                  </button>
+                </div>
+              )}
+
+              {/* Relayer Configuration (only for legacy mode) */}
+              {!useCoordinator && (
+                <div className="space-y-3">
+                  <Label className="text-sm font-semibold text-white/80">Relayer</Label>
+                  <RelayerSelect selectedRelayer={selectedRelayer} onSelect={setSelectedRelayer} />
+                </div>
+              )}
 
               {/* Select Note */}
               <div className="space-y-3">
@@ -364,16 +459,34 @@ export default function TransferPage() {
                     Available: {(BigInt(selectedNote.amount) / 10n ** 18n).toString()} {getTokenLabel(selectedNote.tokenAddress)}
                   </p>
                 )}
+                {useCoordinator && transferAmount && selectedNote && (
+                  <div className="mt-2 p-3 rounded-lg bg-white/[0.02] border border-white/[0.06] text-xs space-y-1">
+                    <div className="flex justify-between text-white/60">
+                      <span>Transfer amount</span>
+                      <span>{transferAmount} {getTokenLabel(selectedNote.tokenAddress)}</span>
+                    </div>
+                    <div className="flex justify-between text-[#8B8CFF]">
+                      <span>Relayer fee ({(feeBps / 100).toFixed(1)}%)</span>
+                      <span>{(Number(transferAmount) * feeBps / 10000).toFixed(4)} {getTokenLabel(selectedNote.tokenAddress)}</span>
+                    </div>
+                    <div className="flex justify-between text-white/60 border-t border-white/[0.06] pt-1">
+                      <span>Your change</span>
+                      <span>
+                        {(Number(BigInt(selectedNote.amount)) / 1e18 - Number(transferAmount) - Number(transferAmount) * feeBps / 10000).toFixed(4)} {getTokenLabel(selectedNote.tokenAddress)}
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Send Button */}
               <div className="pt-4">
                 <Button
-                  disabled={loading || !transferAmount || selectedIdx === null || relayerDisabled}
+                  disabled={loading || !transferAmount || selectedIdx === null || (!useCoordinator && relayerDisabled)}
                   onClick={handleTransfer}
                   className="w-full h-14 bg-[#8B8CFF] hover:bg-[#7B7CFF] text-white rounded-xl text-base font-bold shadow-lg shadow-[#8B8CFF]/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none transition-all"
                 >
-                  {loading ? "Transferring..." : "Transfer Privately"}
+                  {loading ? "Transferring..." : useCoordinator ? "Transfer via Relayer Network" : "Transfer Privately"}
                 </Button>
               </div>
             </>
@@ -381,11 +494,38 @@ export default function TransferPage() {
 
           {activeTab === "withdraw" && (
             <>
-              {/* Relayer Configuration */}
-              <div className="space-y-3">
-                <Label className="text-sm font-semibold text-white/80">Relayer</Label>
-                <RelayerSelect selectedRelayer={selectedRelayer} onSelect={setSelectedRelayer} />
-              </div>
+              {/* Relayer Mode Toggle for Withdraw */}
+              {coordinatorReady && (
+                <div className="flex items-center justify-between p-3 rounded-xl border border-[#8B8CFF]/20 bg-[#8B8CFF]/5">
+                  <div className="flex items-center gap-2">
+                    <Network className="h-4 w-4 text-[#8B8CFF]" />
+                    <span className="text-sm font-medium text-white/80">On-Chain Relayer Network</span>
+                    <span className="text-xs text-white/40">(fee: {(feeBps / 100).toFixed(1)}%)</span>
+                  </div>
+                  <button
+                    onClick={() => setUseCoordinator(!useCoordinator)}
+                    className={cn(
+                      "relative inline-flex h-6 w-11 items-center rounded-full transition-colors",
+                      useCoordinator ? "bg-[#8B8CFF]" : "bg-white/20"
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "inline-block h-4 w-4 transform rounded-full bg-white transition-transform",
+                        useCoordinator ? "translate-x-6" : "translate-x-1"
+                      )}
+                    />
+                  </button>
+                </div>
+              )}
+
+              {/* Relayer Configuration (legacy mode) */}
+              {!useCoordinator && (
+                <div className="space-y-3">
+                  <Label className="text-sm font-semibold text-white/80">Relayer</Label>
+                  <RelayerSelect selectedRelayer={selectedRelayer} onSelect={setSelectedRelayer} />
+                </div>
+              )}
 
               {/* Withdraw Notes List */}
               <div className="space-y-3">
@@ -437,7 +577,7 @@ export default function TransferPage() {
                               </div>
                               <Button
                                 size="sm"
-                                disabled={!selectedRelayer}
+                                disabled={!useCoordinator && !selectedRelayer}
                                 onClick={() => {
                                   setActiveWithdrawNote(note);
                                   setIsWithdrawFlowOpen(true);
@@ -544,6 +684,8 @@ export default function TransferPage() {
           isOpen={isWithdrawFlowOpen}
           onOpenChange={setIsWithdrawFlowOpen}
           relayer={selectedRelayer}
+          useCoordinator={useCoordinator}
+          feeBps={feeBps}
           onWithdrawComplete={() => {
             refreshWithdrawNotes();
             setNotes(getPoolNotes().filter((n) => !n.spent));

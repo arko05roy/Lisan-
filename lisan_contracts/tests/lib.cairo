@@ -9,3 +9,5 @@ mod test_integration;
 // mod test_shielded_amm;
 // mod test_prediction_market;
 mod test_private_voting;
+mod test_relayer_registry;
+mod test_relayer_coordinator;

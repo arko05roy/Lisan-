@@ -1,14 +1,34 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useProvider } from "@starknet-react/core";
 import { PrivateExecute } from "@/components/privacy/private-execute";
 import { RelayerSelect } from "@/components/relayer-select";
 import { Relayer } from "@/lib/relayer-registry";
 import { Card, CardContent } from "@/components/ui/card";
-import { Zap, Lock, Eye, EyeOff, Shield } from "lucide-react";
+import { Zap, Lock, Eye, EyeOff, Shield, Network } from "lucide-react";
+import { isCoordinatorAvailable, getFeeBps } from "@/lib/coordinator-relay";
+import { RpcProvider } from "starknet";
+import { cn } from "@/lib/utils";
 
 export default function ExecutePage() {
+  const { provider } = useProvider();
   const [selectedRelayer, setSelectedRelayer] = useState<Relayer | null>(null);
+  const [useCoordinator, setUseCoordinator] = useState(false);
+  const [coordinatorReady, setCoordinatorReady] = useState(false);
+  const [feeBps, setFeeBps] = useState(10);
+
+  useEffect(() => {
+    if (provider) {
+      isCoordinatorAvailable(provider as unknown as RpcProvider).then((available) => {
+        setCoordinatorReady(available);
+        if (available) {
+          setUseCoordinator(true);
+          getFeeBps(provider as unknown as RpcProvider).then((bps) => setFeeBps(bps)).catch(() => {});
+        }
+      }).catch(() => {});
+    }
+  }, [provider]);
 
   return (
     <div className="mx-auto max-w-3xl space-y-10 pb-16">
@@ -66,16 +86,41 @@ export default function ExecutePage() {
 
       {/* Relayer Selection Card */}
       <Card className="border-white/[0.06] bg-[#0D1117] backdrop-blur-xl">
-        <CardContent className="pt-6">
-          <RelayerSelect
-            selectedRelayer={selectedRelayer}
-            onSelect={setSelectedRelayer}
-          />
+        <CardContent className="pt-6 space-y-4">
+          {coordinatorReady && (
+            <div className="flex items-center justify-between p-3 rounded-xl border border-[#8B8CFF]/20 bg-[#8B8CFF]/5">
+              <div className="flex items-center gap-2">
+                <Network className="h-4 w-4 text-[#8B8CFF]" />
+                <span className="text-sm font-medium text-white/80">On-Chain Relayer Network</span>
+                <span className="text-xs text-white/40">(fee: {(feeBps / 100).toFixed(1)}%)</span>
+              </div>
+              <button
+                onClick={() => setUseCoordinator(!useCoordinator)}
+                className={cn(
+                  "relative inline-flex h-6 w-11 items-center rounded-full transition-colors",
+                  useCoordinator ? "bg-[#8B8CFF]" : "bg-white/20"
+                )}
+              >
+                <span
+                  className={cn(
+                    "inline-block h-4 w-4 transform rounded-full bg-white transition-transform",
+                    useCoordinator ? "translate-x-6" : "translate-x-1"
+                  )}
+                />
+              </button>
+            </div>
+          )}
+          {!useCoordinator && (
+            <RelayerSelect
+              selectedRelayer={selectedRelayer}
+              onSelect={setSelectedRelayer}
+            />
+          )}
         </CardContent>
       </Card>
 
       {/* Private Execute Component */}
-      <PrivateExecute relayer={selectedRelayer} />
+      <PrivateExecute relayer={selectedRelayer} useCoordinator={useCoordinator} feeBps={feeBps} />
 
       {/* How it Works */}
       <div className="rounded-2xl border border-white/[0.06] bg-[#0D1117] p-8">

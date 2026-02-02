@@ -173,6 +173,7 @@ export function TransferForm() {
                     createdAt: Date.now(),
                     txHash: transactionHash,
                     confirmed: false,
+                    tokenAddress: selectedNote.tokenAddress,
                 });
             }
 
@@ -187,6 +188,7 @@ export function TransferForm() {
                 createdAt: Date.now(),
                 txHash: transactionHash,
                 confirmed: false,
+                tokenAddress: selectedNote.tokenAddress,
             });
 
             // Display recipient secrets

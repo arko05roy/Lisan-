@@ -10,7 +10,8 @@ import {
   Zap,
   TrendingUp,
   Vote,
-  Settings
+  Settings,
+  Network
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -20,6 +21,7 @@ const NAV_ITEMS = [
   { href: "/swap", label: "Swap", icon: ArrowRightLeft },
   { href: "/predict", label: "Predict", icon: TrendingUp },
   { href: "/vote", label: "Vote", icon: Vote },
+  { href: "/relayer-dashboard", label: "Relayers", icon: Network },
 ];
 
 export function Sidebar() {

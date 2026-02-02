@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { useAccount } from "@starknet-react/core";
+import { useAccount, useProvider } from "@starknet-react/core";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,16 +20,20 @@ import { resolveRelayerBaseUrl, Relayer } from "@/lib/relayer-registry";
 import { ADDRESSES } from "@/lib/addresses";
 import { buildTreeFromChain } from "@/lib/merkle";
 import { txToast, errorToast } from "@/components/tx-toast";
+import { selectRelayer, coordinatorExecute, calculateFee } from "@/lib/coordinator-relay";
 import { Loader2, Zap, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { hash } from "starknet";
+import { hash, RpcProvider } from "starknet";
 
 interface PrivateExecuteProps {
     relayer: Relayer | null;
+    useCoordinator?: boolean;
+    feeBps?: number;
 }
 
-export function PrivateExecute({ relayer }: PrivateExecuteProps) {
-    const { address } = useAccount();
+export function PrivateExecute({ relayer, useCoordinator = false, feeBps = 10 }: PrivateExecuteProps) {
+    const { address, account } = useAccount();
+    const { provider } = useProvider();
     const [loading, setLoading] = useState(false);
     const [statusMessage, setStatusMessage] = useState("");
 
@@ -71,18 +75,22 @@ export function PrivateExecute({ relayer }: PrivateExecuteProps) {
     );
 
     const handleExecute = async () => {
-        if (!selectedNote || !targetContract || !entrypoint || !amount || !relayer) return;
+        if (!selectedNote || !targetContract || !entrypoint || !amount) return;
+        if (!useCoordinator && !relayer) return;
+        if (useCoordinator && !account) return;
         setLoading(true);
 
         try {
             const amountWei = BigInt(amount) * 10n ** 18n;
             const noteAmountWei = BigInt(selectedNote.amount);
 
-            if (amountWei > noteAmountWei) {
-                throw new Error("Amount exceeds shielded balance");
-            }
+            // Calculate relayer fee if using coordinator
+            const relayerFee = useCoordinator ? calculateFee(amountWei, feeBps) : 0n;
+            const changeAmount = noteAmountWei - amountWei - relayerFee;
 
-            const changeAmount = noteAmountWei - amountWei;
+            if (changeAmount < 0n) {
+                throw new Error("Amount (+ fee) exceeds shielded balance");
+            }
 
             // Wait for on-chain confirmation
             setStatusMessage("Checking on-chain confirmation...");
@@ -92,7 +100,6 @@ export function PrivateExecute({ relayer }: PrivateExecuteProps) {
 
             if (leafIndex === undefined) {
                 setStatusMessage("Waiting for deposit confirmation...");
-                // Faster polling: 2s intervals for up to 60s (30 attempts)
                 for (let i = 0; i < 30; i++) {
                     await new Promise((r) => setTimeout(r, 2000));
                     setStatusMessage(`Waiting for confirmation... (${(i + 1) * 2}s)`);
@@ -145,26 +152,75 @@ export function PrivateExecute({ relayer }: PrivateExecuteProps) {
                 .filter((s) => s.length > 0);
             const callDataArray = [selector, ...userParams];
 
-            setStatusMessage("Submitting to Relayer...");
+            let transactionHash: string;
+            let usedCoordinator = false;
 
-            const { transactionHash } = await relayPrivateExecute(relayerUrl, {
-                fullProofWithHints: proofResult.fullProofWithHints,
-                root,
-                nullifierHash,
-                tokenAddress: selectedNote.tokenAddress,
-                amount: amountWei.toString(),
-                targetContract,
-                callData: callDataArray,
-                changeCommitment,
-                changeAmount: changeAmount.toString(),
-            });
+            if (useCoordinator && account) {
+                // On-chain coordinator path (with fallback)
+                try {
+                    setStatusMessage("Selecting relayer from network...");
+                    const relayerId = await selectRelayer(account);
+
+                    setStatusMessage(`Submitting via Relayer #${relayerId}...`);
+                    const coordResult = await coordinatorExecute(account, {
+                        fullProofWithHints: proofResult.fullProofWithHints,
+                        root,
+                        nullifierHash,
+                        tokenAddress: selectedNote.tokenAddress,
+                        amount: amountWei,
+                        targetContract,
+                        callData: callDataArray,
+                        changeCommitment,
+                        changeAmount,
+                        relayerId,
+                        feeAmount: relayerFee,
+                    });
+                    transactionHash = coordResult.transactionHash;
+                    usedCoordinator = true;
+                } catch (coordError) {
+                    console.warn("[Coordinator fallback] Execute via coordinator failed, falling back to default relayer:", coordError);
+                    setStatusMessage("Coordinator unavailable, falling back to default relayer...");
+                    const fallbackResult = await relayPrivateExecute("", {
+                        fullProofWithHints: proofResult.fullProofWithHints,
+                        root,
+                        nullifierHash,
+                        tokenAddress: selectedNote.tokenAddress,
+                        amount: amountWei.toString(),
+                        targetContract,
+                        callData: callDataArray,
+                        changeCommitment,
+                        changeAmount: changeAmount.toString(),
+                    });
+                    transactionHash = fallbackResult.transactionHash;
+                }
+            } else {
+                // Legacy off-chain relayer path
+                setStatusMessage("Submitting to Relayer...");
+                const fallbackUrl = relayerUrl || "";
+                const legacyResult = await relayPrivateExecute(fallbackUrl, {
+                    fullProofWithHints: proofResult.fullProofWithHints,
+                    root,
+                    nullifierHash,
+                    tokenAddress: selectedNote.tokenAddress,
+                    amount: amountWei.toString(),
+                    targetContract,
+                    callData: callDataArray,
+                    changeCommitment,
+                    changeAmount: changeAmount.toString(),
+                });
+                transactionHash = legacyResult.transactionHash;
+            }
 
             setStatusMessage("Waiting for confirmation...");
             markPoolNoteSpent(selectedNote.commitment);
 
-            const status = await pollTxStatus(transactionHash);
-            if (status !== "ACCEPTED_ON_L2") {
-                throw new Error("Transaction rejected or timed out");
+            if (usedCoordinator) {
+                await (provider as unknown as RpcProvider).waitForTransaction(transactionHash);
+            } else {
+                const status = await pollTxStatus(transactionHash);
+                if (status !== "ACCEPTED_ON_L2") {
+                    throw new Error("Transaction rejected or timed out");
+                }
             }
 
             txToast(transactionHash).success();
@@ -365,7 +421,7 @@ export function PrivateExecute({ relayer }: PrivateExecuteProps) {
                         !targetContract ||
                         !entrypoint ||
                         !amount ||
-                        !relayer
+                        (!useCoordinator && !relayer)
                     }
                     onClick={handleExecute}
                 >

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import { useAccount } from "@starknet-react/core";
+import { useAccount, useProvider } from "@starknet-react/core";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +16,8 @@ import { computeNullifierHash } from "@/lib/crypto";
 import { relayPrepareWithdraw, relayClaimWithdrawal, getRelayTxStatus } from "@/lib/relay";
 import { resolveRelayerBaseUrl, formatFee, Relayer } from "@/lib/relayer-registry";
 import { ADDRESSES, TOKEN_TYPE_BTC, TOKEN_TYPE_STRK } from "@/lib/addresses";
+import { selectRelayer, coordinatorWithdraw, calculateFee } from "@/lib/coordinator-relay";
+import { RpcProvider, AccountInterface } from "starknet";
 import { buildTreeFromChain } from "@/lib/merkle";
 import { txToast, errorToast } from "@/components/tx-toast";
 import { CheckCircle2, Loader2, ArrowRight, ExternalLink } from "lucide-react";
@@ -27,11 +29,15 @@ interface WithdrawFlowProps {
     onOpenChange: (open: boolean) => void;
     relayer: Relayer | null;
     onWithdrawComplete: () => void;
+    useCoordinator?: boolean;
+    feeBps?: number;
 }
 
 type Step = "PREPARE" | "RELAY_PREPARE" | "CLAIM" | "RELAY_CLAIM" | "COMPLETED";
 
-export function WithdrawFlow({ note, isOpen, onOpenChange, relayer, onWithdrawComplete }: WithdrawFlowProps) {
+export function WithdrawFlow({ note, isOpen, onOpenChange, relayer, onWithdrawComplete, useCoordinator = false, feeBps = 10 }: WithdrawFlowProps) {
+    const { account } = useAccount();
+    const { provider } = useProvider();
     const [currentStep, setCurrentStep] = useState<Step>("PREPARE");
     const [loading, setLoading] = useState(false);
     const [statusMessage, setStatusMessage] = useState("");
@@ -128,7 +134,8 @@ export function WithdrawFlow({ note, isOpen, onOpenChange, relayer, onWithdrawCo
     };
 
     const handleStartWithdraw = async () => {
-        if (!relayer) return;
+        if (!useCoordinator && !relayer) return;
+        if (useCoordinator && !account) return;
         setLoading(true);
         try {
             const contractType = isAmm ? "amm" : "pool";
@@ -160,33 +167,78 @@ export function WithdrawFlow({ note, isOpen, onOpenChange, relayer, onWithdrawCo
                 fullProofWithHints = res.fullProofWithHints;
             }
 
-            setStatusMessage("Submitting Proof to Relayer...");
             setCurrentStep("RELAY_PREPARE");
+            let transactionHash: string;
+            let usedCoordinator = false;
 
-            const preparePayload: any = {
-                contract: contractType,
-                fullProofWithHints,
-                root,
-                nullifierHash,
-                withdrawAmount: note.amount,
-            };
-            if (isAmm) {
-                preparePayload.tokenType = (note as AmmNote).tokenType;
+            if (useCoordinator && account && !isAmm) {
+                // On-chain coordinator path (pool withdrawals only, with fallback)
+                try {
+                    setStatusMessage("Selecting relayer from network...");
+                    const relayerId = await selectRelayer(account);
+                    const withdrawAmount = BigInt(note.amount);
+                    const feeAmount = calculateFee(withdrawAmount, feeBps);
+                    const poolNote = note as PoolNote;
+
+                    setStatusMessage(`Submitting via Relayer #${relayerId}...`);
+                    const result = await coordinatorWithdraw(account, {
+                        fullProofWithHints,
+                        root,
+                        nullifierHash,
+                        tokenAddress: poolNote.tokenAddress,
+                        withdrawAmount,
+                        relayerId,
+                        feeAmount,
+                    });
+                    transactionHash = result.transactionHash;
+                    usedCoordinator = true;
+                } catch (coordError) {
+                    console.warn("[Coordinator fallback] Withdraw via coordinator failed, falling back to default relayer:", coordError);
+                    setStatusMessage("Coordinator unavailable, falling back to default relayer...");
+                    const preparePayload: any = {
+                        contract: contractType,
+                        fullProofWithHints,
+                        root,
+                        nullifierHash,
+                        withdrawAmount: note.amount,
+                        tokenAddress: (note as PoolNote).tokenAddress,
+                    };
+                    const result = await relayPrepareWithdraw("", preparePayload);
+                    transactionHash = result.transactionHash;
+                }
             } else {
-                preparePayload.tokenAddress = (note as PoolNote).tokenAddress;
+                // Legacy off-chain relayer path
+                setStatusMessage("Submitting Proof to Relayer...");
+                const fallbackUrl = relayerUrl || "";
+                const preparePayload: any = {
+                    contract: contractType,
+                    fullProofWithHints,
+                    root,
+                    nullifierHash,
+                    withdrawAmount: note.amount,
+                };
+                if (isAmm) {
+                    preparePayload.tokenType = (note as AmmNote).tokenType;
+                } else {
+                    preparePayload.tokenAddress = (note as PoolNote).tokenAddress;
+                }
+                const result = await relayPrepareWithdraw(fallbackUrl, preparePayload);
+                transactionHash = result.transactionHash;
             }
 
-            const { transactionHash } = await relayPrepareWithdraw(relayerUrl, preparePayload);
-
             setTxHash(transactionHash);
-            setStatusMessage("Waiting for Relayer Confirmation...");
+            setStatusMessage("Waiting for Confirmation...");
 
             // Mark spent locally optimistically/immediately
             if (isAmm) markAmmNoteSpent(note.commitment);
             else markPoolNoteSpent(note.commitment);
 
-            const status = await pollTxStatus(transactionHash);
-            if (status !== "ACCEPTED_ON_L2") throw new Error("Relayer transaction rejected or timed out");
+            if (usedCoordinator) {
+                await (provider as unknown as RpcProvider).waitForTransaction(transactionHash);
+            } else {
+                const status = await pollTxStatus(transactionHash);
+                if (status !== "ACCEPTED_ON_L2") throw new Error("Relayer transaction rejected or timed out");
+            }
 
             setPrepareData({
                 nullifierHash,
@@ -201,20 +253,21 @@ export function WithdrawFlow({ note, isOpen, onOpenChange, relayer, onWithdrawCo
         } catch (e: any) {
             console.error(e);
             errorToast(e.message || "Withdrawal preparation failed");
-            onOpenChange(false); // Close on critical error for now? or stay?
+            onOpenChange(false);
         } finally {
             setLoading(false);
         }
     };
 
     const handleClaim = async () => {
-        if (!prepareData || !recipient || !relayer) return;
+        if (!prepareData || !recipient || (!useCoordinator && !relayer)) return;
         setLoading(true);
         setCurrentStep("RELAY_CLAIM");
         setStatusMessage("Submitting Claim Request...");
 
         try {
-            const { transactionHash } = await relayClaimWithdrawal(relayerUrl, {
+            const claimUrl = relayerUrl || "";
+            const { transactionHash } = await relayClaimWithdrawal(claimUrl, {
                 contract: prepareData.source,
                 nullifierHash: prepareData.nullifierHash,
                 recipient,
@@ -237,7 +290,8 @@ export function WithdrawFlow({ note, isOpen, onOpenChange, relayer, onWithdrawCo
         }
     };
 
-    const fees = relayer ? (BigInt(note.amount) * BigInt(relayer.feeBps)) / 10000n : 0n;
+    const effectiveFeeBps = useCoordinator ? feeBps : (relayer?.feeBps || 0);
+    const fees = (BigInt(note.amount) * BigInt(effectiveFeeBps)) / 10000n;
     const receiveAmount = BigInt(note.amount) - fees;
     const formatWei = (wei: bigint) => Number(wei) / 10 ** 18;
 
@@ -284,7 +338,7 @@ export function WithdrawFlow({ note, isOpen, onOpenChange, relayer, onWithdrawCo
                                     <span className="font-mono">{formatWei(BigInt(note.amount))} {tokenLabel}</span>
                                 </div>
                                 <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Relayer Fee ({formatFee(relayer?.feeBps || 0)})</span>
+                                    <span className="text-muted-foreground">Relayer Fee ({formatFee(effectiveFeeBps)})</span>
                                     <span className="font-mono text-red-400">-{formatWei(fees)} {tokenLabel}</span>
                                 </div>
                                 <div className="border-t pt-2 mt-2 flex justify-between font-medium">
@@ -347,7 +401,7 @@ export function WithdrawFlow({ note, isOpen, onOpenChange, relayer, onWithdrawCo
 
                 <DialogFooter>
                     {currentStep === "PREPARE" && !loading && (
-                        <Button onClick={handleStartWithdraw} className="w-full">
+                        <Button onClick={handleStartWithdraw} className="w-full" disabled={!useCoordinator && !relayer}>
                             Authorize Withdrawal
                         </Button>
                     )}

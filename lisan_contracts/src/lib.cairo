@@ -14,3 +14,5 @@ pub mod mock_groth16_verifier;
 pub mod mock_erc20;
 pub mod demo_counter;
 pub mod demo_guestbook;
+pub mod relayer_registry;
+pub mod relayer_coordinator;
