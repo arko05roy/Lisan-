@@ -4,7 +4,7 @@ System Version: 6.2 - WITH RE{DEFINE} SESSION + WINNER PATTERN DATABASE
 Date: January 2026
 
 Status: RE{DEFINE} Hackathon Day 5 (Feb 2) — Wallet UI shipped (MetaMask-style) ✅ | Narrative locked | Office Hours validation TONIGHT
-Last Check-in: Feb 2, 2026 — Wallet UI reorganized, all flows tested, narrative work complete, Adrien session 9:30 PM IST
+Last Check-in: Feb 2, 2026 — Wallet UI reorganized, all flows tested, narrative work complete, Adrien session 9:30 PM IST READY (question finalized, decoder built, strategy locked)
 ═══════════════════════════════════════════════════════════
 CLAUDE'S CORE IDENTITY - READ THIS FIRST
 You are NOT a helpful assistant who does research for the user.
@@ -1299,13 +1299,16 @@ Two commitment schemes (core pool 4-input w/ token_address + AMM pool). Shared n
 | Date | Time (UTC) | Time (IST) | Mentor | Role | Relevance to Lisan |
 |------|-----------|------------|--------|------|---------------------|
 | Feb 2 | 16:00 | **9:30 PM** | @adrien_lacombe | Bitcoin Lead | **HIGH** — Lisan is Bitcoin track |
+| Feb 2 | 16:30 | **10:00 PM** | Richard Sulisthio | Starknet Foundation (Solver Infra & Grants) | **MEDIUM** — Listen only for grants intel + relayer/solver context |
 | Feb 2 | 16:30 | **10:00 PM** | Rick (@scaffold_stark) | Scaffold-Stark | LOW — tooling, not our lane |
 | Feb 3 | 16:30 | **10:00 PM** | @franklyteddy (Privacy Lead) | Privacy Lead | **CRITICAL** — Lisan IS a privacy app |
 | Feb 4 | 16:00 | **9:30 PM** | @jyjonathan | Bitcoin Lead | **HIGH** — second BTC data point |
 | Feb 4 | 16:30 | **10:00 PM** | @bsturisky | DeFi Expert / Starknet Foundation | MEDIUM — strategic direction |
 | Feb 5 | 11:00 | **4:30 PM** | @akashneelesh (StarkWare) | Starknet tooling | LOW — tooling walkthrough |
 
-**Sessions to attend (MANDATORY):** Feb 2 (Adrien/BTC), Feb 3 (Teddy/Privacy), Feb 4 (Jonathan/BTC). Three sessions, three data points.
+**Sessions to attend:**
+- **MANDATORY (ASK questions):** Feb 2 (Adrien/BTC), Feb 3 (Teddy/Privacy), Feb 4 (Jonathan/BTC) — three sessions, three data points
+- **OPTIONAL (LISTEN only):** Feb 2 (Richard/Foundation) — grants intel, solver/relayer context, ecosystem priorities
 
 **Format constraint:** Group GMeet with multiple builders. Expect 1-2 questions max before someone else jumps in. Questions must be binary/forced-choice — no open-ended rambles.
 
@@ -1700,9 +1703,161 @@ TIER 3 (If time permits):
 
 **Office Hours prep (Feb 2, 9:30 PM IST — Adrien, Bitcoin Lead):**
 
-**Question:** "I built a private Bitcoin wallet that lets users call any Starknet smart contract—swaps, predictions, voting, DeFi protocols. Does Bitcoin track want to see BTC interacting with DeFi protocols, or is privacy + composability too broad vs a single deep feature?"
+**Session Topics:** BTC primitives, BTCFi, and Bankless coverage of Starknet's BTCFi push
 
-**Backup question if demo requested:** Can screenshare wallet → deposit → execute flow in real-time on Sepolia.
+**Starknet BTCFi Context:**
+- Starknet launched major BTCFi initiative (100M STRK incentives)
+- Core narrative: "Making Bitcoin productive" (staking, borrowing, yield, DeFi)
+- 650+ BTC already staked, 1000+ BTC bridged in 3 weeks
+- 2026 roadmap: trust-minimized BTC bridge powered by cryptographic verifier
+- Your project fits perfectly: "Making Bitcoin productive AND private"
+
+**THE QUESTION (FINAL — BTCFi-Aligned Version):**
+
+"Adrien — your session is about BTC primitives and BTCFi.
+I built a BTC primitive that makes Bitcoin productive on Starknet:
+private EXECUTION, not just private transfers.
+
+Tornado does private transfers. I do private EXECUTION —
+shielded Bitcoin that can call any smart contract: swaps,
+predictions, voting, any DeFi protocol.
+
+For Starknet's BTCFi push — does Bitcoin track want privacy
+primitives that make Bitcoin safer, or composability primitives
+that make Bitcoin more useful?
+
+What gets judges excited?"
+
+**Timing:** ~35 seconds
+
+**Why this version wins:**
+- References session topic directly ("your session is about BTC primitives and BTCFi")
+- Uses Starknet's language ("BTC primitive", "makes Bitcoin productive", "BTCFi push")
+- Shows you understand ecosystem context (not just asking generic question)
+- Positions your project as part of Starknet's BTCFi narrative
+
+**Memorable tagline (use TWICE):** "Tornado does transfers. I do execution."
+- Say it IN the question
+- Say it AGAIN when thanking him ("Got it. Tornado does transfers, I do execution. Thanks.")
+- Repetition = memory
+
+**IF HE ASKS "TELL ME MORE" (backup context):**
+
+"Starknet's BTCFi push is about making Bitcoin productive.
+Right now BTC on Starknet can stake and borrow — but it's all PUBLIC.
+I added the privacy layer so Bitcoin can be productive AND private.
+That's the primitive that's missing."
+
+This positions you as: "The missing piece in Starknet's BTCFi stack"
+
+**BACKUP QUESTIONS (if someone asks yours first):**
+
+1. "For Bitcoin track positioning: should projects lead with 'what Bitcoin can't do on L1' or focus on a specific DeFi use case?"
+
+2. "Should a privacy-focused Bitcoin project submit to Bitcoin track only, or dual-submit to Privacy track?"
+
+3. "Does Bitcoin track want one deep privacy primitive, or a full private DeFi platform showing breadth?"
+
+**DECODER RING (What His Answer Means):**
+
+| Adrien Says | What It Means | Your Action |
+|-------------|---------------|-------------|
+| "Privacy is what Bitcoin needs" | 🟢 GREEN — privacy-first narrative | Lead with "private execution layer" angle |
+| "Composability is more interesting" | 🟢 GREEN — composability-first | Lead with "Bitcoin doing DeFi" angle |
+| "Both matter" | 🟡 PRESS — ask "If I can only nail ONE in the demo, which?" | Get forced choice |
+| "Show me one thing done really well" | 🟡 PIVOT — narrow to single primitive | Ask: "Which one — swaps, predictions, or cross-contract?" |
+| "Platform breadth is valuable" | 🟢 GREEN — keep multi-primitive | Emphasize "any protocol" composability |
+| Asks YOU a follow-up question | 🟢🟢 JACKPOT — real interest | Answer, then ask: "Should I lead my pitch with that?" |
+| "Sounds cool, good luck" | 🔴 POLITE DISMISS — generic | Don't spiral. Listen to others' questions. |
+
+**SUCCESS METRICS:**
+
+You crushed it if:
+- ✅ He asks you a follow-up question (real interest, not polite)
+- ✅ He gives specific direction ("focus on privacy" OR "show composability")
+- ✅ Other builders on call ask YOU questions
+- ✅ You get more than 1 minute of his attention
+- ✅ He uses your language back ("execution layer", "what Bitcoin can't do on L1")
+
+**POST-SESSION ACTION:**
+
+Report back EXACT WORDS Adrien used. No interpretation. Include:
+- His direct answer to your question
+- Any follow-up questions he asked
+- What other builders asked (reveals track priorities)
+- Any redirects or suggestions he made
+- Tone (excited vs polite vs redirecting)
+
+**PRE-MEETING CHECKLIST (Next 90 Minutes):**
+
+⏰ **60 min before (8:30 PM IST):**
+- [ ] Practice question out loud 10x (time yourself: 35 seconds max)
+- [ ] Write question + 3 backups on paper (in case someone asks yours first)
+- [ ] Review decoder ring (know what signals to listen for)
+- [ ] Review your failure patterns (Stellar identity threat, Aptos non-existent users, CELO invisible metrics)
+
+⏰ **30 min before (9:00 PM IST):**
+- [ ] Test GMeet audio/video (join early to check tech)
+- [ ] Have Discord open (in case chat moves there)
+- [ ] Clear your head: eat something, hydrate, stretch
+
+⏰ **During call:**
+- [ ] Join 2-3 min early, listen to first 2-3 questions before asking
+- [ ] Note what Adrien gets excited about in his answers
+- [ ] Ask your question when there's a natural pause
+- [ ] WRITE DOWN his exact words (don't interpret, just transcribe)
+- [ ] Stay on call after your question, listen to what others ask
+
+⏰ **Immediately after:**
+- [ ] Report back to Claude with EXACT transcript
+- [ ] No self-interpretation, just raw data
+- [ ] Decide one-liner (A, B, or C) based on feedback
+- [ ] Adjust narrative direction (privacy-first vs composability-first)
+
+**REMEMBER:**
+- Sound like it's already built (it is!)
+- Use the Tornado contrast (memorable)
+- Binary questions only (easy to answer in AMA)
+- Say tagline twice (repetition = memory)
+- Don't apologize, don't ramble, don't oversell
+- You built something real. Most people didn't.
+
+---
+
+**Office Hours prep (Feb 2, 10:00 PM IST — Richard Sulisthio, Starknet Foundation):**
+
+**Session Topic:** Solver Infrastructure & Grants
+
+**Strategy:** LISTEN ONLY (don't ask unless directly relevant)
+
+**Why attend:**
+- ✅ Grants intel — learn what Starknet Foundation funds
+- ✅ Solver/relayer connection — Lisan uses relayers for privacy (relayers submit ZK proofs on behalf of users)
+- ✅ Ecosystem priorities — Foundation voice reveals what Starknet values
+- ✅ Post-Adrien digest time — use 30 min to process Adrien's feedback
+- ✅ Low cost — just listen, no prep needed
+
+**ONLY ask a question IF they explicitly mention:**
+- Privacy infrastructure
+- Relayer systems
+- MEV protection
+- ZK proof submission infrastructure
+
+**IF relevant, ask:**
+"Quick question — does Starknet Foundation support privacy infrastructure grants?
+My project uses zero-knowledge relayers for private transaction submission."
+
+**Otherwise:** Listen, take notes, gather intel.
+
+**What to listen for:**
+- What types of grants Foundation is excited about
+- Whether privacy/relayer infrastructure is mentioned
+- Foundation's priorities for Starknet ecosystem
+- Any mention of BTCFi/privacy/infrastructure funding
+
+**Post-session:** Note any grants opportunities or Foundation priorities that align with Lisan.
+
+---
 
 **What's NOT yet E2E tested on Sepolia (unchanged):**
 - ⏳ AMM deposit → swap → withdraw loop
@@ -1714,8 +1869,11 @@ TIER 3 (If time permits):
 - ✅ All flows tested (deposit → execute path verified)
 - ✅ Narrative framework locked (problem/solution/why BTC track cares)
 - ✅ 60-second pitch structure finalized
-- ⏳ One-liner selection pending (A, B, or C)
-- ⏳ Office Hours tonight at 9:30 PM IST (Adrien, Bitcoin Lead)
+- ✅ Adrien office hours question finalized (BTCFi-aligned, 35 seconds, strategic)
+- ✅ Decoder ring built (response interpretation strategy)
+- ✅ Richard session strategy (listen-only mode for grants intel)
+- ⏳ One-liner selection pending (decide after Adrien feedback)
+- ⏳ Office Hours TONIGHT — 9:30 PM (Adrien/ASK) + 10:00 PM (Richard/LISTEN)
 - ⏳ E2E testing remaining flows (AMM, predictions, voting) — scheduled for Feb 3-4
 
 **Next priorities (Feb 2-4):**
