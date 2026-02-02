@@ -1,29 +1,66 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAccount } from "@starknet-react/core";
-import { getPoolNotes } from "@/lib/storage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ChevronDown, ArrowDownUp, Copy } from "lucide-react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { ADDRESSES } from "@/lib/addresses";
+import { Copy, Loader2, CheckCircle2, Shield, ShieldCheck, Unlock, RefreshCw } from "lucide-react";
+import { getPoolNotes, getAmmNotes, addNote, markPoolNoteSpent, markNoteConfirmed, PoolNote, AmmNote } from "@/lib/storage";
+import { generateSecret, computeCommitment, computeNullifierHash } from "@/lib/crypto";
+import { txToast, errorToast } from "@/components/tx-toast";
+import { buildTreeFromChain } from "@/lib/merkle";
+import { ADDRESSES, TOKEN_TYPE_BTC } from "@/lib/addresses";
+import { generatePoolTransferProof } from "@/lib/prover";
+import { relayTransfer, getRelayTxStatus } from "@/lib/relay";
+import { Relayer, resolveRelayerBaseUrl } from "@/lib/relayer-registry";
+import { RelayerSelect } from "@/components/relayer-select";
+import { cn } from "@/lib/utils";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { WithdrawFlow } from "@/components/privacy/withdraw-flow";
 
 export default function TransferPage() {
   const { address } = useAccount();
-  const [activeTab, setActiveTab] = useState<"send" | "transfer" | "receive">("send");
-  const [recipient, setRecipient] = useState("");
-  const [amount, setAmount] = useState("");
-  const [selectedNote, setSelectedNote] = useState("");
+  const [activeTab, setActiveTab] = useState<"send" | "withdraw" | "receive">("send");
 
-  const poolNotes = typeof window !== "undefined" ? getPoolNotes().filter((n) => !n.spent) : [];
+  // Transfer state
+  const [notes, setNotes] = useState<PoolNote[]>([]);
+  const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
+  const [recipient, setRecipient] = useState("");
+  const [transferAmount, setTransferAmount] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [statusMessage, setStatusMessage] = useState("");
+  const [recipientSecrets, setRecipientSecrets] = useState<string | null>(null);
+  const [selectedRelayer, setSelectedRelayer] = useState<Relayer | null>(null);
+
+  // Wizard state
+  const [isWizardOpen, setIsWizardOpen] = useState(false);
+  const [wizardStep, setWizardStep] = useState<"PREPARE" | "RELAY" | "DONE">("PREPARE");
+  const [txHash, setTxHash] = useState<string | null>(null);
+
+  // Withdraw state
+  const [withdrawNotes, setWithdrawNotes] = useState<(PoolNote | AmmNote)[]>([]);
+  const [activeWithdrawNote, setActiveWithdrawNote] = useState<PoolNote | AmmNote | null>(null);
+  const [isWithdrawFlowOpen, setIsWithdrawFlowOpen] = useState(false);
+
+  useEffect(() => {
+    setNotes(getPoolNotes().filter((n) => !n.spent));
+    refreshWithdrawNotes();
+  }, []);
+
+  const refreshWithdrawNotes = () => {
+    const poolNotes = getPoolNotes().filter((n) => !n.spent);
+    const ammNotes = getAmmNotes().filter((n) => !n.spent);
+    const allNotes = [
+      ...poolNotes.map(n => ({ ...n, _source: "pool" as const })),
+      ...ammNotes.map(n => ({ ...n, _source: "amm" as const }))
+    ].sort((a, b) => b.createdAt - a.createdAt);
+    setWithdrawNotes(allNotes);
+  };
+
+  const selectedNote = selectedIdx !== null ? notes[selectedIdx] : null;
+  const relayerUrl = selectedRelayer ? resolveRelayerBaseUrl(selectedRelayer) : "";
+  const relayerDisabled = !selectedRelayer || selectedRelayer.status === "offline";
 
   const getTokenLabel = (tokenAddress: string) => {
     if (tokenAddress === ADDRESSES.MOCK_BTC) return "mBTC";
@@ -32,8 +69,175 @@ export default function TransferPage() {
     return tokenAddress.slice(0, 8) + "...";
   };
 
+  async function handleTransfer() {
+    if (!address || !selectedNote || !transferAmount || relayerDisabled) return;
+    setLoading(true);
+    setRecipientSecrets(null);
+    setWizardStep("PREPARE");
+    setIsWizardOpen(true);
+
+    try {
+      const transferAmountWei = BigInt(transferAmount) * 10n ** 18n;
+      const oldAmountBig = BigInt(selectedNote.amount);
+      const changeAmount = oldAmountBig - transferAmountWei;
+
+      if (changeAmount < 0n) {
+        throw new Error("Transfer amount exceeds note balance");
+      }
+
+      setStatusMessage("Generating new secrets...");
+      await new Promise(r => setTimeout(r, 100));
+
+      // Generate new secrets for sender change note
+      const newSecretSender = generateSecret();
+      const newNullifierSecretSender = generateSecret();
+      const newCommitmentSender = await computeCommitment(
+        changeAmount.toString(),
+        newSecretSender,
+        newNullifierSecretSender,
+      );
+
+      // Generate new secrets for recipient note
+      const newSecretRecipient = generateSecret();
+      const newNullifierSecretRecipient = generateSecret();
+      const newCommitmentRecipient = await computeCommitment(
+        transferAmountWei.toString(),
+        newSecretRecipient,
+        newNullifierSecretRecipient,
+      );
+
+      setStatusMessage("Verifying deposit confirmation...");
+      const normalizedCommitment = "0x" + BigInt(selectedNote.commitment).toString(16);
+      let treeResult = await buildTreeFromChain(ADDRESSES.SHIELDED_POOL, "pool");
+      let leafIndex = treeResult.commitmentToLeafIndex.get(normalizedCommitment);
+
+      if (leafIndex === undefined) {
+        setStatusMessage("Waiting for deposit confirmation...");
+        for (let attempt = 0; attempt < 30; attempt++) {
+          await new Promise((r) => setTimeout(r, 2000));
+          setStatusMessage(`Waiting for confirmation... (${(attempt + 1) * 2}s)`);
+          treeResult = await buildTreeFromChain(ADDRESSES.SHIELDED_POOL, "pool");
+          leafIndex = treeResult.commitmentToLeafIndex.get(normalizedCommitment);
+          if (leafIndex !== undefined) {
+            markNoteConfirmed(selectedNote.commitment);
+            break;
+          }
+        }
+        if (leafIndex === undefined) {
+          throw new Error("Deposit not found on-chain. Try depositing fresh funds.");
+        }
+      }
+
+      setStatusMessage("Generating Zero-Knowledge Proof...");
+      const path = await treeResult.tree.getPath(leafIndex);
+      const root = treeResult.tree.getRoot().toString();
+      const nullifierHash = await computeNullifierHash(selectedNote.nullifierSecret);
+
+      // Debug info
+      console.log("[Transfer Debug]", {
+        leafIndex,
+        treeSize: treeResult.tree.getNextIndex(),
+        root: root,
+        commitment: normalizedCommitment,
+      });
+
+      const { fullProofWithHints } = await generatePoolTransferProof(
+        selectedNote,
+        path,
+        root,
+        nullifierHash,
+        newCommitmentSender,
+        newCommitmentRecipient,
+        changeAmount.toString(),
+        transferAmountWei.toString(),
+        newSecretSender,
+        newNullifierSecretSender,
+        newSecretRecipient,
+        newNullifierSecretRecipient,
+      );
+
+      setStatusMessage("Submitting to Relayer...");
+      setWizardStep("RELAY");
+
+      const { transactionHash } = await relayTransfer(relayerUrl, {
+        fullProofWithHints,
+        root,
+        nullifierHash,
+        newCommitmentSender,
+        newCommitmentRecipient,
+      });
+
+      setTxHash(transactionHash);
+      setStatusMessage("Waiting for confirmation...");
+
+      const maxAttempts = 60;
+      let finalStatus = "PENDING";
+      for (let i = 0; i < maxAttempts; i++) {
+        await new Promise(r => setTimeout(r, 3000));
+        try {
+          const res = await getRelayTxStatus(relayerUrl, transactionHash);
+          finalStatus = res.status;
+          if (finalStatus === "ACCEPTED_ON_L2" || finalStatus === "REJECTED") break;
+        } catch (e) { }
+      }
+
+      if (finalStatus !== "ACCEPTED_ON_L2") throw new Error("Transaction rejected");
+
+      txToast(transactionHash).success();
+      markPoolNoteSpent(selectedNote.commitment);
+
+      if (changeAmount > 0n) {
+        addNote({
+          type: "pool",
+          commitment: newCommitmentSender,
+          amount: changeAmount.toString(),
+          secret: newSecretSender,
+          nullifierSecret: newNullifierSecretSender,
+          spent: false,
+          createdAt: Date.now(),
+          txHash: transactionHash,
+          confirmed: false,
+          tokenAddress: selectedNote.tokenAddress,
+        });
+      }
+
+      addNote({
+        type: "pool",
+        commitment: newCommitmentRecipient,
+        amount: transferAmountWei.toString(),
+        secret: newSecretRecipient,
+        nullifierSecret: newNullifierSecretRecipient,
+        spent: false,
+        createdAt: Date.now(),
+        txHash: transactionHash,
+        confirmed: false,
+        tokenAddress: selectedNote.tokenAddress,
+      });
+
+      setRecipientSecrets(
+        JSON.stringify({
+          commitment: newCommitmentRecipient,
+          amount: transferAmountWei.toString(),
+          secret: newSecretRecipient,
+          nullifierSecret: newNullifierSecretRecipient,
+        }, null, 2),
+      );
+
+      setWizardStep("DONE");
+      setNotes(getPoolNotes().filter((n) => !n.spent));
+      setSelectedIdx(null);
+      setRecipient("");
+      setTransferAmount("");
+    } catch (e: unknown) {
+      errorToast(e instanceof Error ? e.message : "Transfer failed");
+      setIsWizardOpen(false);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
-    <div className="max-w-[600px] mx-auto pt-8">
+    <div className="max-w-[700px] mx-auto pt-8">
       {/* Main Card */}
       <div className="bg-[#0D1117] rounded-3xl border border-white/[0.06] shadow-2xl overflow-hidden">
         {/* Tabs */}
@@ -41,9 +245,7 @@ export default function TransferPage() {
           <button
             onClick={() => setActiveTab("send")}
             className={`pb-3 text-base font-semibold transition-colors relative ${
-              activeTab === "send"
-                ? "text-[#8B8CFF]"
-                : "text-white/40 hover:text-white/60"
+              activeTab === "send" ? "text-[#8B8CFF]" : "text-white/40 hover:text-white/60"
             }`}
           >
             Send
@@ -52,24 +254,20 @@ export default function TransferPage() {
             )}
           </button>
           <button
-            onClick={() => setActiveTab("transfer")}
+            onClick={() => setActiveTab("withdraw")}
             className={`pb-3 text-base font-semibold transition-colors relative ${
-              activeTab === "transfer"
-                ? "text-[#8B8CFF]"
-                : "text-white/40 hover:text-white/60"
+              activeTab === "withdraw" ? "text-[#8B8CFF]" : "text-white/40 hover:text-white/60"
             }`}
           >
-            Transfer
-            {activeTab === "transfer" && (
+            Withdraw
+            {activeTab === "withdraw" && (
               <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#8B8CFF] rounded-full" />
             )}
           </button>
           <button
             onClick={() => setActiveTab("receive")}
             className={`pb-3 text-base font-semibold transition-colors relative ${
-              activeTab === "receive"
-                ? "text-[#8B8CFF]"
-                : "text-white/40 hover:text-white/60"
+              activeTab === "receive" ? "text-[#8B8CFF]" : "text-white/40 hover:text-white/60"
             }`}
           >
             Receive
@@ -83,81 +281,180 @@ export default function TransferPage() {
         <div className="p-8 space-y-6">
           {activeTab === "send" && (
             <>
-              {/* Send From */}
+              {/* Relayer Configuration */}
               <div className="space-y-3">
-                <Label className="text-base font-bold text-white">Send from</Label>
-                <Select value={selectedNote} onValueChange={setSelectedNote}>
-                  <SelectTrigger className="h-14 bg-white/[0.04] border-white/[0.08] rounded-xl text-base text-white hover:bg-white/[0.06] transition-colors">
-                    <SelectValue placeholder={address ? `${address.slice(0, 10)}...${address.slice(-6)}` : "Connect wallet"} />
-                  </SelectTrigger>
-                  <SelectContent className="bg-[#1A1D23] border-white/[0.08]">
-                    {poolNotes.length === 0 ? (
-                      <SelectItem value="none" disabled className="text-white/40">No shielded notes available</SelectItem>
-                    ) : (
-                      poolNotes.map((note) => (
-                        <SelectItem key={note.commitment} value={note.commitment} className="text-white">
-                          {getTokenLabel(note.tokenAddress)} - {(Number(BigInt(note.amount)) / 10 ** 18).toFixed(4)}
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
+                <Label className="text-sm font-semibold text-white/80">Relayer</Label>
+                <RelayerSelect selectedRelayer={selectedRelayer} onSelect={setSelectedRelayer} />
               </div>
 
-              {/* Send To */}
+              {/* Select Note */}
               <div className="space-y-3">
-                <Label className="text-base font-bold text-white">Send to</Label>
+                <Label className="text-base font-bold text-white">Send from (Shielded Note)</Label>
+                {notes.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-white/[0.1] p-8 text-center">
+                    <p className="text-white/40">No shielded notes available</p>
+                    <Button variant="link" className="text-[#8B8CFF] mt-2" onClick={() => window.location.href = '/deposit'}>
+                      Create a note
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {notes.map((note, i) => {
+                      const isSelected = selectedIdx === i;
+                      const noteAmount = (BigInt(note.amount) / 10n ** 18n).toString();
+                      return (
+                        <div
+                          key={note.commitment}
+                          onClick={() => setSelectedIdx(i)}
+                          className={cn(
+                            "cursor-pointer rounded-xl border p-4 transition-all",
+                            isSelected
+                              ? "border-[#8B8CFF] bg-[#8B8CFF]/10 shadow-lg shadow-[#8B8CFF]/20"
+                              : "border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/[0.12]"
+                          )}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#8B8CFF]/10">
+                                <Shield className="h-5 w-5 text-[#8B8CFF]" strokeWidth={2} />
+                              </div>
+                              <div>
+                                <div className="text-sm font-semibold text-white">{getTokenLabel(note.tokenAddress)}</div>
+                                <div className="text-xs text-white/40 font-mono">{note.commitment.slice(0, 12)}...</div>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-lg font-bold text-white">{noteAmount}</div>
+                              <div className="text-xs text-white/40">{new Date(note.createdAt).toLocaleDateString()}</div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Recipient */}
+              <div className={cn("space-y-3", !selectedNote && "opacity-50 pointer-events-none")}>
+                <Label className="text-base font-bold text-white">Send to (Optional)</Label>
                 <Input
-                  placeholder="Enter public address (0x) or ENS name"
+                  placeholder="Recipient address or name (for reference)"
                   value={recipient}
                   onChange={(e) => setRecipient(e.target.value)}
                   className="h-14 bg-white/[0.04] border-white/[0.08] rounded-xl text-base text-white placeholder:text-white/40 focus:border-[#8B8CFF] focus:ring-[#8B8CFF]/20"
                 />
-              </div>
-
-              {/* Asset */}
-              <div className="space-y-3">
-                <Label className="text-base font-bold text-white">Asset</Label>
-                <Select>
-                  <SelectTrigger className="h-14 bg-white/[0.04] border-white/[0.08] rounded-xl text-base text-white hover:bg-white/[0.06] transition-colors">
-                    <SelectValue placeholder="Select Asset" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-[#1A1D23] border-white/[0.08]">
-                    <SelectItem value="mbtc" className="text-white">mBTC</SelectItem>
-                    <SelectItem value="mstrk" className="text-white">mSTRK</SelectItem>
-                  </SelectContent>
-                </Select>
+                <p className="text-xs text-white/40">
+                  Note: The recipient will receive secrets to claim the funds, not a direct transfer to their address.
+                </p>
               </div>
 
               {/* Amount */}
-              <div className="space-y-3">
+              <div className={cn("space-y-3", !selectedNote && "opacity-50 pointer-events-none")}>
                 <Label className="text-base font-bold text-white">Amount</Label>
                 <Input
                   type="number"
                   placeholder="0.00"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
+                  value={transferAmount}
+                  onChange={(e) => setTransferAmount(e.target.value)}
                   className="h-14 bg-white/[0.04] border-white/[0.08] rounded-xl text-base text-white placeholder:text-white/40 focus:border-[#8B8CFF] focus:ring-[#8B8CFF]/20"
                 />
+                {selectedNote && (
+                  <p className="text-xs text-white/40">
+                    Available: {(BigInt(selectedNote.amount) / 10n ** 18n).toString()} {getTokenLabel(selectedNote.tokenAddress)}
+                  </p>
+                )}
               </div>
 
               {/* Send Button */}
               <div className="pt-4">
                 <Button
-                  disabled={!recipient || !amount || !selectedNote}
+                  disabled={loading || !transferAmount || selectedIdx === null || relayerDisabled}
+                  onClick={handleTransfer}
                   className="w-full h-14 bg-[#8B8CFF] hover:bg-[#7B7CFF] text-white rounded-xl text-base font-bold shadow-lg shadow-[#8B8CFF]/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none transition-all"
                 >
-                  Send
+                  {loading ? "Transferring..." : "Transfer Privately"}
                 </Button>
               </div>
             </>
           )}
 
-          {activeTab === "transfer" && (
-            <div className="text-center py-12">
-              <ArrowDownUp className="h-12 w-12 mx-auto mb-4 text-white/20" />
-              <p className="text-base text-white/60">Transfer between your accounts</p>
-            </div>
+          {activeTab === "withdraw" && (
+            <>
+              {/* Relayer Configuration */}
+              <div className="space-y-3">
+                <Label className="text-sm font-semibold text-white/80">Relayer</Label>
+                <RelayerSelect selectedRelayer={selectedRelayer} onSelect={setSelectedRelayer} />
+              </div>
+
+              {/* Withdraw Notes List */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label className="text-base font-bold text-white">Your Shielded Notes</Label>
+                  <button
+                    onClick={refreshWithdrawNotes}
+                    className="p-2 rounded-lg hover:bg-white/[0.04] transition-colors"
+                  >
+                    <RefreshCw className="h-4 w-4 text-white/60" />
+                  </button>
+                </div>
+                {withdrawNotes.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-white/[0.1] p-8 text-center">
+                    <Unlock className="h-12 w-12 mx-auto mb-3 text-white/20" />
+                    <p className="text-white/40">No shielded notes available</p>
+                    <Button variant="link" className="text-[#8B8CFF] mt-2" onClick={() => window.location.href = '/deposit'}>
+                      Create a note
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {withdrawNotes.map((note) => {
+                      const isAmm = "_source" in note && note._source === "amm";
+                      const tokenLabel = isAmm
+                        ? ((note as AmmNote).tokenType === TOKEN_TYPE_BTC ? "mBTC" : "mSTRK")
+                        : getTokenLabel((note as PoolNote).tokenAddress);
+                      const noteAmount = (BigInt(note.amount) / 10n ** 18n).toString();
+
+                      return (
+                        <div
+                          key={note.commitment}
+                          className="rounded-xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/[0.12] p-4 transition-all"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#8B8CFF]/10">
+                                <Shield className="h-5 w-5 text-[#8B8CFF]" strokeWidth={2} />
+                              </div>
+                              <div>
+                                <div className="text-sm font-semibold text-white">{tokenLabel}</div>
+                                <div className="text-xs text-white/40 font-mono">{note.commitment.slice(0, 12)}...</div>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-4">
+                              <div className="text-right">
+                                <div className="text-lg font-bold text-white">{noteAmount}</div>
+                                <div className="text-xs text-white/40">{new Date(note.createdAt).toLocaleDateString()}</div>
+                              </div>
+                              <Button
+                                size="sm"
+                                disabled={!selectedRelayer}
+                                onClick={() => {
+                                  setActiveWithdrawNote(note);
+                                  setIsWithdrawFlowOpen(true);
+                                }}
+                                className="bg-[#8B8CFF] hover:bg-[#7B7CFF]"
+                              >
+                                Withdraw
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </>
           )}
 
           {activeTab === "receive" && (
@@ -181,6 +478,78 @@ export default function TransferPage() {
           )}
         </div>
       </div>
+
+      {/* Transfer Wizard Dialog */}
+      <Dialog open={isWizardOpen} onOpenChange={(v) => { if (!loading) setIsWizardOpen(v); }}>
+        <DialogContent className="sm:max-w-md bg-[#0D1117] border-white/[0.08]">
+          <DialogHeader>
+            <DialogTitle className="text-white">Shielded Transfer</DialogTitle>
+            <DialogDescription className="text-white/60">
+              {wizardStep === "DONE" ? "Transfer Completed Successfully" : "Processing Private Transaction"}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-6 space-y-6">
+            {wizardStep !== "DONE" ? (
+              <div className="flex flex-col items-center justify-center gap-4 text-center">
+                <Loader2 className="h-10 w-10 animate-spin text-[#8B8CFF]" />
+                <p className="text-sm font-medium text-white">{statusMessage}</p>
+                {txHash && <p className="text-xs font-mono text-white/40 bg-white/[0.04] px-2 py-1 rounded">{txHash.slice(0, 16)}...</p>}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex flex-col items-center justify-center gap-2 text-center text-[#22C55E] mb-4">
+                  <CheckCircle2 className="h-12 w-12" />
+                  <span className="font-bold">Transfer Complete!</span>
+                </div>
+
+                <div className="rounded-lg border border-[#8B8CFF]/20 bg-[#8B8CFF]/5 p-4 space-y-3">
+                  <div className="flex items-center gap-2 text-[#8B8CFF] font-medium">
+                    <ShieldCheck className="h-4 w-4" />
+                    <span>Recipient Secrets</span>
+                  </div>
+                  <p className="text-xs text-white/60">
+                    Share these secrets with the recipient to claim the funds.
+                  </p>
+                  <div className="relative">
+                    <pre className="overflow-x-auto rounded bg-[#08090D] p-3 text-[10px] border border-white/[0.08] max-h-[150px] custom-scrollbar text-white/80">
+                      {recipientSecrets}
+                    </pre>
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      className="absolute top-2 right-2 h-6 w-6 bg-white/[0.04] border-white/[0.08]"
+                      onClick={() => navigator.clipboard.writeText(recipientSecrets || "")}
+                    >
+                      <Copy className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            {wizardStep === "DONE" && (
+              <Button onClick={() => setIsWizardOpen(false)} className="w-full bg-[#8B8CFF] hover:bg-[#7B7CFF]">Done</Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Withdraw Flow Dialog */}
+      {activeWithdrawNote && (
+        <WithdrawFlow
+          note={activeWithdrawNote}
+          isOpen={isWithdrawFlowOpen}
+          onOpenChange={setIsWithdrawFlowOpen}
+          relayer={selectedRelayer}
+          onWithdrawComplete={() => {
+            refreshWithdrawNotes();
+            setNotes(getPoolNotes().filter((n) => !n.spent));
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -114,6 +114,13 @@ export class MerkleTree {
   }
 
   /**
+   * Get the next available leaf index (total number of leaves inserted).
+   */
+  getNextIndex(): number {
+    return this._nextIndex;
+  }
+
+  /**
    * Get the Merkle path (proof) for a leaf at the given index.
    * optimized to use sparse tree traversal (skipping empty subtrees).
    */
@@ -179,28 +186,73 @@ export class MerkleTree {
 /**
  * Build a Merkle tree from deposit events.
  * Events must be sorted by leaf_index.
+ * Returns the tree and a mapping from commitment to actual tree index.
  */
 export async function buildTreeFromEvents(
   events: Array<{ commitment: string; leafIndex: number }>
-): Promise<MerkleTree> {
+): Promise<{ tree: MerkleTree; commitmentToLeafIndex: Map<string, number> }> {
   const tree = new MerkleTree(TREE_LEVELS);
   await tree.initialize();
 
   // Sort by leafIndex to ensure correct insertion order
   const sorted = [...events].sort((a, b) => a.leafIndex - b.leafIndex);
 
-  for (const event of sorted) {
-    await tree.insert(BigInt(event.commitment));
+  const commitmentToLeafIndex = new Map<string, number>();
+
+  // Debug: Check if on-chain indices match expected tree indices
+  const onChainIndices = sorted.map(e => e.leafIndex);
+  const firstIndex = sorted.length > 0 ? sorted[0].leafIndex : 0;
+  const isSequential = onChainIndices.every((idx, i) => idx === i + firstIndex);
+
+  console.log("[Tree Build Debug]", {
+    eventCount: sorted.length,
+    onChainIndices: onChainIndices.slice(0, 10), // First 10 indices
+    firstIndex,
+    isZeroBased: firstIndex === 0,
+    isSequential,
+  });
+
+  if (!isSequential) {
+    // Handle gaps by inserting zero leaves at missing indices
+    console.warn("[Tree Build] Non-sequential indices detected, inserting zero leaves for gaps");
+
+    const maxIndex = sorted[sorted.length - 1].leafIndex;
+    let eventIdx = 0;
+
+    for (let i = 0; i <= maxIndex; i++) {
+      if (eventIdx < sorted.length && sorted[eventIdx].leafIndex === i) {
+        // Insert actual commitment
+        const actualIndex = await tree.insert(BigInt(sorted[eventIdx].commitment));
+        commitmentToLeafIndex.set(normalizeHex(sorted[eventIdx].commitment), actualIndex);
+        eventIdx++;
+      } else {
+        // Insert zero leaf for gap
+        console.warn(`[Tree Build] Inserting ZERO leaf at index ${i} (gap detected)`);
+        await tree.insert(ZERO_VALUE);
+      }
+    }
+  } else {
+    // Sequential indices - normal insertion
+    for (const event of sorted) {
+      const actualIndex = await tree.insert(BigInt(event.commitment));
+      commitmentToLeafIndex.set(normalizeHex(event.commitment), actualIndex);
+    }
   }
 
-  return tree;
+  console.log("[Tree Build Success]", {
+    totalLeaves: tree.getNextIndex(),
+    root: tree.getRoot().toString(),
+    sampleMappings: Array.from(commitmentToLeafIndex.entries()).slice(0, 3),
+  });
+
+  return { tree, commitmentToLeafIndex };
 }
 
 /**
  * Normalize a hex commitment string so comparisons are safe.
  * Strips leading zeros after 0x prefix.
  */
-function normalizeHex(hex: string): string {
+export function normalizeHex(hex: string): string {
   return "0x" + BigInt(hex).toString(16);
 }
 
@@ -226,12 +278,6 @@ export async function buildTreeFromChain(
     deposits: Array<{ commitment: string; leafIndex: number }>;
   };
 
-  const tree = await buildTreeFromEvents(deposits);
-
-  const commitmentToLeafIndex = new Map<string, number>();
-  for (const d of deposits) {
-    commitmentToLeafIndex.set(normalizeHex(d.commitment), d.leafIndex);
-  }
-
-  return { tree, commitmentToLeafIndex };
+  // buildTreeFromEvents now returns both tree and mapping with correct indices
+  return await buildTreeFromEvents(deposits);
 }

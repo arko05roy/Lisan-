@@ -90,7 +90,16 @@ export function WithdrawFlow({ note, isOpen, onOpenChange, relayer, onWithdrawCo
         );
         let leafIndex = result.commitmentToLeafIndex.get(normalized);
 
-        if (leafIndex !== undefined) return { tree: result.tree, leafIndex };
+        if (leafIndex !== undefined) {
+            // Verify the leaf index is valid for the tree
+            const treeSize = result.tree.getNextIndex();
+            if (leafIndex >= treeSize) {
+                throw new Error(
+                    `Note commitment found but tree index invalid (${leafIndex} >= ${treeSize}). This note may be from an old contract deployment. Please deposit fresh funds.`
+                );
+            }
+            return { tree: result.tree, leafIndex };
+        }
 
         setStatusMessage("Waiting for deposit confirmation...");
         // Faster polling: 2s intervals for up to 60s (30 attempts)
@@ -103,6 +112,12 @@ export function WithdrawFlow({ note, isOpen, onOpenChange, relayer, onWithdrawCo
             );
             leafIndex = result.commitmentToLeafIndex.get(normalized);
             if (leafIndex !== undefined) {
+                const treeSize = result.tree.getNextIndex();
+                if (leafIndex >= treeSize) {
+                    throw new Error(
+                        `Note commitment found but tree index invalid. This note may be from an old contract deployment. Please deposit fresh funds.`
+                    );
+                }
                 markNoteConfirmed(commitment);
                 return { tree: result.tree, leafIndex };
             }
@@ -126,6 +141,14 @@ export function WithdrawFlow({ note, isOpen, onOpenChange, relayer, onWithdrawCo
             const path = await tree.getPath(leafIndex);
             const root = tree.getRoot().toString();
             const nullifierHash = await computeNullifierHash(note.nullifierSecret);
+
+            // Debug info
+            console.log("[Withdraw Debug]", {
+                leafIndex,
+                treeSize: tree.getNextIndex(),
+                root: root,
+                commitment: "0x" + BigInt(note.commitment).toString(16),
+            });
 
             // Proof Gen
             let fullProofWithHints;
