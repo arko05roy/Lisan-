@@ -182,128 +182,182 @@ export function PrivateExecute({ relayer }: PrivateExecuteProps) {
     };
 
     return (
-        <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                    <Zap className="h-5 w-5 text-primary" />
-                    Private Execute
+        <Card className="border-white/[0.06] bg-[#0D1117] backdrop-blur-xl">
+            <CardHeader className="border-b border-white/[0.04] pb-6">
+                <CardTitle className="flex items-center gap-3 text-xl">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#8B8CFF]/10">
+                        <Zap className="h-5 w-5 text-[#8B8CFF]" strokeWidth={2.5} />
+                    </div>
+                    Transaction Details
                 </CardTitle>
-                <p className="text-sm text-muted-foreground">
-                    Interact with any Starknet contract using your shielded funds. The pool acts as a
-                    private proxy — nobody knows it was you.
-                </p>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-6 pt-6">
                 {/* Note Selection */}
-                <div className="space-y-3">
-                    <Label className="text-base font-medium text-foreground/80">
-                        Select Shielded Note
-                    </Label>
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                        <Label className="text-sm font-semibold text-white">
+                            Select Shielded Balance
+                        </Label>
+                        <span className="text-xs text-white/40">
+                            {poolNotes.length} note{poolNotes.length !== 1 ? 's' : ''} available
+                        </span>
+                    </div>
                     {poolNotes.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">
-                            No unspent pool notes available. Deposit funds first.
-                        </p>
+                        <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-6 text-center">
+                            <p className="text-sm text-white/40">
+                                No shielded notes available. Deposit funds first to enable private execution.
+                            </p>
+                        </div>
                     ) : (
-                        <div className="space-y-2">
-                            {poolNotes.map((note) => (
-                                <div
-                                    key={note.commitment}
-                                    onClick={() => setSelectedNote(note)}
-                                    className={cn(
-                                        "cursor-pointer rounded-lg border p-3 transition-all hover:bg-muted/50",
-                                        selectedNote?.commitment === note.commitment
-                                            ? "border-primary bg-primary/5"
-                                            : "border-border/40",
-                                    )}
-                                >
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-2">
-                                            <Badge variant="outline">{getTokenLabel(note)}</Badge>
-                                            <span className="font-mono text-sm">
-                                                {formatWei(note.amount)}
-                                            </span>
+                        <div className="space-y-3">
+                            {poolNotes.map((note) => {
+                                const isSelected = selectedNote?.commitment === note.commitment;
+                                return (
+                                    <div
+                                        key={note.commitment}
+                                        onClick={() => setSelectedNote(note)}
+                                        className={cn(
+                                            "cursor-pointer rounded-xl border p-4 transition-all",
+                                            isSelected
+                                                ? "border-[#8B8CFF] bg-[#8B8CFF]/10 shadow-lg shadow-[#8B8CFF]/20"
+                                                : "border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/[0.12]",
+                                        )}
+                                    >
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#8B8CFF]/10">
+                                                    <span className="text-sm font-bold text-[#8B8CFF]">
+                                                        {getTokenLabel(note).charAt(0)}
+                                                    </span>
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-semibold text-white">
+                                                        {getTokenLabel(note)}
+                                                    </p>
+                                                    <p className="font-mono text-lg font-bold text-white/80">
+                                                        {formatWei(note.amount)}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-xs text-white/40">
+                                                    {new Date(note.createdAt).toLocaleDateString()}
+                                                </p>
+                                                {isSelected && (
+                                                    <div className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#8B8CFF] text-[10px] font-semibold text-white">
+                                                        Selected
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
-                                        <span className="text-xs text-muted-foreground">
-                                            {new Date(note.createdAt).toLocaleDateString()}
-                                        </span>
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     )}
                 </div>
 
                 {/* Target Contract */}
-                <div className="space-y-2">
-                    <Label>Target Contract Address</Label>
+                <div className="space-y-3">
+                    <Label className="text-sm font-semibold text-white">
+                        Target Contract Address
+                    </Label>
                     <Input
                         placeholder="0x..."
                         value={targetContract}
                         onChange={(e) => setTargetContract(e.target.value)}
                         disabled={loading}
+                        className="h-12 bg-white/[0.02] border-white/[0.06] text-white font-mono text-sm focus:border-[#8B8CFF] focus:ring-[#8B8CFF]/20"
                     />
                 </div>
 
                 {/* Function Name */}
-                <div className="space-y-2">
-                    <Label>Function Name</Label>
+                <div className="space-y-3">
+                    <Label className="text-sm font-semibold text-white">
+                        Function Name
+                    </Label>
                     <Input
                         placeholder="e.g. increment, transfer, approve"
                         value={entrypoint}
                         onChange={(e) => setEntrypoint(e.target.value)}
                         disabled={loading}
+                        className="h-12 bg-white/[0.02] border-white/[0.06] text-white focus:border-[#8B8CFF] focus:ring-[#8B8CFF]/20"
                     />
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-white/40">
                         The name of the function to call on the target contract.
                     </p>
                 </div>
 
                 {/* Amount */}
-                <div className="space-y-2">
-                    <Label>Amount to Send</Label>
-                    <Input
-                        type="number"
-                        placeholder="0.00"
-                        value={amount}
-                        onChange={(e) => setAmount(e.target.value)}
-                        disabled={loading}
-                    />
+                <div className="space-y-3">
+                    <Label className="text-sm font-semibold text-white">
+                        Amount to Send
+                    </Label>
+                    <div className="relative">
+                        <Input
+                            type="number"
+                            placeholder="0.00"
+                            value={amount}
+                            onChange={(e) => setAmount(e.target.value)}
+                            disabled={loading}
+                            className="h-14 bg-white/[0.02] border-white/[0.06] text-white font-mono text-lg pr-20 focus:border-[#8B8CFF] focus:ring-[#8B8CFF]/20"
+                        />
+                        {selectedNote && (
+                            <div className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-white/60">
+                                {getTokenLabel(selectedNote)}
+                            </div>
+                        )}
+                    </div>
                     {selectedNote && (
-                        <p className="text-xs text-muted-foreground">
-                            Available: {formatWei(selectedNote.amount)}{" "}
-                            {getTokenLabel(selectedNote)}
-                        </p>
+                        <div className="flex items-center justify-between px-1">
+                            <p className="text-xs text-white/40">
+                                Available: {formatWei(selectedNote.amount)} {getTokenLabel(selectedNote)}
+                            </p>
+                            <button
+                                onClick={() => setAmount((Number(BigInt(selectedNote.amount)) / 10 ** 18).toString())}
+                                className="text-xs font-semibold text-[#8B8CFF] hover:text-[#8B8CFF]/80 transition-colors"
+                            >
+                                Use Max
+                            </button>
+                        </div>
                     )}
                 </div>
 
                 {/* Calldata */}
-                <div className="space-y-2">
-                    <Label>Calldata (comma-separated felt252 values)</Label>
+                <div className="space-y-3">
+                    <Label className="text-sm font-semibold text-white">
+                        Calldata <span className="text-white/40 font-normal">(Optional)</span>
+                    </Label>
                     <Input
                         placeholder="0x1234, 0x5678, ..."
                         value={callData}
                         onChange={(e) => setCallData(e.target.value)}
                         disabled={loading}
+                        className="h-12 bg-white/[0.02] border-white/[0.06] text-white font-mono text-sm focus:border-[#8B8CFF] focus:ring-[#8B8CFF]/20"
                     />
-                    <p className="text-xs text-muted-foreground">
-                        The raw calldata to pass to the target contract. Leave empty for simple
-                        token transfers.
+                    <p className="text-xs text-white/40">
+                        Comma-separated felt252 values. Leave empty for simple token transfers.
                     </p>
                 </div>
 
                 {/* Status */}
                 {loading && (
-                    <div className="flex flex-col items-center justify-center p-4 gap-3 text-center">
-                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                        <p className="text-sm text-muted-foreground animate-pulse">
-                            {statusMessage}
-                        </p>
+                    <div className="flex flex-col items-center justify-center p-8 gap-4 text-center rounded-xl border border-[#8B8CFF]/20 bg-[#8B8CFF]/5">
+                        <Loader2 className="h-10 w-10 animate-spin text-[#8B8CFF]" strokeWidth={2.5} />
+                        <div>
+                            <p className="text-sm font-semibold text-white mb-1">
+                                {statusMessage}
+                            </p>
+                            <p className="text-xs text-white/40">
+                                This may take a moment...
+                            </p>
+                        </div>
                     </div>
                 )}
 
                 {/* Action Button */}
                 <Button
-                    className="w-full h-12 text-lg font-medium"
+                    className="w-full h-14 text-base font-bold rounded-xl bg-gradient-to-r from-[#8B8CFF] to-[#6B6DFF] hover:from-[#7B7CFF] hover:to-[#5B5DFF] shadow-lg shadow-[#8B8CFF]/30 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                     disabled={
                         loading ||
                         !address ||
@@ -316,10 +370,15 @@ export function PrivateExecute({ relayer }: PrivateExecuteProps) {
                     onClick={handleExecute}
                 >
                     {loading ? (
-                        "Executing Privately..."
+                        <span className="flex items-center gap-3">
+                            <Loader2 className="h-5 w-5 animate-spin" />
+                            Executing...
+                        </span>
                     ) : (
                         <span className="flex items-center gap-2">
-                            Execute Privately <ArrowRight className="h-4 w-4" />
+                            <Zap className="h-5 w-5" strokeWidth={2.5} />
+                            Execute Privately
+                            <ArrowRight className="h-5 w-5" strokeWidth={2.5} />
                         </span>
                     )}
                 </Button>

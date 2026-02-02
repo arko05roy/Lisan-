@@ -13,32 +13,30 @@ export function WalletButton() {
     const short = `${address.slice(0, 6)}...${address.slice(-4)}`;
     return (
       <div className="flex items-center gap-3">
-        <div className="flex items-center gap-2 rounded-xl bg-white/[0.04] border border-white/[0.06] px-3.5 py-2">
-          <div className="h-2 w-2 rounded-full bg-[#22C55E] pulse-dot" />
-          <span className="text-[13px] font-mono text-white/60">{short}</span>
+        <div className="flex items-center gap-3 rounded-xl bg-white/[0.04] border border-white/[0.08] px-4 py-2.5 backdrop-blur-sm">
+          <div className="h-2.5 w-2.5 rounded-full bg-[#22C55E] pulse-dot" />
+          <span className="text-sm font-mono font-semibold text-white/80 tracking-tight">{short}</span>
         </div>
         <button
           onClick={() => disconnect()}
-          className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/[0.04] border border-white/[0.06] text-white/30 hover:text-white/60 hover:bg-white/[0.08] transition-all duration-200"
+          className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/[0.04] border border-white/[0.08] text-white/40 hover:text-white/80 hover:bg-white/[0.08] hover:border-white/[0.12] transition-all duration-200"
         >
-          <LogOut className="h-4 w-4" />
+          <LogOut className="h-4 w-4" strokeWidth={2} />
         </button>
       </div>
     );
   }
 
   return (
-    <div className="flex gap-2">
+    <div className="flex gap-3">
       {connectors.map((connector) => (
         <Button
           key={connector.id}
-          variant="outline"
-          size="sm"
           onClick={() => connect({ connector })}
-          className="border-white/[0.08] bg-white/[0.04] hover:bg-[#8B8CFF]/10 hover:border-[#8B8CFF]/20 hover:text-white text-white/60 transition-all duration-200 rounded-xl"
+          className="h-10 px-5 rounded-xl bg-gradient-to-r from-[#8B8CFF] to-[#6B6DFF] hover:from-[#7B7CFF] hover:to-[#5B5DFF] text-white font-bold text-sm shadow-lg shadow-[#8B8CFF]/30 border-0 transition-all duration-200"
         >
-          <Wallet className="mr-2 h-4 w-4" />
-          {connector.name}
+          <Wallet className="mr-2 h-4 w-4" strokeWidth={2.5} />
+          Connect Wallet
         </Button>
       ))}
     </div>

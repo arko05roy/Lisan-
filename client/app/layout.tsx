@@ -1,24 +1,26 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { IBM_Plex_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "next-themes";
 import { StarknetProvider } from "@/components/providers/starknet-provider";
 import { Toaster } from "@/components/ui/sonner";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const ibmPlexSans = IBM_Plex_Sans({
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-ibm-plex",
   subsets: ["latin"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const jetBrainsMono = JetBrains_Mono({
+  weight: ["400", "500", "600"],
+  variable: "--font-jetbrains-mono",
   subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
-  title: "Lisan — Private Bitcoin DeFi on Starknet",
+  title: "Lisan Wallet — Private Execution on Starknet",
   description:
-    "Shielded pools, private AMM, prediction markets, and voting — all powered by Poseidon commitments on Starknet.",
+    "The privacy-first wallet for Starknet. Execute transactions privately, manage shielded assets, and interact with contracts anonymously.",
 };
 
 export default function RootLayout({
@@ -29,7 +31,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${ibmPlexSans.variable} ${jetBrainsMono.variable} antialiased`}
       >
         <ThemeProvider
           attribute="class"

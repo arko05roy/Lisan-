@@ -1,69 +1,42 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { cn } from "@/lib/utils";
-import { Shield, Search, ChevronDown } from "lucide-react";
 import { WalletButton } from "@/components/wallet-button";
+import { Shield, Zap, ArrowRightLeft, TrendingUp, Vote } from "lucide-react";
 
-const NAV_ITEMS = [
-    { href: "/deposit", label: "Pool" },
-    { href: "/swap", label: "Trade" },
-    { href: "/execute", label: "Execute" },
-    { href: "/predict", label: "Explore" },
-    { href: "/dashboard", label: "Portfolio" },
-];
+const PAGE_TITLES: Record<string, { title: string; subtitle: string; icon: typeof Shield }> = {
+  "/dashboard": { title: "Wallet", subtitle: "Manage your shielded assets", icon: Shield },
+  "/deposit": { title: "Shielded Pool", subtitle: "Deposit & withdraw privately", icon: Shield },
+  "/execute": { title: "Private Execute", subtitle: "Interact with contracts anonymously", icon: Zap },
+  "/swap": { title: "Swap", subtitle: "Trade tokens privately", icon: ArrowRightLeft },
+  "/predict": { title: "Predict", subtitle: "Prediction markets", icon: TrendingUp },
+  "/vote": { title: "Vote", subtitle: "Private governance", icon: Vote },
+  "/transfer": { title: "Transfer", subtitle: "Send funds privately", icon: Shield },
+  "/withdraw": { title: "Withdraw", subtitle: "Claim shielded funds", icon: Shield },
+};
 
 export function Navbar() {
-    const pathname = usePathname();
+  const pathname = usePathname();
+  const pageInfo = PAGE_TITLES[pathname] || { title: "Lisan Wallet", subtitle: "Privacy-first wallet", icon: Shield };
+  const Icon = pageInfo.icon;
 
-    return (
-        <header className="flex h-16 items-center justify-between border-b border-white/[0.06] bg-[#0B0F14] px-6">
-            <div className="flex items-center gap-8">
-                {/* Brand */}
-                <div className="flex items-center gap-1.5">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#8B8CFF]/15">
-                        <Shield className="h-4 w-4 text-[#8B8CFF]" strokeWidth={2} />
-                    </div>
-                    <ChevronDown className="h-4 w-4 text-white/40" />
-                </div>
+  return (
+    <header className="flex h-20 items-center justify-between border-b border-white/[0.04] bg-[#08090D]/80 backdrop-blur-xl px-8">
+      {/* Page Title */}
+      <div className="flex items-center gap-4">
+        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#8B8CFF]/10">
+          <Icon className="h-6 w-6 text-[#8B8CFF]" strokeWidth={2} />
+        </div>
+        <div>
+          <h1 className="text-xl font-bold text-white tracking-tight">{pageInfo.title}</h1>
+          <p className="text-sm text-white/40">{pageInfo.subtitle}</p>
+        </div>
+      </div>
 
-                {/* Navigation */}
-                <nav className="flex items-center gap-1">
-                    {NAV_ITEMS.map((item) => {
-                        const active = pathname === item.href;
-                        return (
-                            <Link
-                                key={item.href}
-                                href={item.href}
-                                className={cn(
-                                    "px-4 py-2 text-[14px] font-medium transition-colors duration-200",
-                                    active
-                                        ? "text-[#8B8CFF]"
-                                        : "text-white/60 hover:text-white"
-                                )}
-                            >
-                                {item.label}
-                            </Link>
-                        );
-                    })}
-                </nav>
-            </div>
-
-            <div className="flex items-center gap-4">
-                {/* Search */}
-                <button className="flex h-9 w-9 items-center justify-center rounded-full text-white/40 hover:text-white transition-colors">
-                    <Search className="h-4 w-4" />
-                </button>
-
-                {/* Get App Button */}
-                <button className="hidden sm:flex items-center rounded-full border border-white/[0.1] bg-white/[0.02] px-4 py-1.5 text-[13px] font-medium text-white transition-colors hover:bg-white/[0.05]">
-                    Get the app
-                </button>
-
-                {/* Wallet */}
-                <WalletButton />
-            </div>
-        </header>
-    );
+      {/* Wallet Connection */}
+      <div className="flex items-center gap-4">
+        <WalletButton />
+      </div>
+    </header>
+  );
 }
