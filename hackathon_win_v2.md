@@ -4405,4 +4405,151 @@ GO.
 - Dual-framework challenge system (failure avoidance + winner alignment)
 - Active session: RE{DEFINE} Starknet (Lisan — Private Multi-Asset DeFi Platform with Cross-Contract Composability)
 
-**Version 6.2 - Updated with RE{DEFINE} session learnings + Winner Pattern Database (48 projects)**
+**Version 6.3 - Updated with Teddy Session Results + Frontend Audit (Feb 3, 2026)**
+
+═══════════════════════════════════════════════════════════
+
+# TEDDY SESSION RESULTS (Feb 3, 2026 — Day 6)
+
+## Session Summary
+
+**WHO:** Teddy Woodward (@franklyteddy) — Privacy Lead
+**QUESTION ASKED:** Unified pool vs isolated pools for timing analysis prevention
+
+## Teddy's Exact Feedback
+
+### 1. Unified Pool Architecture
+- **Response:** "Nice, nice, nice" during explanation, "Correct, correct" on timing analysis concern
+- **Verdict:** ✅ **KEEP UNIFIED POOL** — Larger anonymity set is the right call
+- **Action:** No architecture change needed
+
+### 2. Privacy Maxxing
+- **What he said:** Counter timing analysis with DCA and random amounts
+- **Meaning:**
+  - **DCA (Dollar Cost Averaging):** Don't deposit 10 BTC at once. Split into 2.3, 1.8, 3.1 BTC over hours/days
+  - **Random amounts:** Never use round numbers. 0.9847 BTC looks like noise, 1.0 BTC screams "human"
+- **Action:** Mention as future enhancement, not critical for demo
+
+### 3. Prediction Markets — BULLISH
+- **What he said:** When asked DeFi vs pure privacy protocol, lit up about prediction markets
+- **Reason:** Polymarket and Kalshi have copy trading problem — whales get copied, lose their edge
+- **Lisan solves this:** No one can see who bet what. Whales can take positions without being front-run
+- **Action:** Emphasize copy-trading prevention in prediction market messaging
+
+### 4. "MAKE SURE THE PRIVACY FEATURES BENEFIT THE PROTOCOL"
+- **What he said:** Emphatic about this point
+- **Meaning:** Don't add privacy for privacy's sake. Every feature needs clear "this helps users do X better"
+- **Examples:**
+  - Private swaps → No sandwich attacks, better execution
+  - Private bets → No copy trading, keep your alpha
+  - Private votes → No vote buying, real governance
+- **Action:** Articulate WHY privacy helps for each specific feature
+
+### 5. "Who Are You Hiding From?"
+- **What he said:** If you can answer this precisely, privacy max all the way
+- **Meaning:** Need clear threat model, not vague "privacy is good"
+- **Hiding from:**
+  - Other traders (no front-running, no copy trading)
+  - MEV bots (can't see pending trades)
+  - On-chain analysts (can't link deposits to actions)
+  - Competitors (can't analyze your strategy)
+- **NOT hiding from:** Law enforcement, regulators (not Tornado Cash)
+- **Action:** Document clear threat model in pitch/documentation
+
+### 6. Tongo Resource
+- **What he shared:** https://github.com/omarespejel/starknet-privacy-toolkit
+- **What it is:** Reference implementation for private ERC20 on Starknet using Noir + Garaga
+- **Action:** Review for patterns, but don't integrate (different proving stack)
+
+---
+
+## Strategic Implications
+
+| Teddy Said | What It Means | Action |
+|------------|---------------|--------|
+| Unified pool correct | Architecture validated | No change needed |
+| Privacy max (DCA, random) | Behavioral privacy matters | Mention as feature/future enhancement |
+| Bullish on prediction markets | Clear use case with real money at stake | Lead with copy-trading prevention angle |
+| "Privacy must benefit protocol" | Each feature needs clear value prop | Update pitch to explain WHY |
+| "Who are you hiding from" | Need precise threat model | Document in pitch materials |
+
+---
+
+## One-Liner Options (Post-Teddy) — USER FAVORITES
+
+1. **"Do anything on Starknet. No one knows it's you."** ← USER'S TOP PICK
+2. **"Tornado hid transfers. We hide everything."** ← STRONG DIFFERENTIATOR
+
+**Recommended:** Option 1 for general pitch, Option 2 for technical judges who know Tornado Cash.
+
+---
+
+## Frontend Audit Results (Feb 3)
+
+### Current State: 7.5/10 — Solid but needs polish
+
+| Feature | Status | Polish |
+|---------|--------|--------|
+| Deposit | ✅ Complete | 7/10 |
+| Withdraw | ✅ Complete | 8/10 |
+| Private Execute | ✅ Complete | 8.5/10 — Most impressive feature |
+| Private Swap/AMM | ⚠️ 75% | 7/10 |
+| Prediction Markets | ✅ Complete | 9/10 — Best polished feature |
+| Private Voting | ⚠️ 65% | 5/10 — Needs work |
+| Relayer Dashboard | ✅ Complete | 7.5/10 |
+| Transfer | ✅ Complete | 8/10 |
+
+### Critical Gaps Identified
+
+1. **No Landing Page** — `/page.tsx` just redirects to `/deposit`. Judges have no idea what Lisan is.
+2. **No Copy-Trading Prevention Messaging** — Teddy's bullish point is nowhere in UI
+3. **Voting Page Incomplete** — Can't see proposals list, no results display
+4. **Dashboard Activity Tab Empty** — Button exists but no content
+5. **No "What would be public" comparison** — Missing the "aha" moment
+
+### Priority Fixes (Next 17 Days)
+
+| Priority | Task | Time | Impact |
+|----------|------|------|--------|
+| P0 | Create landing page | 2h | Judge understanding |
+| P0 | Add copy-trading prevention messaging | 1h | Teddy's key point |
+| P1 | Complete voting (proposals list + results) | 2h | Feature completeness |
+| P1 | Fill Activity tab | 1h | Dashboard completeness |
+| P2 | Pre-populate prediction markets | 30m | Demo-ready |
+| P2 | Add QR code to Transfer Receive | 30m | UX polish |
+
+### Technical Debt (Fix for Grants, Not Hackathon)
+
+- **Decimal handling:** Hardcoded 18 decimals everywhere. Real WBTC uses 8 decimals.
+- **Location:** 22+ files with `10n ** 18n` hardcoded
+- **Impact:** Not visible to judges in demo, but would break with real tokens
+- **Action:** Fix when pushing for grants, not during hackathon
+- **Real WBTC on Sepolia:** `0x00452bd5c0512a61df7c7be8cfea5e4f893cb40e126bdc40aee6054db955129e` (8 decimals)
+
+---
+
+## Updated Pitch Structure
+
+**Hook:** "Every DeFi action leaks your intent."
+
+**Problem:** "Front-runners exploit your swaps. Copycats mirror your bets. MEV bots see everything."
+
+**Solution:** "Lisan — do anything on Starknet. No one knows it's you."
+
+**Features:**
+- Private swaps (no sandwich attacks)
+- Private bets (no copy trading) ← TEDDY'S BULLISH AREA
+- Private votes (no coercion)
+- Private execution (call any contract from shielded balance)
+
+**Differentiator:** "Tornado hid transfers. We hide everything."
+
+**Threat Model:** "Hiding from traders, MEV bots, and on-chain analysts. Not law enforcement."
+
+---
+
+**Session Rating:** 🟢🟢 STRONG VALIDATION
+- Architecture confirmed
+- Clear direction on prediction markets
+- Actionable feedback on messaging
+- No pivot needed, just polish

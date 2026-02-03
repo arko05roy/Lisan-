@@ -9,11 +9,42 @@
 
 **Narrative:** "Every DeFi primitive leaks your intent. We made them all private — for any token, through any contract."
 
-**One-Liner:** "Every DeFi primitive leaks your intent. We made them all private. Transfers, swaps, predictions, votes — any ERC20, any contract, all instant, all private, all on Starknet."
+**One-Liner (NEW — Post-Teddy):** "Do anything on Starknet. No one knows it's you."
+
+**Alt One-Liner:** "Tornado hid transfers. We hide everything."
 
 ---
 
-## CURRENT STATUS (Updated Jan 31, 2026 — Day 3+, MULTI-ASSET + PRIVATE EXECUTE)
+## CURRENT STATUS (Updated Feb 3, 2026 — Day 6, POST-TEDDY SESSION)
+
+### 🎯 TEDDY SESSION COMPLETE — Architecture Validated, Direction Confirmed
+- ✅ Unified pool architecture CORRECT (no change needed)
+- ✅ Prediction markets = Teddy's bullish area (copy trading prevention)
+- ✅ One-liner locked: "Do anything on Starknet. No one knows it's you."
+- ✅ Threat model clear: Hiding from traders, MEV bots, analysts — NOT law enforcement
+
+### REMAINING TASKS (Priority Order)
+
+| Priority | Task | Time | Status |
+|----------|------|------|--------|
+| **P0** | Create landing page (hero, features, CTA) | 2h | ⏳ TODO |
+| **P0** | Add copy-trading prevention messaging to /predict | 1h | ⏳ TODO |
+| **P1** | Complete voting page (proposals list + results display) | 2h | ⏳ TODO |
+| **P1** | Fill dashboard Activity tab with transaction history | 1h | ⏳ TODO |
+| **P2** | Pre-populate 2-3 prediction markets for demo | 30m | ⏳ TODO |
+| **P2** | Add QR code to Transfer → Receive tab | 30m | ⏳ TODO |
+| **P2** | Add "Max" button to deposit form | 15m | ⏳ TODO |
+| **P3** | Video script (locked by Feb 15) | 2h | ⏳ TODO |
+| **P3** | Record + edit video | 4h | ⏳ TODO |
+
+### TECHNICAL DEBT (Fix for Grants, NOT Hackathon)
+- Decimal handling: 22+ files have hardcoded `10n ** 18n`. Real WBTC uses 8 decimals.
+- Real WBTC on Sepolia: `0x00452bd5c0512a61df7c7be8cfea5e4f893cb40e126bdc40aee6054db955129e`
+- Impact: Not visible in demo, fix when pushing for production/grants.
+
+---
+
+## PHASE STATUS (Original Tracker)
 
 | Phase | Status | Details |
 |-------|--------|---------|
@@ -31,13 +62,23 @@
 | Phase 9: Private Execute | ✅ COMPLETE (Day 3+) | Cross-contract composability — pool acts as private proxy for any Starknet contract |
 | Phase 10: Redeploy | ✅ COMPLETE (Day 3+) | All contracts redeployed with new multi-asset constructor + MockERC20 (DEMO token) |
 | Phase 10a: Frontend Update | ✅ COMPLETE (Day 3+) | Multi-asset deposit (mBTC/mSTRK/DEMO/Custom ERC20), private-execute page, updated ABIs |
-| Phase 11: Frontend Polish | ⏳ IN PROGRESS (Feb 1-8) | UX polish, error handling, remaining flow testing |
+| Phase 11: Frontend Polish | ⏳ IN PROGRESS (Feb 3-10) | Landing page, messaging, voting completion |
+| Phase 11a: Teddy Feedback | ✅ COMPLETE (Day 6) | Architecture validated, copy-trading messaging needed |
 | Phase 12: Video | ⏳ PENDING (Feb 15-20) | Script LOCKED Feb 15. Record + edit. |
 | Phase 13: Submission | ⏳ PENDING (Feb 21-28) | README, GitHub theater, DoraHacks, buffer |
 
 **Pace:** ALL 6 contract phases completed in Day 1 (originally planned for 14+ days). Full privacy loop (deposit → transfer → withdraw), shielded AMM (deposit → swap → withdraw), prediction market (create → bet → resolve → claim), AND private voting (create → vote → tally) all operational. 183 tests passing. All 3 arms complete — "Winning Submission" contract scope achieved. **Day 2:** All 7 contracts declared and deployed to Starknet Sepolia testnet. Deployment addresses saved to `.env`. **Full frontend built same day:** Next.js 16 App Router, dark theme, Starknet wallet connection (Argent X + Braavos), all 7 pages implemented with contract interaction, Poseidon commitment generation, localStorage secret management, transaction toast notifications. Build passes clean. **Day 3:** Major privacy overhaul — replaced flat commitment storage with incremental Merkle tree (depth 20), switched from BN254 Poseidon to Stark-field Poseidon, added server-side event fetching via API route, implemented DEMO_MODE circuit bypass, relayer-based two-step withdraw flow, migrated RPC from dead BlastAPI to Alchemy v0.8. **First successful deposit → prepare_withdraw → claim_withdrawal confirmed on Sepolia and visible on Voyager explorer.** **Day 3+ (Multi-Asset + Private Execute):** Two major features shipped: (1) Multi-Asset Shielded Pool — ShieldedPool now accepts ANY ERC20 token (removed single btc_token dependency, added per-token `token_balances` map, 4-input Poseidon commitment with token_address). (2) Cross-Contract Private Composability via `private_execute` — users can interact with ANY external Starknet contract using shielded funds, pool acts as private proxy (ZK proof → nullifier → approve → external call → optional change commitment). All pool tests rewritten for MockGroth16Verifier — 75 pool-related tests passing. New MockERC20 "DEMO" token deployed for demoing custom token deposits. Frontend updated with 4-token deposit selector (mBTC, mSTRK, DEMO, Custom ERC20 address field) and new Private Execute page. All contracts redeployed to Sepolia.
 
-**Contract scope:** Multi-asset pool + private execute shipped. Frontend polish and E2E testing are the priority. Hard cutoff Feb 15 for video script lock.
+**Contract scope:** Multi-asset pool + private execute shipped. ✅ CONTRACTS COMPLETE.
+
+**Frontend scope (Day 6+):**
+- Landing page needed (currently just redirects to /deposit)
+- Copy-trading prevention messaging for /predict (Teddy's key feedback)
+- Voting page needs proposals list + results display
+- Dashboard Activity tab is empty
+- Pre-populate prediction markets for demo
+
+**Hard cutoff:** Feb 15 for video script lock.
 
 ### Deployed Contract Addresses (Starknet Sepolia) — v2 (Multi-Asset)
 ```
