@@ -2,171 +2,202 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, FileText, Shield, Eye, Zap, Lock } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { ArrowRight, ArrowUpRight, Shield, Eye, Zap, Lock, Fingerprint, Network } from "lucide-react";
+import { useEffect, useRef, useState, useCallback } from "react";
 
-// Floating particles component for atmosphere
-function FloatingParticles() {
+// Morphing gradient blob
+function MorphingBlob() {
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {[...Array(30)].map((_, i) => (
-        <div
-          key={i}
-          className="absolute rounded-full bg-white/20"
-          style={{
-            width: Math.random() * 3 + 1 + "px",
-            height: Math.random() * 3 + 1 + "px",
-            left: Math.random() * 100 + "%",
-            top: Math.random() * 100 + "%",
-            animation: `float-particle ${15 + Math.random() * 20}s linear infinite`,
-            animationDelay: `-${Math.random() * 20}s`,
-            opacity: Math.random() * 0.5 + 0.1,
-          }}
-        />
-      ))}
+      <div
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] opacity-30"
+        style={{
+          background: "radial-gradient(circle, rgba(139, 140, 255, 0.4) 0%, rgba(99, 102, 241, 0.2) 40%, transparent 70%)",
+          filter: "blur(80px)",
+          animation: "morphBlob 20s ease-in-out infinite",
+        }}
+      />
+      <div
+        className="absolute top-1/3 right-1/4 w-[500px] h-[500px] opacity-20"
+        style={{
+          background: "radial-gradient(circle, rgba(236, 72, 153, 0.3) 0%, transparent 60%)",
+          filter: "blur(60px)",
+          animation: "morphBlob 15s ease-in-out infinite reverse",
+        }}
+      />
     </div>
   );
 }
 
-// Animated text reveal component
-function RevealText({
-  children,
-  delay = 0,
-  className = "",
-}: {
-  children: React.ReactNode;
-  delay?: number;
-  className?: string;
-}) {
+// Custom cursor follower
+function CursorGlow() {
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      setPosition({ x: e.clientX, y: e.clientY });
+      setIsVisible(true);
+    };
+    const handleMouseLeave = () => setIsVisible(false);
+
+    window.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseleave", handleMouseLeave);
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseleave", handleMouseLeave);
+    };
+  }, []);
+
+  if (typeof window === "undefined") return null;
+
   return (
-    <span
-      className={`inline-block overflow-hidden ${className}`}
-      style={{ animationDelay: `${delay}ms` }}
-    >
-      <span
-        className="inline-block animate-text-reveal"
-        style={{ animationDelay: `${delay}ms` }}
-      >
-        {children}
-      </span>
+    <div
+      className="fixed pointer-events-none z-[100] transition-opacity duration-300 hidden md:block"
+      style={{
+        left: position.x - 200,
+        top: position.y - 200,
+        width: 400,
+        height: 400,
+        background: "radial-gradient(circle, rgba(139, 140, 255, 0.08) 0%, transparent 60%)",
+        opacity: isVisible ? 1 : 0,
+      }}
+    />
+  );
+}
+
+// Animated counter with scroll trigger
+function AnimatedNumber({ value, suffix = "", delay = 0 }: { value: number; suffix?: string; delay?: number }) {
+  const [count, setCount] = useState(0);
+  const [hasAnimated, setHasAnimated] = useState(false);
+  const ref = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !hasAnimated) {
+          setHasAnimated(true);
+          setTimeout(() => {
+            let start = 0;
+            const duration = 2000;
+            const startTime = performance.now();
+            const animate = (currentTime: number) => {
+              const elapsed = currentTime - startTime;
+              const progress = Math.min(elapsed / duration, 1);
+              const eased = 1 - Math.pow(1 - progress, 4);
+              setCount(Math.floor(eased * value));
+              if (progress < 1) requestAnimationFrame(animate);
+            };
+            requestAnimationFrame(animate);
+          }, delay);
+        }
+      },
+      { threshold: 0.5 }
+    );
+    if (ref.current) observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, [value, delay, hasAnimated]);
+
+  return (
+    <span ref={ref}>
+      {count}
+      {suffix}
     </span>
   );
 }
 
-// Feature card component
-function FeatureCard({
-  icon: Icon,
+// Magnetic hover effect hook
+function useMagneticHover(strength = 0.3) {
+  const ref = useRef<HTMLElement>(null);
+  const [transform, setTransform] = useState({ x: 0, y: 0 });
+
+  const handleMouseMove = useCallback(
+    (e: MouseEvent) => {
+      if (!ref.current) return;
+      const rect = ref.current.getBoundingClientRect();
+      const x = (e.clientX - rect.left - rect.width / 2) * strength;
+      const y = (e.clientY - rect.top - rect.height / 2) * strength;
+      setTransform({ x, y });
+    },
+    [strength]
+  );
+
+  const handleMouseLeave = useCallback(() => {
+    setTransform({ x: 0, y: 0 });
+  }, []);
+
+  return { ref, transform, handleMouseMove, handleMouseLeave };
+}
+
+// Feature card with number
+function FeatureBlock({
+  number,
   title,
   description,
-  delay,
+  icon: Icon,
 }: {
-  icon: React.ElementType;
+  number: string;
   title: string;
   description: string;
-  delay: number;
+  icon: React.ElementType;
 }) {
   return (
-    <div
-      className="group relative p-6 rounded-2xl bg-white/[0.02] border border-white/[0.05] backdrop-blur-sm hover:bg-white/[0.04] hover:border-white/[0.1] transition-all duration-500 hover:translate-y-[-4px] animate-fade-in-up opacity-0"
-      style={{ animationDelay: `${delay}ms`, animationFillMode: "forwards" }}
-    >
-      {/* Glow effect on hover */}
-      <div
-        className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-        style={{
-          background:
-            "radial-gradient(circle at 50% 0%, rgba(139, 140, 255, 0.1) 0%, transparent 70%)",
-        }}
-      />
+    <div className="group relative min-w-[340px] md:min-w-[400px] p-8 md:p-10">
+      {/* Background */}
+      <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-white/[0.03] to-transparent border border-white/[0.06] group-hover:border-white/[0.12] group-hover:from-white/[0.05] transition-all duration-500" />
+
+      {/* Hover glow */}
+      <div className="absolute inset-0 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" style={{
+        background: "radial-gradient(circle at 50% 0%, rgba(139, 140, 255, 0.15) 0%, transparent 60%)",
+      }} />
 
       <div className="relative z-10">
-        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#8B8CFF]/20 to-[#8B8CFF]/5 flex items-center justify-center mb-4 border border-[#8B8CFF]/20 group-hover:border-[#8B8CFF]/40 transition-colors duration-300">
-          <Icon className="w-5 h-5 text-[#8B8CFF]" />
+        {/* Large number */}
+        <span className="block font-serif text-[120px] md:text-[150px] leading-none text-white/[0.03] group-hover:text-white/[0.06] transition-colors duration-500 -mb-16 md:-mb-20">
+          {number}
+        </span>
+
+        {/* Icon */}
+        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#8B8CFF]/20 to-[#8B8CFF]/5 flex items-center justify-center mb-6 border border-[#8B8CFF]/20 group-hover:border-[#8B8CFF]/40 group-hover:scale-110 transition-all duration-300">
+          <Icon className="w-6 h-6 text-[#8B8CFF]" />
         </div>
-        <h3 className="font-sans text-lg font-medium text-white mb-2">
+
+        {/* Content */}
+        <h3 className="font-sans text-xl md:text-2xl font-medium text-white mb-3 group-hover:translate-x-1 transition-transform duration-300">
           {title}
         </h3>
-        <p className="font-sans text-sm text-white/50 leading-relaxed">
+        <p className="font-sans text-base text-white/40 leading-relaxed max-w-[300px] group-hover:text-white/50 transition-colors duration-300">
           {description}
         </p>
+
+        {/* Learn more link */}
+        <div className="mt-6 flex items-center gap-2 text-[#8B8CFF]/60 group-hover:text-[#8B8CFF] transition-colors duration-300">
+          <span className="text-sm font-medium">Learn more</span>
+          <ArrowUpRight className="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform duration-300" />
+        </div>
       </div>
     </div>
   );
 }
 
-// Magnetic button effect
-function MagneticButton({
-  children,
-  href,
-  variant = "primary",
-}: {
-  children: React.ReactNode;
-  href: string;
-  variant?: "primary" | "secondary";
-}) {
-  const buttonRef = useRef<HTMLAnchorElement>(null);
-  const [position, setPosition] = useState({ x: 0, y: 0 });
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!buttonRef.current) return;
-    const rect = buttonRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left - rect.width / 2;
-    const y = e.clientY - rect.top - rect.height / 2;
-    setPosition({ x: x * 0.15, y: y * 0.15 });
-  };
-
-  const handleMouseLeave = () => {
-    setPosition({ x: 0, y: 0 });
-  };
-
-  const baseStyles =
-    "relative inline-flex items-center justify-center gap-2 px-8 py-4 font-sans font-medium rounded-full transition-all duration-300 overflow-hidden";
-
-  const variants = {
-    primary: "bg-white text-black hover:shadow-[0_0_40px_rgba(255,255,255,0.3)]",
-    secondary:
-      "bg-white/[0.03] hover:bg-white/[0.06] backdrop-blur-md border border-white/10 hover:border-white/20 text-white",
-  };
-
+// Process step
+function ProcessStep({ number, title, description, isLast = false }: { number: string; title: string; description: string; isLast?: boolean }) {
   return (
-    <Link
-      ref={buttonRef}
-      href={href}
-      className={`${baseStyles} ${variants[variant]}`}
-      onMouseMove={handleMouseMove}
-      onMouseLeave={handleMouseLeave}
-      style={{
-        transform: `translate(${position.x}px, ${position.y}px)`,
-      }}
-    >
-      {variant === "primary" && (
-        <span className="absolute inset-0 bg-gradient-to-r from-[#8B8CFF] to-[#6366f1] opacity-0 hover:opacity-100 transition-opacity duration-300" />
-      )}
-      <span className="relative z-10 flex items-center gap-2">{children}</span>
-    </Link>
-  );
-}
-
-// Stats counter
-function StatCounter({
-  value,
-  label,
-  delay,
-}: {
-  value: string;
-  label: string;
-  delay: number;
-}) {
-  return (
-    <div
-      className="text-center animate-fade-in-up opacity-0"
-      style={{ animationDelay: `${delay}ms`, animationFillMode: "forwards" }}
-    >
-      <div className="font-serif text-4xl md:text-5xl text-white mb-1">
-        {value}
+    <div className="relative flex gap-6 md:gap-8">
+      {/* Timeline */}
+      <div className="flex flex-col items-center">
+        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#8B8CFF] to-[#6366f1] flex items-center justify-center text-white font-mono text-sm font-bold shrink-0">
+          {number}
+        </div>
+        {!isLast && (
+          <div className="w-px h-full bg-gradient-to-b from-[#8B8CFF]/40 to-transparent min-h-[80px]" />
+        )}
       </div>
-      <div className="font-sans text-sm text-white/40 uppercase tracking-wider">
-        {label}
+
+      {/* Content */}
+      <div className="pb-12">
+        <h3 className="font-sans text-xl md:text-2xl font-medium text-white mb-2">{title}</h3>
+        <p className="font-sans text-white/40 leading-relaxed max-w-md">{description}</p>
       </div>
     </div>
   );
@@ -174,6 +205,8 @@ function StatCounter({
 
 export default function Home() {
   const [scrollY, setScrollY] = useState(0);
+  const featuresRef = useRef<HTMLDivElement>(null);
+  const [featureScroll, setFeatureScroll] = useState(0);
 
   useEffect(() => {
     const handleScroll = () => setScrollY(window.scrollY);
@@ -181,468 +214,407 @@ export default function Home() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  // Horizontal scroll for features
+  const scrollFeatures = (direction: "left" | "right") => {
+    if (!featuresRef.current) return;
+    const scrollAmount = 420;
+    const newScroll = direction === "left"
+      ? Math.max(0, featureScroll - scrollAmount)
+      : featureScroll + scrollAmount;
+    featuresRef.current.scrollTo({ left: newScroll, behavior: "smooth" });
+    setFeatureScroll(newScroll);
+  };
+
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#030305] font-sans">
-      {/* Noise texture overlay */}
+    <main className="relative min-h-screen overflow-x-hidden bg-[#030305] font-sans">
+      <CursorGlow />
+
+      {/* Noise texture */}
       <div
-        className="fixed inset-0 pointer-events-none z-50 opacity-[0.015]"
+        className="fixed inset-0 pointer-events-none z-50 opacity-[0.02]"
         style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
+          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
         }}
       />
 
-
-      {/* Hero Section */}
-      <section className="relative min-h-screen">
-        {/* Hero Image Container with parallax */}
+      {/* HERO SECTION */}
+      <section className="relative min-h-screen overflow-hidden">
+        {/* Background image with parallax */}
         <div
           className="absolute inset-0 w-full h-full"
-          style={{
-            transform: `translateY(${scrollY * 0.3}px)`,
-          }}
+          style={{ transform: `translateY(${scrollY * 0.4}px) scale(1.1)` }}
         >
           <Image
             src="/hero.png"
             alt="Lisan Hero"
             fill
             priority
-            className="object-cover object-center scale-110"
+            className="object-cover object-center"
           />
 
-          {/* Vignette effect */}
-          <div
-            className="absolute inset-0"
-            style={{
-              background:
-                "radial-gradient(ellipse at center, transparent 0%, rgba(3,3,5,0.4) 50%, rgba(3,3,5,0.95) 100%)",
-            }}
-          />
-
-          {/* Bottom gradient fade */}
-          <div
-            className="absolute bottom-0 left-0 right-0 h-[70%]"
-            style={{
-              background:
-                "linear-gradient(to bottom, transparent 0%, rgba(3,3,5,0.3) 30%, rgba(3,3,5,0.7) 50%, rgba(3,3,5,0.95) 70%, #030305 100%)",
-            }}
-          />
-
-          {/* Side gradients for cinematic feel */}
-          <div
-            className="absolute inset-y-0 left-0 w-1/4"
-            style={{
-              background:
-                "linear-gradient(to right, rgba(3,3,5,0.8) 0%, transparent 100%)",
-            }}
-          />
-          <div
-            className="absolute inset-y-0 right-0 w-1/4"
-            style={{
-              background:
-                "linear-gradient(to left, rgba(3,3,5,0.8) 0%, transparent 100%)",
-            }}
-          />
+          {/* Cinematic overlays */}
+          <div className="absolute inset-0 bg-gradient-to-b from-[#030305]/60 via-transparent to-[#030305]" />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#030305]/80 via-transparent to-[#030305]/80" />
+          <div className="absolute inset-0" style={{
+            background: "radial-gradient(ellipse 80% 50% at 50% 50%, transparent 0%, #030305 100%)",
+          }} />
         </div>
 
-        {/* Floating particles */}
-        <FloatingParticles />
-
-        {/* Ambient glow orbs */}
-        <div
-          className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full animate-pulse-glow pointer-events-none"
-          style={{
-            background:
-              "radial-gradient(circle, rgba(139, 140, 255, 0.15) 0%, transparent 70%)",
-            filter: "blur(60px)",
-          }}
-        />
-        <div
-          className="absolute bottom-1/3 right-1/4 w-72 h-72 rounded-full animate-pulse-glow pointer-events-none"
-          style={{
-            background:
-              "radial-gradient(circle, rgba(99, 102, 241, 0.1) 0%, transparent 70%)",
-            filter: "blur(50px)",
-            animationDelay: "2s",
-          }}
-        />
+        <MorphingBlob />
 
         {/* Navigation */}
-        <nav
-          className="relative z-20 flex items-center justify-between px-6 md:px-12 py-6 animate-fade-in-up"
-          style={{ animationDelay: "100ms" }}
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#8B8CFF] to-[#6366f1] flex items-center justify-center">
+        <nav className="relative z-30 flex items-center justify-between px-6 md:px-12 lg:px-20 py-6 animate-fade-in-up" style={{ animationDelay: "100ms" }}>
+          <Link href="/" className="flex items-center gap-3 group">
+            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#8B8CFF] to-[#6366f1] flex items-center justify-center group-hover:scale-105 transition-transform duration-300">
               <Shield className="w-5 h-5 text-white" />
             </div>
-            <span className="font-serif text-2xl text-white tracking-tight">
-              Lisan
-            </span>
-          </div>
+            <span className="font-serif text-2xl text-white tracking-tight">Lisan</span>
+          </Link>
 
-          <div className="hidden md:flex items-center gap-8">
-            <Link
-              href="#features"
-              className="font-sans text-sm text-white/60 hover:text-white transition-colors duration-300"
-            >
-              Features
-            </Link>
-            <Link
-              href="#how-it-works"
-              className="font-sans text-sm text-white/60 hover:text-white transition-colors duration-300"
-            >
-              How it Works
-            </Link>
-            <Link
-              href="#"
-              className="font-sans text-sm text-white/60 hover:text-white transition-colors duration-300"
-            >
-              Docs
-            </Link>
+          <div className="hidden lg:flex items-center gap-10">
+            {["Features", "How it Works", "Docs", "Community"].map((item) => (
+              <Link
+                key={item}
+                href={`#${item.toLowerCase().replace(" ", "-")}`}
+                className="relative font-sans text-sm text-white/50 hover:text-white transition-colors duration-300 group"
+              >
+                {item}
+                <span className="absolute -bottom-1 left-0 w-0 h-px bg-[#8B8CFF] group-hover:w-full transition-all duration-300" />
+              </Link>
+            ))}
           </div>
 
           <Link
             href="/deposit"
-            className="hidden md:inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white/[0.05] hover:bg-white/[0.1] border border-white/10 hover:border-white/20 text-white text-sm font-sans font-medium transition-all duration-300"
+            className="group flex items-center gap-2 px-6 py-3 rounded-full bg-white text-black text-sm font-sans font-medium hover:bg-[#8B8CFF] hover:text-white transition-all duration-300"
           >
-            Launch App
-            <ArrowRight className="w-4 h-4" />
+            <span>Launch App</span>
+            <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
           </Link>
         </nav>
 
-        {/* Hero Content */}
-        <div className="relative z-10 flex flex-col items-center justify-center min-h-[calc(100vh-100px)] pb-32 px-6">
-          {/* Badge */}
-          <div
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#8B8CFF]/10 border border-[#8B8CFF]/20 mb-8 animate-fade-in-up opacity-0"
-            style={{ animationDelay: "200ms", animationFillMode: "forwards" }}
-          >
-            <div className="w-2 h-2 rounded-full bg-[#8B8CFF] animate-pulse" />
-            <span className="font-sans text-sm text-[#8B8CFF]">
-              Now Live on Starknet Mainnet
-            </span>
-          </div>
+        {/* Hero content - asymmetric layout */}
+        <div className="relative z-20 min-h-[calc(100vh-100px)] flex flex-col justify-center px-6 md:px-12 lg:px-20 pb-20">
+          <div className="max-w-7xl mx-auto w-full">
+            {/* Status badge */}
+            <div className="inline-flex items-center gap-3 px-4 py-2 rounded-full bg-white/[0.03] border border-white/[0.08] mb-8 animate-fade-in-up opacity-0" style={{ animationDelay: "200ms", animationFillMode: "forwards" }}>
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400" />
+              </span>
+              <span className="font-sans text-sm text-white/70">Live on Starknet Mainnet</span>
+            </div>
 
-          {/* Hero Text */}
-          <div className="text-center max-w-5xl">
-            <h1 className="font-serif text-white tracking-tight leading-[0.95]">
-              <div className="overflow-hidden">
-                <RevealText delay={300}>
-                  <span className="block text-[2.8rem] xs:text-5xl sm:text-6xl md:text-7xl lg:text-8xl">
+            {/* Main headline - large and dramatic */}
+            <div className="grid lg:grid-cols-12 gap-8 lg:gap-4 items-end">
+              <div className="lg:col-span-8">
+                <h1 className="font-serif text-white leading-[0.95] tracking-tight">
+                  <span className="block text-[2.5rem] sm:text-[3.5rem] md:text-[4.5rem] lg:text-[5.5rem] animate-fade-in-up opacity-0" style={{ animationDelay: "300ms", animationFillMode: "forwards" }}>
                     Do anything on
                   </span>
-                </RevealText>
-              </div>
-              <div className="overflow-hidden">
-                <RevealText delay={400}>
-                  <span className="block text-[2.8rem] xs:text-5xl sm:text-6xl md:text-7xl lg:text-8xl bg-gradient-to-r from-white via-[#8B8CFF] to-white bg-clip-text text-transparent animate-gradient">
+                  <span
+                    className="block text-[2.5rem] sm:text-[3.5rem] md:text-[4.5rem] lg:text-[5.5rem] animate-fade-in-up opacity-0"
+                    style={{
+                      animationDelay: "400ms",
+                      animationFillMode: "forwards",
+                      background: "linear-gradient(90deg, #8B8CFF, #a78bfa, #8B8CFF)",
+                      WebkitBackgroundClip: "text",
+                      WebkitTextFillColor: "transparent",
+                      backgroundClip: "text",
+                      backgroundSize: "200% auto",
+                    }}
+                  >
                     Starknet.
                   </span>
-                </RevealText>
-              </div>
-              <div className="overflow-hidden mt-2">
-                <RevealText delay={500}>
-                  <span className="block text-[2.5rem] xs:text-4xl sm:text-5xl md:text-6xl lg:text-7xl italic font-light text-white/80">
-                    No one knows
+                  <span className="block text-[2.2rem] sm:text-[3rem] md:text-[4rem] lg:text-[5rem] italic font-light text-white/70 mt-2 animate-fade-in-up opacity-0" style={{ animationDelay: "500ms", animationFillMode: "forwards" }}>
+                    No one knows it&apos;s you.
                   </span>
-                </RevealText>
+                </h1>
+
+                {/* Subheadline */}
+                <p className="mt-8 text-lg md:text-xl text-white/40 font-sans font-light max-w-lg leading-relaxed animate-fade-in-up opacity-0" style={{ animationDelay: "600ms", animationFillMode: "forwards" }}>
+  Tornado Cash hid transfers <br /> We hide everything                </p>
               </div>
-              <div className="overflow-hidden">
-                <RevealText delay={600}>
-                  <span className="block text-[3rem] xs:text-5xl sm:text-6xl md:text-7xl lg:text-8xl italic font-light text-white/70">
-                    it&apos;s you.
-                  </span>
-                </RevealText>
+
+              {/* Right side stats */}
+              <div className="lg:col-span-4 flex flex-col gap-6 lg:items-end animate-fade-in-up opacity-0" style={{ animationDelay: "700ms", animationFillMode: "forwards" }}>
+                <div className="text-right">
+                  <div className="font-serif text-5xl md:text-6xl text-white">
+                    <AnimatedNumber value={2} suffix=".4M+" />
+                  </div>
+                  <div className="font-sans text-sm text-white/40 uppercase tracking-wider mt-1">TVL Protected</div>
+                </div>
+                <div className="text-right">
+                  <div className="font-serif text-5xl md:text-6xl text-white">
+                    <AnimatedNumber value={12} suffix="K+" delay={200} />
+                  </div>
+                  <div className="font-sans text-sm text-white/40 uppercase tracking-wider mt-1">Private Transactions</div>
+                </div>
               </div>
-            </h1>
+            </div>
 
-            <p
-              className="mt-10 text-lg md:text-xl text-white/50 font-sans font-light max-w-2xl mx-auto leading-relaxed animate-fade-in-up opacity-0"
-              style={{ animationDelay: "800ms", animationFillMode: "forwards" }}
-            >
-              The privacy-first execution layer for Starknet. Execute
-              transactions privately through zero-knowledge proofs, keeping your
-              identity hidden while maintaining full control.
-            </p>
+            {/* CTA buttons */}
+            <div className="flex flex-wrap items-center gap-4 mt-12 animate-fade-in-up opacity-0" style={{ animationDelay: "800ms", animationFillMode: "forwards" }}>
+              <Link
+                href="/deposit"
+                className="group relative inline-flex items-center gap-3 px-8 py-4 rounded-full bg-white text-black font-sans font-medium overflow-hidden transition-all duration-300 hover:shadow-[0_0_50px_rgba(139,140,255,0.4)]"
+              >
+                <span className="relative z-10">Enter App</span>
+                <ArrowRight className="relative z-10 w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" />
+                <div className="absolute inset-0 bg-gradient-to-r from-[#8B8CFF] to-[#a78bfa] opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              </Link>
 
-            {/* CTA Buttons */}
-            <div
-              className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-12 animate-fade-in-up opacity-0"
-              style={{ animationDelay: "1000ms", animationFillMode: "forwards" }}
-            >
-              <MagneticButton href="/deposit" variant="primary">
-                <span>Enter App</span>
-                <ArrowRight className="w-5 h-5" />
-              </MagneticButton>
-
-              <MagneticButton href="#" variant="secondary">
-                <FileText className="w-5 h-5 opacity-70" />
-                <span>Read Whitepaper</span>
-              </MagneticButton>
+              <Link
+                href="#how-it-works"
+                className="group inline-flex items-center gap-3 px-8 py-4 rounded-full border border-white/10 text-white font-sans font-medium hover:border-white/30 hover:bg-white/[0.02] transition-all duration-300"
+              >
+                <span>How it Works</span>
+                <div className="w-6 h-6 rounded-full border border-white/20 flex items-center justify-center group-hover:border-white/40 transition-colors duration-300">
+                  <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform duration-300" />
+                </div>
+              </Link>
             </div>
           </div>
 
           {/* Scroll indicator */}
-          <div
-            className="absolute bottom-12 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 animate-fade-in-up opacity-0"
-            style={{ animationDelay: "1200ms", animationFillMode: "forwards" }}
-          >
-            <span className="font-sans text-xs text-white/30 uppercase tracking-widest">
-              Scroll to explore
-            </span>
-            <div className="w-6 h-10 rounded-full border border-white/20 flex items-start justify-center p-2">
-              <div
-                className="w-1 h-2 rounded-full bg-white/50 animate-bounce"
-                style={{ animationDuration: "1.5s" }}
+          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-3 animate-fade-in-up opacity-0" style={{ animationDelay: "900ms", animationFillMode: "forwards" }}>
+            <div className="w-px h-16 bg-gradient-to-b from-transparent via-white/20 to-transparent" />
+            <span className="font-mono text-[10px] text-white/30 uppercase tracking-[0.3em]">Scroll</span>
+          </div>
+        </div>
+      </section>
+
+      {/* FEATURES - Horizontal scroll */}
+      <section id="features" className="relative z-10 py-24 md:py-32 overflow-hidden">
+        {/* Section header */}
+        <div className="max-w-7xl mx-auto px-6 md:px-12 lg:px-20 mb-12">
+          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
+            <div>
+              <span className="font-mono text-sm text-[#8B8CFF] uppercase tracking-wider">Features</span>
+              <h2 className="font-serif text-4xl md:text-5xl lg:text-6xl text-white mt-4">
+                Privacy by<br />
+                <span className="text-white/40">Design</span>
+              </h2>
+            </div>
+
+            {/* Scroll controls */}
+            <div className="flex gap-3">
+              <button
+                onClick={() => scrollFeatures("left")}
+                className="w-12 h-12 rounded-full border border-white/10 flex items-center justify-center text-white/40 hover:text-white hover:border-white/30 transition-all duration-300"
+              >
+                <ArrowRight className="w-5 h-5 rotate-180" />
+              </button>
+              <button
+                onClick={() => scrollFeatures("right")}
+                className="w-12 h-12 rounded-full border border-white/10 flex items-center justify-center text-white/40 hover:text-white hover:border-white/30 transition-all duration-300"
+              >
+                <ArrowRight className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Horizontal scrolling cards */}
+        <div
+          ref={featuresRef}
+          className="flex gap-6 overflow-x-auto scrollbar-hide px-6 md:px-12 lg:px-20 pb-4"
+          style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+        >
+          <FeatureBlock
+            number="01"
+            icon={Eye}
+            title="Anonymous Execution"
+            description="Your wallet address is never revealed on-chain. Execute any transaction while maintaining complete anonymity."
+          />
+          <FeatureBlock
+            number="02"
+            icon={Shield}
+            title="ZK-Powered Privacy"
+            description="Leveraging Starknet's native zero-knowledge proofs for cryptographic privacy guarantees."
+          />
+          <FeatureBlock
+            number="03"
+            icon={Zap}
+            title="Instant Finality"
+            description="Sub-2 second transaction finality with Starknet's STARK-based validity rollup architecture."
+          />
+          <FeatureBlock
+            number="04"
+            icon={Lock}
+            title="Self-Custodial"
+            description="Your keys, your crypto. No trusted third parties, no central points of failure."
+          />
+          <FeatureBlock
+            number="05"
+            icon={Fingerprint}
+            title="Identity Protection"
+            description="Advanced identity shielding ensures your on-chain activity can never be linked to you."
+          />
+          <FeatureBlock
+            number="06"
+            icon={Network}
+            title="Relayer Network"
+            description="Decentralized relayer network ensures transaction submission without revealing your identity."
+          />
+        </div>
+      </section>
+
+      {/* HOW IT WORKS */}
+      <section id="how-it-works" className="relative z-10 py-24 md:py-32">
+        <div className="max-w-7xl mx-auto px-6 md:px-12 lg:px-20">
+          <div className="grid lg:grid-cols-2 gap-16 lg:gap-24">
+            {/* Left - sticky header */}
+            <div className="lg:sticky lg:top-32 lg:self-start">
+              <span className="font-mono text-sm text-[#8B8CFF] uppercase tracking-wider">Process</span>
+              <h2 className="font-serif text-4xl md:text-5xl lg:text-6xl text-white mt-4 leading-tight">
+                Four steps to<br />
+                <span className="text-white/40">complete privacy</span>
+              </h2>
+              <p className="font-sans text-lg text-white/40 mt-6 leading-relaxed max-w-md">
+                Lisan makes private transactions simple. No complex setup, no technical knowledge required.
+              </p>
+
+              {/* Visual element */}
+              <div className="hidden lg:block mt-12 relative w-64 h-64">
+                <div className="absolute inset-0 rounded-full border border-[#8B8CFF]/20 animate-spin" style={{ animationDuration: "20s" }} />
+                <div className="absolute inset-4 rounded-full border border-[#8B8CFF]/10 animate-spin" style={{ animationDuration: "15s", animationDirection: "reverse" }} />
+                <div className="absolute inset-8 rounded-full border border-dashed border-[#8B8CFF]/20" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#8B8CFF]/30 to-[#6366f1]/20 flex items-center justify-center backdrop-blur-sm">
+                    <Shield className="w-8 h-8 text-white/80" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Right - steps */}
+            <div className="space-y-0">
+              <ProcessStep
+                number="01"
+                title="Connect & Deposit"
+                description="Connect your Starknet wallet and deposit assets into Lisan's shielded pool. Your deposit enters a privacy-preserving smart contract."
+              />
+              <ProcessStep
+                number="02"
+                title="Generate ZK Proof"
+                description="Locally generate a zero-knowledge proof that validates your transaction without revealing any identifying information."
+              />
+              <ProcessStep
+                number="03"
+                title="Submit via Relayer"
+                description="Your proof is submitted through our decentralized relayer network, completely breaking the link between you and the transaction."
+              />
+              <ProcessStep
+                number="04"
+                title="Execute Privately"
+                description="Your transaction executes on Starknet with full privacy. No one can trace it back to your wallet address."
+                isLast
               />
             </div>
           </div>
         </div>
       </section>
 
-      {/* Stats Section */}
-      <section className="relative z-10 py-16 border-y border-white/[0.05]">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-4">
-            <StatCounter value="$2.4M+" label="TVL Protected" delay={100} />
-            <StatCounter value="12K+" label="Private Txns" delay={200} />
-            <StatCounter value="100%" label="On-chain Privacy" delay={300} />
-            <StatCounter value="<2s" label="Finality" delay={400} />
+      {/* TESTIMONIAL / QUOTE */}
+      <section className="relative z-10 py-24 md:py-32 overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#8B8CFF]/[0.02] to-transparent" />
+
+        <div className="max-w-5xl mx-auto px-6 md:px-12 lg:px-20 text-center relative">
+          <div className="font-serif text-[120px] md:text-[200px] text-white/[0.02] absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/4 select-none">"</div>
+
+          <blockquote className="font-serif text-3xl md:text-4xl lg:text-5xl text-white leading-tight relative z-10">
+            Privacy is not about having something to hide.<br />
+            <span className="text-white/40">It&apos;s about having something to protect.</span>
+          </blockquote>
+
+          <div className="mt-10 flex items-center justify-center gap-4">
+            <div className="w-12 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+            <span className="font-sans text-sm text-white/40 uppercase tracking-wider">The Lisan Philosophy</span>
+            <div className="w-12 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
           </div>
         </div>
       </section>
 
-      {/* Features Section */}
-      <section id="features" className="relative z-10 py-24 md:py-32">
-        <div className="max-w-6xl mx-auto px-6">
-          {/* Section header */}
-          <div className="text-center mb-16">
-            <h2
-              className="font-serif text-3xl md:text-5xl text-white mb-4 animate-fade-in-up opacity-0"
-              style={{ animationFillMode: "forwards" }}
-            >
-              Privacy by Design
-            </h2>
-            <p
-              className="font-sans text-lg text-white/40 max-w-xl mx-auto animate-fade-in-up opacity-0"
-              style={{ animationDelay: "100ms", animationFillMode: "forwards" }}
-            >
-              Built from the ground up with zero-knowledge cryptography to
-              ensure your transactions remain yours alone.
-            </p>
-          </div>
+      {/* CTA SECTION */}
+      <section className="relative z-10 py-24 md:py-40">
+        <div className="max-w-7xl mx-auto px-6 md:px-12 lg:px-20">
+          <div className="relative rounded-[40px] overflow-hidden">
+            {/* Background */}
+            <div className="absolute inset-0 bg-gradient-to-br from-[#8B8CFF]/20 via-[#6366f1]/10 to-transparent" />
+            <div className="absolute inset-0 backdrop-blur-3xl" />
+            <div className="absolute inset-0 border border-white/[0.08] rounded-[40px]" />
 
-          {/* Feature cards grid */}
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <FeatureCard
-              icon={Eye}
-              title="Anonymous Execution"
-              description="Your wallet address is never revealed on-chain. Execute any transaction while maintaining complete anonymity."
-              delay={200}
-            />
-            <FeatureCard
-              icon={Shield}
-              title="ZK-Powered Privacy"
-              description="Leveraging Starknet's native zero-knowledge proofs for cryptographic privacy guarantees."
-              delay={300}
-            />
-            <FeatureCard
-              icon={Zap}
-              title="Instant Finality"
-              description="Sub-2 second transaction finality with Starknet's STARK-based validity rollup architecture."
-              delay={400}
-            />
-            <FeatureCard
-              icon={Lock}
-              title="Self-Custodial"
-              description="Your keys, your crypto. No trusted third parties, no central points of failure."
-              delay={500}
-            />
-            <FeatureCard
-              icon={FileText}
-              title="Any Contract"
-              description="Interact with any Starknet smart contract privately. DeFi, NFTs, DAOs — all shielded."
-              delay={600}
-            />
-            <FeatureCard
-              icon={Shield}
-              title="Relayer Network"
-              description="Decentralized relayer network ensures transaction submission without revealing your identity."
-              delay={700}
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* How it Works Section */}
-      <section
-        id="how-it-works"
-        className="relative z-10 py-24 md:py-32 border-t border-white/[0.05]"
-      >
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
-            {/* Left: Text content */}
-            <div>
-              <h2
-                className="font-serif text-3xl md:text-5xl text-white mb-6 animate-fade-in-up opacity-0"
-                style={{ animationFillMode: "forwards" }}
-              >
-                How Lisan Works
+            <div className="relative z-10 py-20 md:py-28 px-8 md:px-16 text-center">
+              <h2 className="font-serif text-4xl md:text-6xl lg:text-7xl text-white mb-6">
+                Ready to go private?
               </h2>
-              <div className="space-y-6">
-                {[
-                  {
-                    step: "01",
-                    title: "Deposit to Shield",
-                    desc: "Move assets into your shielded balance using our privacy pool.",
-                  },
-                  {
-                    step: "02",
-                    title: "Generate Proof",
-                    desc: "Create a zero-knowledge proof of your transaction locally.",
-                  },
-                  {
-                    step: "03",
-                    title: "Submit via Relayer",
-                    desc: "A relayer submits your transaction, hiding your identity.",
-                  },
-                  {
-                    step: "04",
-                    title: "Execute Privately",
-                    desc: "Your transaction executes on-chain with full privacy.",
-                  },
-                ].map((item, i) => (
-                  <div
-                    key={item.step}
-                    className="flex gap-4 animate-fade-in-up opacity-0"
-                    style={{
-                      animationDelay: `${(i + 1) * 150}ms`,
-                      animationFillMode: "forwards",
-                    }}
-                  >
-                    <span className="font-mono text-sm text-[#8B8CFF]/60 font-medium shrink-0 w-8">
-                      {item.step}
-                    </span>
-                    <div>
-                      <h3 className="font-sans text-lg text-white font-medium mb-1">
-                        {item.title}
-                      </h3>
-                      <p className="font-sans text-white/40">{item.desc}</p>
-                    </div>
-                  </div>
+              <p className="font-sans text-lg md:text-xl text-white/50 max-w-xl mx-auto mb-10">
+                Join the privacy revolution on Starknet. Your first transaction is just a click away.
+              </p>
+
+              <Link
+                href="/deposit"
+                className="group inline-flex items-center gap-3 px-10 py-5 rounded-full bg-white text-black font-sans font-semibold text-lg hover:shadow-[0_0_60px_rgba(255,255,255,0.3)] transition-all duration-300"
+              >
+                <span>Start Now</span>
+                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" />
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* FOOTER */}
+      <footer className="relative z-10 py-16 border-t border-white/[0.05]">
+        <div className="max-w-7xl mx-auto px-6 md:px-12 lg:px-20">
+          <div className="grid md:grid-cols-4 gap-12 md:gap-8">
+            {/* Brand */}
+            <div className="md:col-span-2">
+              <Link href="/" className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#8B8CFF] to-[#6366f1] flex items-center justify-center">
+                  <Shield className="w-5 h-5 text-white" />
+                </div>
+                <span className="font-serif text-2xl text-white">Lisan</span>
+              </Link>
+              <p className="font-sans text-white/40 mt-4 max-w-sm leading-relaxed">
+                The privacy-first execution layer for Starknet. Built for those who believe privacy is a right, not a privilege.
+              </p>
+            </div>
+
+            {/* Links */}
+            <div>
+              <h4 className="font-sans text-sm text-white/60 uppercase tracking-wider mb-4">Product</h4>
+              <div className="space-y-3">
+                {["Features", "How it Works", "Security", "Roadmap"].map((link) => (
+                  <Link key={link} href="#" className="block font-sans text-white/40 hover:text-white transition-colors duration-300">
+                    {link}
+                  </Link>
                 ))}
               </div>
             </div>
 
-            {/* Right: Visual diagram placeholder */}
-            <div
-              className="relative aspect-square rounded-3xl overflow-hidden bg-gradient-to-br from-[#8B8CFF]/10 to-transparent border border-white/[0.05] animate-fade-in-up opacity-0"
-              style={{ animationDelay: "300ms", animationFillMode: "forwards" }}
-            >
-              {/* Decorative elements */}
-              <div
-                className="absolute inset-0 flex items-center justify-center"
-                style={{
-                  background:
-                    "radial-gradient(circle at 30% 30%, rgba(139, 140, 255, 0.1) 0%, transparent 50%)",
-                }}
-              >
-                <div className="relative w-48 h-48">
-                  {/* Animated rings */}
-                  {[...Array(3)].map((_, i) => (
-                    <div
-                      key={i}
-                      className="absolute inset-0 rounded-full border border-[#8B8CFF]/20"
-                      style={{
-                        transform: `scale(${1 + i * 0.4})`,
-                        opacity: 1 - i * 0.3,
-                        animation: `pulse-glow ${3 + i}s ease-in-out infinite`,
-                        animationDelay: `${i * 0.5}s`,
-                      }}
-                    />
-                  ))}
-                  {/* Center icon */}
-                  <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-[#8B8CFF]/30 to-[#6366f1]/20 rounded-full backdrop-blur-sm">
-                    <Shield className="w-16 h-16 text-white/80" />
-                  </div>
-                </div>
+            <div>
+              <h4 className="font-sans text-sm text-white/60 uppercase tracking-wider mb-4">Community</h4>
+              <div className="space-y-3">
+                {["Twitter", "Discord", "GitHub", "Documentation"].map((link) => (
+                  <Link key={link} href="#" className="block font-sans text-white/40 hover:text-white transition-colors duration-300">
+                    {link}
+                  </Link>
+                ))}
               </div>
-
-              {/* Grid pattern overlay */}
-              <div
-                className="absolute inset-0 opacity-[0.03]"
-                style={{
-                  backgroundImage: `linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)`,
-                  backgroundSize: "40px 40px",
-                }}
-              />
             </div>
           </div>
-        </div>
-      </section>
 
-      {/* CTA Section */}
-      <section className="relative z-10 py-24 md:py-32">
-        <div className="max-w-4xl mx-auto px-6 text-center">
-          <h2
-            className="font-serif text-4xl md:text-6xl text-white mb-6 animate-fade-in-up opacity-0"
-            style={{ animationFillMode: "forwards" }}
-          >
-            Ready for Privacy?
-          </h2>
-          <p
-            className="font-sans text-lg text-white/40 mb-10 max-w-xl mx-auto animate-fade-in-up opacity-0"
-            style={{ animationDelay: "100ms", animationFillMode: "forwards" }}
-          >
-            Join thousands of users already transacting privately on Starknet.
-          </p>
-          <div
-            className="animate-fade-in-up opacity-0"
-            style={{ animationDelay: "200ms", animationFillMode: "forwards" }}
-          >
-            <MagneticButton href="/deposit" variant="primary">
-              <span>Get Started</span>
-              <ArrowRight className="w-5 h-5" />
-            </MagneticButton>
-          </div>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="relative z-10 py-12 border-t border-white/[0.05]">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#8B8CFF] to-[#6366f1] flex items-center justify-center">
-                <Shield className="w-4 h-4 text-white" />
-              </div>
-              <span className="font-serif text-xl text-white">Lisan</span>
-            </div>
-
-            <div className="flex items-center gap-8">
-              <Link
-                href="#"
-                className="font-sans text-sm text-white/40 hover:text-white transition-colors"
-              >
-                Documentation
-              </Link>
-              <Link
-                href="#"
-                className="font-sans text-sm text-white/40 hover:text-white transition-colors"
-              >
-                GitHub
-              </Link>
-              <Link
-                href="#"
-                className="font-sans text-sm text-white/40 hover:text-white transition-colors"
-              >
-                Twitter
-              </Link>
-            </div>
-
+          {/* Bottom */}
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4 mt-16 pt-8 border-t border-white/[0.05]">
             <p className="font-sans text-sm text-white/30">
               © 2025 Lisan. All rights reserved.
             </p>
+            <div className="flex items-center gap-6">
+              <Link href="#" className="font-sans text-sm text-white/30 hover:text-white/60 transition-colors">Privacy Policy</Link>
+              <Link href="#" className="font-sans text-sm text-white/30 hover:text-white/60 transition-colors">Terms of Service</Link>
+            </div>
           </div>
         </div>
       </footer>

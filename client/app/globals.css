@@ -380,3 +380,27 @@
   animation: pulse-glow 4s ease-in-out infinite;
 }
 
+@keyframes morphBlob {
+  0%, 100% {
+    transform: translate(-50%, -50%) scale(1) rotate(0deg);
+    border-radius: 40% 60% 60% 40% / 60% 40% 60% 40%;
+  }
+  25% {
+    transform: translate(-50%, -50%) scale(1.1) rotate(90deg);
+    border-radius: 60% 40% 40% 60% / 40% 60% 40% 60%;
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(0.95) rotate(180deg);
+    border-radius: 50% 50% 40% 60% / 60% 50% 50% 40%;
+  }
+  75% {
+    transform: translate(-50%, -50%) scale(1.05) rotate(270deg);
+    border-radius: 40% 60% 50% 50% / 50% 40% 60% 50%;
+  }
+}
+
+/* Hide scrollbar for horizontal scroll */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
