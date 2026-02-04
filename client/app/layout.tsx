@@ -17,6 +17,14 @@ const jetBrainsMono = JetBrains_Mono({
   subsets: ["latin"],
 });
 
+import { Italiana } from "next/font/google";
+
+const italiana = Italiana({
+  subsets: ["latin"],
+  variable: "--font-italiana",
+  weight: "400",
+});
+
 export const metadata: Metadata = {
   title: "Lisan Wallet — Private Execution on Starknet",
   description:
@@ -31,7 +39,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body
-        className={`${ibmPlexSans.variable} ${jetBrainsMono.variable} antialiased`}
+        className={`${ibmPlexSans.variable} ${jetBrainsMono.variable} ${italiana.variable} antialiased`}
       >
         <ThemeProvider
           attribute="class"
