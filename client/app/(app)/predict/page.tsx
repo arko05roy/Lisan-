@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ADDRESSES } from "@/lib/addresses";
 import { PREDICTION_MARKET_ABI } from "@/lib/abis";
 import { generateSecret, computeBetCommitment } from "@/lib/crypto";
-import { addNote, getBetNotes, markBetNoteClaimed, BetNote } from "@/lib/storage";
+import { addNote, getBetNotes, markBetNoteClaimed, BetNote, addMarket, getMarket } from "@/lib/storage";
 import { buildApproveCall, buildCall } from "@/lib/contracts";
 import { txToast, errorToast } from "@/components/tx-toast";
 import { uint256, hash } from "starknet";
@@ -64,6 +64,17 @@ function MarketCard({
   const [betAmount, setBetAmount] = useState("");
   const [selectedOutcome, setSelectedOutcome] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
+
+  // Get market question from storage, with fallback examples
+  const marketMetadata = getMarket(marketId);
+  const defaultQuestions = [
+    "Will BTC reach $100k by March 2026?",
+    "Will STRK hit $5 by Q2 2026?",
+    "Will Ethereum L2 TVL exceed $50B by end of year?",
+    "Will Starknet process 10M+ transactions in a single day?",
+    "Will a new L2 launch with 100k+ users in Q1 2026?",
+  ];
+  const question = marketMetadata?.question || defaultQuestions[marketId % defaultQuestions.length] || `Market #${marketId}`;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const args = [marketId.toString()] as any;
@@ -133,7 +144,7 @@ function MarketCard({
               )}
             </div>
             <h3 className="text-[15px] font-semibold text-white leading-tight">
-              {isBinary ? "Binary Market" : `${outcomes}-Outcome Market`} #{marketId}
+              {question}
             </h3>
           </div>
 
@@ -277,7 +288,7 @@ function MarketCard({
           )}
 
           <p className="text-[10px] text-white/25 text-center">
-            Private bet — only the commitment is stored on-chain
+            ZK-protected — copycats can&apos;t see your position until settlement
           </p>
         </div>
       )}
@@ -447,6 +458,9 @@ export default function PredictPage() {
       );
       const resolutionTime = Math.floor(Date.now() / 1000) + parseInt(resolutionMinutes) * 60;
 
+      // Get current market count to know the new market ID
+      const currentCount = marketCount ? Number(marketCount) : 0;
+
       const result = await sendAsync([
         buildCall(ADDRESSES.PREDICTION_MARKET, "create_market", [
           questionHash,
@@ -454,6 +468,14 @@ export default function PredictPage() {
           resolutionTime.toString(),
         ]),
       ]);
+
+      // Store market metadata locally
+      addMarket({
+        marketId: currentCount,
+        question: question,
+        createdAt: Date.now(),
+      });
+
       txToast(result.transaction_hash).success();
       setQuestion("");
       refetchCount();
@@ -606,6 +628,19 @@ export default function PredictPage() {
 
         {/* ── Markets Tab ─────────────────────────────────── */}
         <TabsContent value="markets" className="space-y-4 mt-4">
+          {/* Copy-Trading Prevention Callout */}
+          <div className="rounded-xl border border-green-500/20 bg-green-500/5 p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-green-400 font-semibold text-sm">
+                🛡️ Copy-Trading Protection
+              </span>
+            </div>
+            <p className="text-xs text-white/60">
+              On Polymarket, whales get copied instantly. Here, your positions are hidden via ZK proofs —
+              only the commitment is stored on-chain. Take positions without leaking your strategy.
+            </p>
+          </div>
+
           {totalMarkets === 0 ? (
             <div className="rounded-2xl border border-white/[0.06] bg-[#151B23] py-12 text-center">
               <p className="text-white/40">No markets yet.</p>

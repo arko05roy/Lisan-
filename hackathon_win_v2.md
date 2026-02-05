@@ -4588,8 +4588,8 @@ GO.
 | Priority | Task | Time | Status |
 |----------|------|------|--------|
 | ~~P0~~ | ~~Landing page~~ | ~~2h~~ | ✅ DONE |
-| **P0** | Copy-trading prevention messaging | 1h | ⏳ NEXT |
-| P1 | Complete voting (proposals list + results) | 2h | ⏳ |
+| ~~P0~~ | ~~Copy-trading prevention messaging~~ | ~~1h~~ | ✅ DONE |
+| **P1** | Complete voting (proposals list + results) | 2h | ⏳ NEXT |
 | P1 | Fill Activity tab | 1h | ⏳ |
 | P2 | Pre-populate prediction markets | 30m | ⏳ |
 
@@ -4602,7 +4602,7 @@ GO.
 
 ## Day 8 Targets (Feb 5)
 
-1. Add copy-trading prevention messaging to Prediction Markets page
+1. ✅ Add copy-trading prevention messaging to Prediction Markets page (DONE — ZK callout + updated bet card text)
 2. Complete voting page (proposals list + results display)
 3. Continue relayer integration with PrivatePool (fee deduction, routing)
 4. E2E test one flow on Sepolia (AMM or Predictions)

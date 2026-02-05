@@ -130,3 +130,41 @@ export function importNotes(json: string) {
   const notes = JSON.parse(json) as Note[];
   saveAllNotes(notes);
 }
+
+// Market metadata storage
+const MARKETS_KEY = "lisan_markets";
+
+export interface MarketMetadata {
+  marketId: number;
+  question: string;
+  createdAt: number;
+}
+
+function getAllMarkets(): MarketMetadata[] {
+  if (typeof window === "undefined") return [];
+  const raw = localStorage.getItem(MARKETS_KEY);
+  if (!raw) return [];
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return [];
+  }
+}
+
+function saveAllMarkets(markets: MarketMetadata[]) {
+  localStorage.setItem(MARKETS_KEY, JSON.stringify(markets));
+}
+
+export function addMarket(market: MarketMetadata) {
+  const markets = getAllMarkets();
+  markets.push(market);
+  saveAllMarkets(markets);
+}
+
+export function getMarket(marketId: number): MarketMetadata | undefined {
+  return getAllMarkets().find(m => m.marketId === marketId);
+}
+
+export function getAllMarketsMetadata(): MarketMetadata[] {
+  return getAllMarkets();
+}
