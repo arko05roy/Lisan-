@@ -70,13 +70,28 @@ export function DepositForm() {
         setLoading(true);
 
         try {
-            // Parse amount and convert to wei (handling decimals)
-            const amountFloat = parseFloat(amount);
-            if (isNaN(amountFloat) || amountFloat <= 0) {
+            // Convert amount to wei, handling decimals without floating point math
+            const trimmedAmount = amount.trim();
+            if (!trimmedAmount || trimmedAmount === "0") {
                 throw new Error("Invalid amount");
             }
-            // Convert to smallest unit (18 decimals) then to BigInt
-            const amountWei = BigInt(Math.floor(amountFloat * 1e18));
+
+            let amountWei: bigint;
+            if (trimmedAmount.includes(".")) {
+                // Handle decimal input (e.g., "1.5" -> "1500000000000000000")
+                const [integerPart, decimalPart = ""] = trimmedAmount.split(".");
+                const paddedDecimals = decimalPart.padEnd(18, "0").slice(0, 18);
+                const integerWei = BigInt(integerPart || "0") * (10n ** 18n);
+                const decimalWei = BigInt(paddedDecimals);
+                amountWei = integerWei + decimalWei;
+            } else {
+                // Handle integer input (e.g., "1" -> "1000000000000000000")
+                amountWei = BigInt(trimmedAmount) * (10n ** 18n);
+            }
+
+            if (amountWei <= 0n) {
+                throw new Error("Amount must be greater than zero");
+            }
             const secret = generateSecret();
             const nullifierSecret = generateSecret();
             const amountFelt = amountWei.toString();
