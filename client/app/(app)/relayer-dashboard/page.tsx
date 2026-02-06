@@ -218,9 +218,9 @@ export default function RelayerDashboardPage() {
 
       toast.success("Successfully registered as relayer!");
       await fetchRelayers();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Registration error:", error);
-      const msg = error?.message || error?.toString() || "Unknown error";
+      const msg = error instanceof Error ? error.message : String(error);
       toast.error(`Registration failed: ${msg.slice(0, 120)}`);
     } finally {
       setRegistering(false);
@@ -244,9 +244,9 @@ export default function RelayerDashboardPage() {
 
       toast.success("Successfully claimed earnings!");
       await fetchRelayers();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Claim error:", error);
-      const msg = error?.message || error?.toString() || "Unknown error";
+      const msg = error instanceof Error ? error.message : String(error);
       toast.error(`Claim failed: ${msg.slice(0, 120)}`);
     } finally {
       setClaiming(false);

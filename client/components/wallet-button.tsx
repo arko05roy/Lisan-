@@ -27,18 +27,25 @@ export function WalletButton() {
     );
   }
 
+  // Only show Braavos wallet
+  const braavosConnector = connectors.find((c) => c.id.toLowerCase().includes("braavos"));
+
+  if (!braavosConnector) {
+    return (
+      <Button disabled className="h-10 px-5 rounded-xl bg-white/[0.04] text-white/40 border border-white/[0.08]">
+        <Wallet className="mr-2 h-4 w-4" strokeWidth={2.5} />
+        Braavos Not Found
+      </Button>
+    );
+  }
+
   return (
-    <div className="flex gap-3">
-      {connectors.map((connector) => (
-        <Button
-          key={connector.id}
-          onClick={() => connect({ connector })}
-          className="h-10 px-5 rounded-xl bg-gradient-to-r from-[#8B8CFF] to-[#6B6DFF] hover:from-[#7B7CFF] hover:to-[#5B5DFF] text-white font-bold text-sm shadow-lg shadow-[#8B8CFF]/30 border-0 transition-all duration-200"
-        >
-          <Wallet className="mr-2 h-4 w-4" strokeWidth={2.5} />
-          Connect Wallet
-        </Button>
-      ))}
-    </div>
+    <Button
+      onClick={() => connect({ connector: braavosConnector })}
+      className="h-10 px-5 rounded-xl bg-gradient-to-r from-[#8B8CFF] to-[#6B6DFF] hover:from-[#7B7CFF] hover:to-[#5B5DFF] text-white font-bold text-sm shadow-lg shadow-[#8B8CFF]/30 border-0 transition-all duration-200"
+    >
+      <Wallet className="mr-2 h-4 w-4" strokeWidth={2.5} />
+      Connect Braavos
+    </Button>
   );
 }

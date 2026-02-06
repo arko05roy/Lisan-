@@ -3,3 +3,4 @@ export { SHIELDED_POOL_ABI } from "./shielded-pool";
 export { SHIELDED_AMM_ABI } from "./shielded-amm";
 export { PREDICTION_MARKET_ABI } from "./prediction-market";
 export { PRIVATE_VOTING_ABI } from "./private-voting";
+export { MOCK_PRAGMA_ORACLE_ABI } from "./mock-pragma-oracle";

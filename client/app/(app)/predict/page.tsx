@@ -90,6 +90,7 @@ function MarketCard({
   const bets = betCount ? Number(betCount) : 0;
   const resolved = toBool(isResolved);
   const resTime = resolutionTime ? Number(resolutionTime) * 1000 : 0;
+  // eslint-disable-next-line react-hooks/purity
   const isExpired = resTime > 0 && resTime < Date.now();
   const isBinary = outcomes === 2;
   const canResolve = isExpired && !resolved;
@@ -406,6 +407,10 @@ export default function PredictPage() {
   const [numOutcomes, setNumOutcomes] = useState("2");
   const [resolutionMinutes, setResolutionMinutes] = useState("60");
 
+  // Oracle admin
+  const [oracleMarketId, setOracleMarketId] = useState("");
+  const [oracleOutcome, setOracleOutcome] = useState("");
+
   // My Bets
   const [betNotes, setBetNotes] = useState<BetNote[]>([]);
   const [selectedBetIdx, setSelectedBetIdx] = useState<number | null>(null);
@@ -543,6 +548,8 @@ export default function PredictPage() {
       const msg = e instanceof Error ? e.message : "Failed to resolve";
       if (msg.includes("Too early to resolve") || msg.includes("too early")) {
         errorToast("Cannot resolve yet — the resolution time has not passed. Check the countdown on the market card.");
+      } else if (msg.includes("Oracle has no result") || msg.includes("oracle")) {
+        errorToast("Oracle data not available yet. The oracle needs to provide the market outcome before resolution. Please wait for the oracle to update or manually set the result.");
       } else {
         errorToast(msg);
       }
@@ -591,6 +598,31 @@ export default function PredictPage() {
       setLoading(false);
       setTxStatus(null);
       setProofStatus(null);
+    }
+  }
+
+  async function setOracleResult() {
+    if (!address || !oracleMarketId || !oracleOutcome) return;
+    setLoading(true);
+    try {
+      const result = await sendAsync([
+        buildCall(ADDRESSES.MOCK_PRAGMA_ORACLE, "set_result", [
+          oracleMarketId,
+          oracleOutcome,
+        ]),
+      ]);
+      txToast(result.transaction_hash).success();
+      setOracleMarketId("");
+      setOracleOutcome("");
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Failed to set oracle result";
+      if (msg.includes("Only owner") || msg.includes("owner")) {
+        errorToast("Only the oracle owner can set results. Make sure you're connected with the oracle owner account.");
+      } else {
+        errorToast(msg);
+      }
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -747,7 +779,7 @@ export default function PredictPage() {
         </TabsContent>
 
         {/* ── Create Tab ──────────────────────────────────── */}
-        <TabsContent value="create" className="mt-4">
+        <TabsContent value="create" className="mt-4 space-y-4">
           <Card>
             <CardHeader>
               <CardTitle className="text-[14px]">Create Market</CardTitle>
@@ -789,6 +821,58 @@ export default function PredictPage() {
               </div>
               <Button className="w-full" disabled={loading || !address || !question} onClick={createMarket}>
                 {loading ? "Creating..." : "Create Market"}
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Oracle Admin Section */}
+          <Card className="border-yellow-500/20">
+            <CardHeader>
+              <CardTitle className="text-[14px] flex items-center gap-2">
+                <span>🔮 Oracle Admin</span>
+                <Badge variant="outline" className="text-[10px]">Owner Only</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="rounded-lg border border-yellow-500/20 bg-yellow-500/5 p-3">
+                <p className="text-xs text-white/60">
+                  Before a market can be resolved, the oracle must have a result set. Only the oracle owner can set results.
+                  After setting the result here, you can then click &quot;Resolve Market&quot; on the market card.
+                </p>
+              </div>
+              <div>
+                <Label>Market ID</Label>
+                <Input
+                  type="number"
+                  placeholder="0"
+                  value={oracleMarketId}
+                  onChange={(e) => setOracleMarketId(e.target.value)}
+                  className="mt-1"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  The market ID to set the result for (shown on market cards as &quot;Market #X&quot;)
+                </p>
+              </div>
+              <div>
+                <Label>Winning Outcome</Label>
+                <Input
+                  type="number"
+                  placeholder="0 for YES, 1 for NO (binary markets)"
+                  value={oracleOutcome}
+                  onChange={(e) => setOracleOutcome(e.target.value)}
+                  className="mt-1"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  For binary markets: 0 = YES, 1 = NO. For multi-outcome: 0, 1, 2, etc.
+                </p>
+              </div>
+              <Button
+                className="w-full"
+                variant="outline"
+                disabled={loading || !address || !oracleMarketId || !oracleOutcome}
+                onClick={setOracleResult}
+              >
+                {loading ? "Setting..." : "Set Oracle Result"}
               </Button>
             </CardContent>
           </Card>

@@ -168,3 +168,42 @@ export function getMarket(marketId: number): MarketMetadata | undefined {
 export function getAllMarketsMetadata(): MarketMetadata[] {
   return getAllMarkets();
 }
+
+// Proposal metadata storage
+const PROPOSALS_KEY = "lisan_proposals";
+
+export interface ProposalMetadata {
+  proposalId: number;
+  description: string;
+  optionLabels?: string[]; // Optional labels for each option (e.g., ["Yes", "No", "Abstain"])
+  createdAt: number;
+}
+
+function getAllProposals(): ProposalMetadata[] {
+  if (typeof window === "undefined") return [];
+  const raw = localStorage.getItem(PROPOSALS_KEY);
+  if (!raw) return [];
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return [];
+  }
+}
+
+function saveAllProposals(proposals: ProposalMetadata[]) {
+  localStorage.setItem(PROPOSALS_KEY, JSON.stringify(proposals));
+}
+
+export function addProposal(proposal: ProposalMetadata) {
+  const proposals = getAllProposals();
+  proposals.push(proposal);
+  saveAllProposals(proposals);
+}
+
+export function getProposal(proposalId: number): ProposalMetadata | undefined {
+  return getAllProposals().find(p => p.proposalId === proposalId);
+}
+
+export function getAllProposalsMetadata(): ProposalMetadata[] {
+  return getAllProposals();
+}
