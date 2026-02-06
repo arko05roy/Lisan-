@@ -70,7 +70,13 @@ export function DepositForm() {
         setLoading(true);
 
         try {
-            const amountWei = BigInt(amount) * 10n ** 18n;
+            // Parse amount and convert to wei (handling decimals)
+            const amountFloat = parseFloat(amount);
+            if (isNaN(amountFloat) || amountFloat <= 0) {
+                throw new Error("Invalid amount");
+            }
+            // Convert to smallest unit (18 decimals) then to BigInt
+            const amountWei = BigInt(Math.floor(amountFloat * 1e18));
             const secret = generateSecret();
             const nullifierSecret = generateSecret();
             const amountFelt = amountWei.toString();
