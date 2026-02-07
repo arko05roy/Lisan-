@@ -1,311 +1,247 @@
-# Lisan 🔒
+# Lisan
 
-**Private Bitcoin DeFi on Starknet**
-*Do anything onchain. No one knows it's you.*
+**Private DeFi on Starknet — swaps, prediction markets, voting, and transfers, all from a shielded balance.**
 
-[![Starknet](https://img.shields.io/badge/Starknet-Cairo-orange)](https://starknet.io)
-[![Privacy](https://img.shields.io/badge/Privacy-ZK--SNARK-blue)](https://www.cairo-lang.org/)
-[![RE{DEFINE}](https://img.shields.io/badge/Hackathon-RE%7BDEFINE%7D-purple)](https://redefine.starknet.io)
+No one sees what you bet. No one sees how you vote. No one sees what you trade.
 
 ---
 
-## 🎯 The Problem
+## About
 
-In public blockchains, **every action is visible**:
-- Whales get front-run when placing large orders
-- Your voting preferences are public
-- Prediction market positions leak your alpha
-- DeFi strategies are copied the moment you execute
+Lisan is a privacy layer for Starknet. You connect your existing wallet — ArgentX or Braavos — deposit any ERC20 token into a shielded pool, and interact with DeFi privately. Prediction markets, governance voting, instant swaps, transfers, withdrawals to fresh addresses — all without revealing your identity.
 
-**Privacy should be a feature, not a vulnerability.**
+Zero-knowledge proofs verify everything client-side. A decentralized relayer network submits your transactions so there's no on-chain link back to your wallet. The UX is familiar — same wallets, same tokens, just private.
+
+Unlike Tornado Cash (isolated pools, deposit-and-withdraw only), Lisan gives you a **unified pool across all tokens and all actions**, with full DeFi composability built in.
 
 ---
 
-## 💡 What is Lisan?
+## Features
 
-Lisan is a **privacy layer for Starknet DeFi** that lets you interact with ANY contract (swaps, predictions, votes, lending) from a **shielded balance** — without revealing your identity.
+### Prediction Markets
+Create markets, place hidden bets, claim winnings after resolution. Your position stays secret — no copy-traders, no front-running your alpha.
 
-Think **Tornado Cash meets Universal DeFi Router** — but instead of isolated pools, you get:
-- ✅ **One unified shielded pool** for all assets (BTC, ETH, USDC, any ERC20)
-- ✅ **Cross-contract composability** — swap, bet, vote, lend from the same pool
-- ✅ **Decentralized relayer network** — no centralized sequencer
-- ✅ **Garaga-powered ZK verification** — on-chain proof verification at scale
+- Binary (YES/NO) and multi-outcome markets
+- Oracle-based resolution (Pragma integration)
+- Bet commitments hide your amount and side
+- ZK proof required to claim payout — proves you won without revealing your bet
 
----
+### Private Governance Voting
+Cast votes that stay hidden until the tally phase. Whale votes are private. No social pressure, no vote-buying verification.
 
-## 🔥 Key Features
+- Custom proposals with configurable options and deadlines
+- Vote commitments + nullifier hashes (one vote per proposal, enforced on-chain)
+- Choices revealed only at tally — all at once
+- Winning option computed automatically
 
-### 1. **Shielded Multi-Asset Pool**
-Deposit BTC, ETH, USDC (or any ERC20) into a unified Merkle tree. Withdraw to any address, anytime.
+### Instant Private Swaps
+Swap BTC ↔ STRK on a constant-product AMM routed through the shielded pool. No wallet link, no MEV extraction, no waiting.
 
-```cairo
-// Deposit any token privately
-shielded_pool.deposit(token_address, amount, commitment)
+- Real-time pool reserves and live swap quotes via `get_amount_out()`
+- Liquidity provision for LPs
+- All swaps submitted via relayers — instant execution, no trace back to your wallet
 
-// Withdraw to any address
-shielded_pool.withdraw(nullifier, recipient, amount, proof)
-```
+### Any-ERC20 Transfers & Instant Withdrawals
+Deposit any ERC20 token. Move funds between shielded balances. Withdraw to any fresh address instantly — unlinkable to your original deposit.
 
-### 2. **Private Contract Calls (The Magic)**
-Interact with **any Starknet contract** from your shielded balance:
+- **Any ERC20 supported** — BTC, STRK, USDC, or any token on Starknet
+- P2P shielded transfers (zero on-chain link between sender and receiver)
+- Instant two-phase withdrawal: prepare (verify proof) → claim (send to recipient)
 
-```cairo
-// Swap on AMMs
-shielded_pool.private_call(
-    target: AMM_ADDRESS,
-    calldata: [swap_eth_to_usdc, 5_ETH]
-)
+### Familiar Wallet UX
+No new interface to learn. Connect ArgentX or Braavos — the wallets you already use on Starknet — and you're ready. Lisan adds privacy to the DeFi experience you already know.
 
-// Bet on prediction markets
-shielded_pool.private_call(
-    target: PREDICTION_MARKET,
-    calldata: [place_bet, yes, 10_USDC]
-)
-
-// Vote on governance (whale votes stay private)
-shielded_pool.private_call(
-    target: DAO_CONTRACT,
-    calldata: [vote, proposal_42, against]
-)
-```
-
-**The target contract never sees WHO called it** — only that the call came from the shielded pool.
-
-### 3. **Decentralized Relayer Network**
-No single point of failure or censorship:
-- Users generate ZK proofs **locally** (client-side)
-- Relayers compete to submit proofs onchain
-- Economic incentives ensure liveness (fees + slashing)
-- Privacy-preserving reputation via Merkle commitments
-
-### 4. **Garaga ZK Verification**
-On-chain Groth16 proof verification using Garaga (Starknet's ZK verification library):
-- Verifies Merkle inclusion proofs
-- Prevents double-spending via nullifier checks
-- Validates signatures without revealing the signer
+### General Private Execution
+Call **any Starknet contract** from your shielded balance via `private_execute`. The target contract sees a call from the ShieldedPool — not from you.
 
 ---
 
-## 🏗️ Architecture
+## How It Works
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                         USER (Browser)                        │
-│  • Generates ZK proof locally (Merkle path + nullifier)      │
-│  • Signs withdrawal/call with EdDSA                          │
-└────────────────────────────┬────────────────────────────────┘
-                             │
-                             ▼
-┌─────────────────────────────────────────────────────────────┐
-│                   RELAYER NETWORK (Offchain)                 │
-│  • Receives encrypted proof from user                        │
-│  • Submits to ShieldedPool contract                          │
-│  • Earns fees (0.1% of tx value)                            │
-└────────────────────────────┬────────────────────────────────┘
-                             │
-                             ▼
-┌─────────────────────────────────────────────────────────────┐
-│              SHIELDED POOL (Cairo Contract)                  │
-│  • Verifies Groth16 proof via Garaga                         │
-│  • Checks nullifier hasn't been used                         │
-│  • Updates Merkle tree (new commitment)                      │
-│  • Forwards call to target contract                          │
-└────────────────────────────┬────────────────────────────────┘
-                             │
-                             ▼
-┌─────────────────────────────────────────────────────────────┐
-│               TARGET CONTRACT (AMM, Market, DAO)             │
-│  • Receives call from ShieldedPool                           │
-│  • Executes swap/bet/vote                                    │
-│  • Returns result to ShieldedPool                            │
-└─────────────────────────────────────────────────────────────┘
+You (Browser)           →  Generate Groth16 proof locally (snarkjs)
+                            Your secrets never leave the browser.
+
+Relayer Network         →  Receives your proof, submits it on-chain.
+                            Earns 0.5% fee. No single point of failure.
+
+ShieldedPool (Cairo)    →  Verifies proof via Garaga (on-chain ZK verification).
+                            Checks nullifier. Updates Merkle tree.
+                            Forwards your call to the target contract.
+
+Target Contract         →  Executes your swap / bet / vote / transfer.
+                            Has no idea who you are.
 ```
+
+**Privacy primitives used:**
+- **Poseidon commitments** — hide your balance and choices
+- **Nullifiers** — prevent double-spending (one-time use tokens)
+- **Merkle tree** — prove your commitment exists without revealing which one
+- **Groth16 proofs** — generated client-side, verified on-chain via Garaga
+- **Relayers** — break the wallet-to-transaction link
 
 ---
 
-## 🚀 Quick Start
+## Deployed Contracts (Starknet Sepolia)
 
-### Prerequisites
-- [Scarb](https://docs.swmansion.com/scarb/) (Cairo package manager)
-- [Starknet Foundry](https://foundry-rs.github.io/starknet-foundry/) (Testing)
-- Node.js 18+ (Frontend)
-
-### 1. Clone & Build
-
-```bash
-git clone https://github.com/yourusername/lisan.git
-cd lisan
-
-# Build Cairo contracts
-scarb build
-
-# Run tests
-snforge test
-```
-
-### 2. Deploy Contracts (Starknet Sepolia)
-
-```bash
-# Deploy ShieldedPool
-sncast deploy --contract ShieldedPool
-
-# Deploy Relayer Registry
-sncast deploy --contract RelayerRegistry
-
-# Deploy Mock tokens (for testing)
-sncast deploy --contract MockBTC
-```
-
-### 3. Run Frontend
-
-```bash
-cd frontend
-npm install
-npm run dev
-# Open http://localhost:3000
-```
-
-### 4. Make Your First Private Transaction
-
-```bash
-# 1. Deposit 1 BTC
-curl -X POST http://localhost:3000/api/deposit \
-  -d '{"token": "BTC", "amount": "1000000000"}'
-
-# 2. Generate proof locally (happens in browser)
-# 3. Submit via relayer
-# 4. Done! Your BTC is now shielded ✅
-```
+| Contract | Address |
+|---|---|
+| ShieldedPool | [`0x01156462ef834c9224596cbb8d9bba9d3a8645b8866349f376c7210f1d961ff2`](https://sepolia.starkscan.co/contract/0x01156462ef834c9224596cbb8d9bba9d3a8645b8866349f376c7210f1d961ff2) |
+| ShieldedAMM | [`0x02470e8ce4fc20725d80ee8b605d48c676be5a5513d6fde6609d53980b9268a1`](https://sepolia.starkscan.co/contract/0x02470e8ce4fc20725d80ee8b605d48c676be5a5513d6fde6609d53980b9268a1) |
+| PredictionMarket | [`0x04de34008dc1945133c984140578059c05aedc8201da9ccfaf0f035814e3e559`](https://sepolia.starkscan.co/contract/0x04de34008dc1945133c984140578059c05aedc8201da9ccfaf0f035814e3e559) |
+| PrivateVoting | [`0x05670a0067833e25f39d0baec27ea0ce1dfb662126b469d28a4d768252f6b2b1`](https://sepolia.starkscan.co/contract/0x05670a0067833e25f39d0baec27ea0ce1dfb662126b469d28a4d768252f6b2b1) |
+| RelayerRegistry | [`0x012a228eab2513f1f9a0ba5d337d67749afe995cc73fc6849717ea37dd7e8e04`](https://sepolia.starkscan.co/contract/0x012a228eab2513f1f9a0ba5d337d67749afe995cc73fc6849717ea37dd7e8e04) |
+| RelayerCoordinator | [`0x06ca449638232ced7caf36d44793271f35750deb90490d14def66cb9d2eb10ca`](https://sepolia.starkscan.co/contract/0x06ca449638232ced7caf36d44793271f35750deb90490d14def66cb9d2eb10ca) |
+| MockBTC | [`0x03ffc3ab1419ed9daa9cc49d0f000b13f23c47b42bb931d1cf1cbbb22639ba8f`](https://sepolia.starkscan.co/contract/0x03ffc3ab1419ed9daa9cc49d0f000b13f23c47b42bb931d1cf1cbbb22639ba8f) |
+| MockSTRK | [`0x023de67f0eaa413e33173e040bfbaa25c5e0a47d74c69e7acaecedd64afbd37f`](https://sepolia.starkscan.co/contract/0x023de67f0eaa413e33173e040bfbaa25c5e0a47d74c69e7acaecedd64afbd37f) |
+| MockPragmaOracle | [`0x07c57f85bf5febfde9bfbef4444d1359b0fdadc87bacb4f2516ad9bc33f4d8ba`](https://sepolia.starkscan.co/contract/0x07c57f85bf5febfde9bfbef4444d1359b0fdadc87bacb4f2516ad9bc33f4d8ba) |
 
 ---
 
-## 📁 Repository Structure
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Smart Contracts | Cairo 2.0 (Starknet) |
+| ZK Verification | Groth16 via Garaga |
+| Frontend | Next.js 16, React 19, TypeScript, TailwindCSS |
+| Proof Generation | snarkjs + circomlibjs (client-side) |
+| Wallet | starknet-react, starknetkit (ArgentX, Braavos) |
+| Testing | Starknet Foundry (snforge) |
+
+---
+
+## Project Structure
 
 ```
 lisan/
-├── contracts/           # Cairo smart contracts
-│   ├── ShieldedPool.cairo       # Main privacy pool
-│   ├── RelayerRegistry.cairo    # Relayer management
-│   ├── ProofVerifier.cairo      # Garaga ZK verification
-│   └── MockERC20.cairo          # Test tokens
-├── frontend/            # Next.js web app
-│   ├── components/      # UI components
-│   ├── lib/             # ZK proof generation
-│   └── pages/           # App routes
-├── circuits/            # ZK circuit definitions (if any)
-├── relayer/             # Offchain relayer service
-└── tests/               # Smart contract tests
+├── client/                           # Next.js frontend
+│   ├── app/
+│   │   ├── page.tsx                  # Landing page
+│   │   └── (app)/
+│   │       ├── predict/page.tsx      # Prediction markets
+│   │       ├── vote/page.tsx         # Private voting
+│   │       ├── swap/page.tsx         # Shielded AMM
+│   │       ├── deposit/page.tsx      # Deposit into pool
+│   │       ├── withdraw/page.tsx     # Withdraw from pool
+│   │       ├── transfer/page.tsx     # P2P transfers
+│   │       ├── execute/page.tsx      # Custom contract calls
+│   │       └── dashboard/page.tsx    # Portfolio overview
+│   └── lib/
+│       ├── crypto.ts                 # Commitment generation
+│       ├── prover.ts                 # ZK proof generation
+│       ├── merkle.ts                 # Merkle tree logic
+│       └── relay.ts                  # Relayer API
+│
+├── lisan_contracts/                  # Cairo smart contracts
+│   ├── src/
+│   │   ├── shielded_pool.cairo       # Core privacy pool
+│   │   ├── shielded_amm.cairo        # Private DEX
+│   │   ├── prediction_market.cairo   # Private betting
+│   │   ├── private_voting.cairo      # Secret governance
+│   │   ├── relayer_registry.cairo    # Relayer staking & fees
+│   │   ├── relayer_coordinator.cairo # Relayer selection
+│   │   ├── merkle_tree.cairo         # Merkle proofs
+│   │   └── commitment.cairo          # Poseidon commitments
+│   └── tests/
+│       ├── test_prediction_market.cairo
+│       ├── test_private_voting.cairo
+│       ├── test_shielded_amm.cairo
+│       └── test_integration.cairo
+│
+└── circuits/                         # ZK circuit definitions
 ```
 
 ---
 
-## 🎮 Live Demo
+## Getting Started
 
-**[Try Lisan →](https://lisan-demo.vercel.app)**
+### Prerequisites
+- [Scarb](https://docs.swmansion.com/scarb/) (Cairo package manager)
+- [Starknet Foundry](https://foundry-rs.github.io/starknet-foundry/)
+- Node.js 18+
 
-Demo credentials:
-- Pre-loaded testnet BTC
-- Interact with mock AMM, prediction market, DAO
-- See how privacy works in real-time
-
----
-
-## 🛠️ Tech Stack
-
-| Layer | Technology |
-|-------|-----------|
-| Smart Contracts | Cairo 2.0 (Starknet) |
-| ZK Proofs | Groth16 via Garaga |
-| Frontend | Next.js 14 + TypeScript |
-| Proof Generation | snarkjs (client-side) |
-| Relayer Network | Rust + libp2p |
-| Testing | Starknet Foundry |
-
----
-
-## 🏆 Why Lisan Wins
-
-### For Users
-- **True privacy** — your strategy stays yours
-- **Universal compatibility** — works with ANY Starknet contract
-- **No new interface** — use familiar DeFi apps, just add privacy
-
-### For Starknet
-- **Privacy narrative** — "Bitcoin's privacy, Starknet's scalability"
-- **Cross-contract composability** — not just isolated pools
-- **Decentralized infrastructure** — no reliance on centralized relayers
-
-### For Judges
-- **Novel architecture** — unified pool beats Tornado's fragmentation
-- **Real-world use case** — whale protection, private voting, frontrun prevention
-- **Technical depth** — Garaga ZK verification, Merkle proofs, economic relayer game theory
-- **Bitcoin track fit** — makes BTC a DeFi power user asset on Starknet
-
----
-
-## 🧪 Testing
+### Contracts
 
 ```bash
-# Run all tests
+cd lisan_contracts
+scarb build
 snforge test
+```
 
-# Test specific module
-snforge test test_deposit
-snforge test test_private_call
-snforge test test_relayer_slashing
+### Frontend
 
-# Coverage report
-snforge coverage
+```bash
+cd client
+npm install
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000). Connect an ArgentX or Braavos wallet on Sepolia.
+
+---
+
+## Contract API
+
+### PredictionMarket
+
+```cairo
+create_market(question_hash, num_outcomes, resolution_time) → market_id
+place_bet(market_id, bet_commitment, amount)                → hidden position
+resolve(market_id)                                          → queries oracle, sets winner
+claim(market_id, proof, bet_commitment, nullifier, recipient) → payout
+```
+
+### PrivateVoting
+
+```cairo
+create_proposal(description_hash, num_options, end_time) → proposal_id
+cast_vote(proposal_id, vote_commitment, nullifier_hash)  → hidden vote
+tally(proposal_id, revealed_votes[])                     → results + winner
+```
+
+### ShieldedPool
+
+```cairo
+deposit(token, amount, commitment)                       → enter pool
+transfer(proof, root, nullifier, ...)                    → P2P transfer
+prepare_withdraw(proof, root, nullifier, token, amount)  → stage exit
+claim_withdrawal(nullifier, recipient)                   → finalize
+private_execute(proof, ..., target, calldata, ...)       → call any contract
+```
+
+### ShieldedAMM
+
+```cairo
+swap(proof, root, nullifier, ..., amount_in, min_out)    → private swap
+add_liquidity(token_a_amount, token_b_amount)            → seed pool
+get_amount_out(amount_in, reserve_in, reserve_out)       → quote
 ```
 
 ---
 
-## 🚧 Roadmap
+## Lisan vs Tornado Cash
 
-- [x] **Phase 1:** ShieldedPool contract with deposit/withdraw
-- [x] **Phase 2:** Private contract calls (`private_call`)
-- [x] **Phase 3:** Relayer registry + economic incentives
-- [x] **Phase 4:** Garaga proof verification integration
-- [ ] **Phase 5:** Multi-asset support (ETH, USDC, STRK)
-- [ ] **Phase 6:** Frontend with proof generation
-- [ ] **Phase 7:** Mainnet deployment + audit
-
----
-
-## 🤝 Contributing
-
-We welcome contributions! Areas we need help:
-
-- **Circuit optimization** — faster proof generation
-- **Relayer clients** — more implementations (Go, Python)
-- **Frontend UX** — making privacy intuitive
-- **Audit reports** — security reviews
-
-See [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines.
+| | Tornado Cash | Lisan |
+|---|---|---|
+| Pool structure | Isolated per amount | Unified — all amounts, all tokens |
+| Anonymity set | Small (per pool) | Large (entire platform) |
+| Actions | Deposit → Withdraw | Deposit → Instant Swap → Bet → Vote → Withdraw |
+| Token support | Few fixed pools | Any ERC20 on Starknet |
+| Wallet UX | Custom interface | ArgentX / Braavos — wallets you already use |
+| Prediction markets | No | Yes |
+| Private voting | No | Yes |
+| Cross-contract calls | No | Yes (`private_execute`) |
+| Relayers | Centralized (shut down) | Decentralized with economic incentives |
+| Verification | Offchain | On-chain via Garaga |
+| Cost | Ethereum L1 gas | Starknet L2 |
 
 ---
 
-## 📜 License
+## License
 
-MIT License - see [LICENSE](./LICENSE)
-
----
-
-## 🔗 Links
-
-- **Demo:** [lisan-demo.vercel.app](https://lisan-demo.vercel.app)
-- **Docs:** [docs.lisan.xyz](https://docs.lisan.xyz)
-- **Twitter:** [@LisanPrivacy](https://twitter.com/LisanPrivacy)
-- **Hackathon Submission:** [RE{DEFINE} Starknet](https://redefine.starknet.io)
+MIT
 
 ---
 
-## 📞 Contact
-
-Built by [@arkoroy](https://github.com/arkoroy) for RE{DEFINE} Hackathon.
-
-Questions? Open an issue or DM on Twitter.
-
----
-
-**Lisan** — *Privacy for the DeFi masses* 🔒✨
+Built for [RE{DEFINE} Hackathon](https://redefine.starknet.io) 2026.
