@@ -340,15 +340,15 @@ export default function Home() {
               <div className="lg:col-span-4 flex flex-col gap-6 lg:items-end animate-fade-in-up opacity-0" style={{ animationDelay: "700ms", animationFillMode: "forwards" }}>
                 <div className="text-right">
                   <div className="font-serif text-5xl md:text-6xl text-white">
-                    <AnimatedNumber value={2} suffix=".4M+" />
+                    <AnimatedNumber value={100} suffix="%" />
                   </div>
-                  <div className="font-sans text-sm text-white/40 uppercase tracking-wider mt-1">TVL Protected</div>
+                  <div className="font-sans text-sm text-white/40 uppercase tracking-wider mt-1">On-Chain Privacy</div>
                 </div>
                 <div className="text-right">
                   <div className="font-serif text-5xl md:text-6xl text-white">
-                    <AnimatedNumber value={12} suffix="K+" delay={200} />
+                    <AnimatedNumber value={0} suffix="" delay={200} />
                   </div>
-                  <div className="font-sans text-sm text-white/40 uppercase tracking-wider mt-1">Private Transactions</div>
+                  <div className="font-sans text-sm text-white/40 uppercase tracking-wider mt-1">Traces Left</div>
                 </div>
               </div>
             </div>
