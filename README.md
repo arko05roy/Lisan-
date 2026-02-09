@@ -291,13 +291,6 @@ tally(proposal_id, revealed_votes[])                     → results + winner
 
 ---
 
-## Validated By
-
-- **Adrien Lacombe** (Starknet Bitcoin Lead) — *"Worth building and needed in Starknet"*
-- **Richard** (Starknet Foundation) — *"Relayers really really good idea"*
-- **Teddy** (Starknet Privacy Lead) — Confirmed unified pool architecture, bullish on prediction markets
-
----
 
 <div align="center">
 
