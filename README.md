@@ -9,7 +9,7 @@ One shielded pool. Any ERC20. Zero trace back to you.
 
 [![Starknet](https://img.shields.io/badge/Starknet-Sepolia-blue?style=flat-square)](https://sepolia.starkscan.co/) [![Cairo](https://img.shields.io/badge/Cairo-2.0-orange?style=flat-square)]() [![Contracts](https://img.shields.io/badge/Contracts-9-green?style=flat-square)]() [![ZK](https://img.shields.io/badge/ZK-Groth16%20%C3%97%20Garaga-purple?style=flat-square)]() [![License](https://img.shields.io/badge/License-MIT-white?style=flat-square)]()
 
-[Launch App]((https://lisan-gamma.vercel.app/)) &middot; [Architecture](#architecture) &middot; [Contracts](#deployed-contracts-starknet-sepolia) &middot; [Video Demo](#demo)
+[Launch App](https://lisan-gamma.vercel.app/) &middot; [Architecture](#architecture) &middot; [Contracts](#deployed-contracts-starknet-sepolia) &middot; [Video Demo](#demo)
 
 </div>
 
