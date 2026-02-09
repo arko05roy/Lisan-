@@ -6,12 +6,12 @@ import { Shield, Zap, ArrowRightLeft, TrendingUp, Vote } from "lucide-react";
 
 const PAGE_TITLES: Record<string, { title: string; subtitle: string; icon: typeof Shield }> = {
   "/dashboard": { title: "Wallet", subtitle: "Manage your shielded assets", icon: Shield },
-  "/deposit": { title: "Shielded Pool", subtitle: "Deposit & withdraw privately", icon: Shield },
+  "/deposit": { title: "Shield", subtitle: "Shield your tokens", icon: Shield },
   "/execute": { title: "Private Execute", subtitle: "Interact with contracts anonymously", icon: Zap },
   "/swap": { title: "Swap", subtitle: "Trade tokens privately", icon: ArrowRightLeft },
   "/predict": { title: "Predict", subtitle: "Prediction markets", icon: TrendingUp },
   "/vote": { title: "Vote", subtitle: "Private governance", icon: Vote },
-  "/transfer": { title: "Transfer", subtitle: "Send funds privately", icon: Shield },
+  "/transfer": { title: "Send", subtitle: "Send privately", icon: Shield },
   "/withdraw": { title: "Withdraw", subtitle: "Claim shielded funds", icon: Shield },
 };
 

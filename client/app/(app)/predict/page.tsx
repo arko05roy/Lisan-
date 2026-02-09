@@ -410,6 +410,7 @@ export default function PredictPage() {
   // Oracle admin
   const [oracleMarketId, setOracleMarketId] = useState("");
   const [oracleOutcome, setOracleOutcome] = useState("");
+  const [showOracleAdmin, setShowOracleAdmin] = useState(false);
 
   // My Bets
   const [betNotes, setBetNotes] = useState<BetNote[]>([]);
@@ -825,56 +826,62 @@ export default function PredictPage() {
             </CardContent>
           </Card>
 
-          {/* Oracle Admin Section */}
-          <Card className="border-yellow-500/20">
-            <CardHeader>
-              <CardTitle className="text-[14px] flex items-center gap-2">
-                <span>🔮 Oracle Admin</span>
+          {/* Oracle Admin Section (collapsible) */}
+          <Card className="border-yellow-500/20 overflow-hidden">
+            <button
+              onClick={() => setShowOracleAdmin(!showOracleAdmin)}
+              className="w-full px-6 py-4 flex items-center justify-between hover:bg-yellow-500/5 transition-colors"
+            >
+              <div className="flex items-center gap-2 text-[14px] font-semibold">
+                <span>Oracle Admin</span>
                 <Badge variant="outline" className="text-[10px]">Owner Only</Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="rounded-lg border border-yellow-500/20 bg-yellow-500/5 p-3">
-                <p className="text-xs text-white/60">
-                  Before a market can be resolved, the oracle must have a result set. Only the oracle owner can set results.
-                  After setting the result here, you can then click &quot;Resolve Market&quot; on the market card.
-                </p>
               </div>
-              <div>
-                <Label>Market ID</Label>
-                <Input
-                  type="number"
-                  placeholder="0"
-                  value={oracleMarketId}
-                  onChange={(e) => setOracleMarketId(e.target.value)}
-                  className="mt-1"
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  The market ID to set the result for (shown on market cards as &quot;Market #X&quot;)
-                </p>
-              </div>
-              <div>
-                <Label>Winning Outcome</Label>
-                <Input
-                  type="number"
-                  placeholder="0 for YES, 1 for NO (binary markets)"
-                  value={oracleOutcome}
-                  onChange={(e) => setOracleOutcome(e.target.value)}
-                  className="mt-1"
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  For binary markets: 0 = YES, 1 = NO. For multi-outcome: 0, 1, 2, etc.
-                </p>
-              </div>
-              <Button
-                className="w-full"
-                variant="outline"
-                disabled={loading || !address || !oracleMarketId || !oracleOutcome}
-                onClick={setOracleResult}
-              >
-                {loading ? "Setting..." : "Set Oracle Result"}
-              </Button>
-            </CardContent>
+              <span className={`text-white/40 text-xs transition-transform duration-200 ${showOracleAdmin ? "rotate-180" : ""}`}>▼</span>
+            </button>
+            <div className={`overflow-hidden transition-all duration-300 ${showOracleAdmin ? "max-h-[600px] opacity-100" : "max-h-0 opacity-0"}`}>
+              <CardContent className="space-y-4 pt-0">
+                <div className="rounded-lg border border-yellow-500/20 bg-yellow-500/5 p-3">
+                  <p className="text-xs text-white/60">
+                    Before a market can be resolved, the oracle must have a result set. Only the oracle owner can set results.
+                    After setting the result here, you can then click &quot;Resolve Market&quot; on the market card.
+                  </p>
+                </div>
+                <div>
+                  <Label>Market ID</Label>
+                  <Input
+                    type="number"
+                    placeholder="0"
+                    value={oracleMarketId}
+                    onChange={(e) => setOracleMarketId(e.target.value)}
+                    className="mt-1"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    The market ID to set the result for (shown on market cards as &quot;Market #X&quot;)
+                  </p>
+                </div>
+                <div>
+                  <Label>Winning Outcome</Label>
+                  <Input
+                    type="number"
+                    placeholder="0 for YES, 1 for NO (binary markets)"
+                    value={oracleOutcome}
+                    onChange={(e) => setOracleOutcome(e.target.value)}
+                    className="mt-1"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    For binary markets: 0 = YES, 1 = NO. For multi-outcome: 0, 1, 2, etc.
+                  </p>
+                </div>
+                <Button
+                  className="w-full"
+                  variant="outline"
+                  disabled={loading || !address || !oracleMarketId || !oracleOutcome}
+                  onClick={setOracleResult}
+                >
+                  {loading ? "Setting..." : "Set Oracle Result"}
+                </Button>
+              </CardContent>
+            </div>
           </Card>
         </TabsContent>
       </Tabs>

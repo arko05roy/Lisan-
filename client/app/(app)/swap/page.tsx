@@ -245,23 +245,6 @@ export default function SwapPage() {
   ──────────────────────────────────────────────────────────────── */
   const actionPanel = (
     <>
-      <div className="flex items-center gap-4 mb-4">
-        <Button
-          variant={activeTab === "swap" ? "default" : "outline"}
-          onClick={() => setActiveTab("swap")}
-          className="flex-1 rounded-full"
-        >
-          <RefreshCw className="mr-2 h-4 w-4" /> Swap
-        </Button>
-        <Button
-          variant={activeTab === "liquidity" ? "default" : "outline"}
-          onClick={() => setActiveTab("liquidity")}
-          className="flex-1 rounded-full"
-        >
-          <Plus className="mr-2 h-4 w-4" /> Add Liquidity
-        </Button>
-      </div>
-
       {activeTab === "swap" ? (
         <Card className="border-0 shadow-none bg-transparent">
           <CardContent className="p-0 space-y-4">
@@ -335,11 +318,24 @@ export default function SwapPage() {
             >
               {loading ? "Swapping..." : "Swap"}
             </Button>
+
+            <button
+              onClick={() => setActiveTab("liquidity")}
+              className="w-full text-center text-xs text-muted-foreground hover:text-primary transition-colors pt-2"
+            >
+              Add Liquidity →
+            </button>
           </CardContent>
         </Card>
       ) : (
         <Card className="border-0 shadow-none bg-transparent">
           <CardContent className="p-0 space-y-4">
+            <button
+              onClick={() => setActiveTab("swap")}
+              className="text-xs text-muted-foreground hover:text-primary transition-colors mb-2"
+            >
+              ← Back to Swap
+            </button>
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label>mBTC Amount</Label>
