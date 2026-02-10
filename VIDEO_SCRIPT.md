@@ -1,184 +1,291 @@
-# Lisan — Video Script
+# Lisan — Video Script (RE{DEFINE} Hackathon)
 
-**Target:** Hackathon judges + Starknet community
-**Tone:** Clear, confident, demo-heavy
-**Format:** Screen recording + voiceover
-**Length:** 3-5 minutes
-
----
-
-## OPENING (0:00 - 0:15)
-
-**[VISUAL: Lisan landing page hero section]**
-
-> Every transaction on a public blockchain is visible. Your swaps, your bets, your votes — everyone can see them.
->
-> Lisan changes that. It's a privacy layer for Starknet — prediction markets, governance voting, instant swaps, transfers — all from a shielded balance, using a wallet you already know.
+**Target:** Hackathon judges (technical + business backgrounds)
+**Tone:** Urgent, confident, demo-heavy, fear-then-solution
+**Format:** Screen recording + voiceover + mempool visuals
+**Length:** 3:00 minutes (strict)
+**Goal:** Make judges remember "the privacy layer one" and "the composability one"
 
 ---
 
-## THE PROBLEM (0:15 - 0:45)
+## ACT 1: THE HEIST (0:00-0:25) 🎯 HOOK WITH FEAR
 
-**[VISUAL: Starkscan explorer showing a swap transaction — highlight the visible wallet, amount, timestamp]**
+**[VISUAL: Live Ethereum/Starknet mempool visualization - pending transactions scrolling, amounts visible]**
 
-> Let me show you the problem.
->
-> Here's a swap on Starknet. The wallet address — public. The amount — public. The timestamp — public. MEV bots see this and front-run the trade before it settles.
->
-> Prediction markets are worse. If you bet big on an outcome, copy-traders follow your position. Your alpha is everyone's alpha.
->
-> And governance? Your DAO vote is on-chain. Whales face social pressure. Early voters influence late voters. There's no secret ballot.
->
-> The only privacy solution that existed — Tornado Cash — only lets you deposit and withdraw. You can't swap. You can't bet. You can't vote. And their isolated pools fragment the anonymity set.
+**Narrator (urgent tone):**
+> "This is the dark forest. Every DeFi swap is visible before it executes. Front-running bots watch the mempool. They see your trade. They copy it. They profit."
 
----
+**[VISUAL: Animation showing bot front-running a swap - user loses $1,200]**
 
-## THE SOLUTION (0:45 - 1:20)
+> "MEV bots extracted $1.38 billion in 2024 alone. Your alpha is their profit."
 
-**[VISUAL: Lisan architecture diagram animating step by step]**
+**[VISUAL: Prediction market bet - large bet on "Trump wins" - whale wallets immediately copy the position]**
 
-> Lisan is different. You deposit any ERC20 token — BTC, STRK, USDC, anything — into a unified shielded pool. Then you interact with DeFi privately.
->
-> Here's the flow:
->
-> You connect your wallet — ArgentX or Braavos, the same wallets you already use on Starknet. You deposit tokens. Your balance becomes a cryptographic commitment in a Merkle tree — only you know the secret.
->
-> When you want to act — swap, bet, vote, transfer — your browser generates a zero-knowledge proof locally. Your secrets never leave the browser.
->
-> You pick a relayer from our decentralized network. The relayer submits your proof on-chain. The ShieldedPool verifies it using Garaga — Starknet's native ZK verifier — and forwards your call to the target contract.
->
-> The target contract has no idea who you are. It just sees a call from the ShieldedPool.
+> "Prediction markets? Your bet is public. Whales follow your position. Your edge evaporates the moment you place it."
+
+**[VISUAL: Screen glitch transition to black, then Lisan logo appears]**
+
+> "What if every transaction was invisible until it's too late to front-run?"
+
+**[TEXT OVERLAY: "Lisan"]**
 
 ---
 
-## LIVE DEMO (1:20 - 3:40)
+## ACT 2: THE PROMISE (0:25-0:45) 🎯 PLATFORM POSITIONING
 
-**[VISUAL: Switch to Lisan app in browser]**
+**[VISUAL: Lisan architecture diagram - animated, clean, modern]**
 
-> Let me show you. Here's Lisan running on Starknet Sepolia.
+**Narrator (confident, authoritative):**
+> "Lisan is the privacy layer for Starknet. One shielded pool. Any token. Any DeFi action. All private. All instant."
 
-### Demo 1: Deposit (1:20 - 1:50)
+**[VISUAL: Features appear as animated checkmarks]**
 
-**[VISUAL: Navigate to Deposit page, connect wallet]**
+✓ **Private Transfers**
+✓ **Private Swaps** (AMM, zero front-running)
+✓ **Private Predictions** (hidden bets, oracle-resolved)
+✓ **Private Voting** (secret ballot DAOs)
+✓ **Private Execute** (call ANY contract privately)
 
-> I'm connected with Braavos. I'll deposit 5 BTC into the shielded pool.
->
-> *[Select BTC token, enter amount, click Deposit]*
->
-> Transaction confirmed. My BTC is now shielded.
->
-> *[Open Starkscan]*
->
-> On the explorer, you see a deposit into the ShieldedPool contract at `0x0115...1ff2`. But you can't see what I'll do next — withdraw, swap, bet — or to which address. It's just a commitment.
-
-### Demo 2: Private Swap (1:50 - 2:20)
-
-**[VISUAL: Navigate to Swap page]**
-
-> Now I'll swap 2 BTC for STRK — privately.
->
-> *[Enter swap amount, show the live quote from pool reserves]*
->
-> The AMM shows me a quote based on real-time reserves. I click swap. My browser generates a Groth16 proof — this takes a few seconds.
->
-> *[Show proof generating, then relayer selection]*
->
-> I pick a relayer — they'll earn 0.5% for submitting this. Transaction confirmed.
->
-> *[Open explorer]*
->
-> The blockchain shows a swap from the ShieldedPool to the AMM contract at `0x0247...68a1`. But there's no trace back to my wallet. The AMM thinks the ShieldedPool is trading. It has no idea I'm behind it.
-
-### Demo 3: Private Prediction Market Bet (2:20 - 2:55)
-
-**[VISUAL: Navigate to Predict page]**
-
-> This is where it gets interesting. Here are live prediction markets.
->
-> *[Show market list — status badges, pool sizes, countdowns]*
->
-> I'll bet 1 BTC on "Yes" for this market. My position is hidden — the contract stores a bet commitment, not my address or my side.
->
-> *[Enter bet, generate proof, submit via relayer]*
->
-> Transaction confirmed. Let's check the PredictionMarket contract at `0x04de...e559`.
->
-> *[Open explorer]*
->
-> It shows a bet was placed. But not by whom. Not which side. Not the amount. No one can copy my trade. No one can front-run my position.
->
-> After the oracle resolves the market, I claim my winnings with a ZK proof that proves I bet correctly — without revealing my original bet.
-
-### Demo 4: Private Governance Vote (2:55 - 3:20)
-
-**[VISUAL: Navigate to Vote page]**
-
-> Now governance. Here's an active proposal with three options.
->
-> *[Show proposal details — options, vote count, deadline]*
->
-> I'll cast my vote. My choice is hidden behind a commitment — the contract only stores a hash. No one knows how I voted.
->
-> *[Select option, submit vote]*
->
-> During the voting period, all choices stay secret. After the deadline, anyone can trigger the tally — all votes are revealed in batch, and the winner is computed on-chain. True secret ballot governance.
-
-### Demo 5: Private Withdrawal (3:20 - 3:40)
-
-**[VISUAL: Navigate to Withdraw page]**
-
-> Finally, I'll withdraw 1 BTC to a completely fresh address.
->
-> *[Enter new recipient address, generate proof, submit]*
->
-> Done. The blockchain shows BTC leaving the ShieldedPool to a new address. But there's no link between my original deposit, the swaps, the bet, the vote, and this withdrawal. All unlinkable.
+**[TEXT OVERLAY: "This isn't Tornado Cash. This is infrastructure."]**
 
 ---
 
-## WHAT MAKES LISAN DIFFERENT (3:40 - 4:15)
+## ACT 3: DEMO — DEPOSIT & TRANSFER (0:45-1:10) 🎯 CORE PRIVACY PRIMITIVE
 
-**[VISUAL: Comparison table on screen — Lisan vs Tornado Cash]**
+**[VISUAL: Lisan app, wallet connected, Deposit page]**
 
-> So how is this different from Tornado Cash?
->
-> Tornado Cash has isolated pools — 0.1 ETH, 1 ETH, 10 ETH. Small anonymity sets. Easy to trace. And all you can do is deposit and withdraw.
->
-> Lisan has one unified pool for all tokens, all amounts, all actions. Larger anonymity set. And you can actually do things — swap, bet, vote, transfer — all from the same pool.
->
-> Tornado's relayers were centralized. When they got shut down, privacy died. Lisan's relayers are decentralized with staking and slashing — economic incentives keep them running.
->
-> And the UX? You connect the wallet you already have — ArgentX or Braavos. Any ERC20 token works. Instant swaps, instant withdrawals. No new interface to learn.
->
-> Tornado was deposit-and-withdraw. Lisan is a full private DeFi platform.
+**Narrator:**
+> "Watch. I deposit 10 Bitcoin into the shielded pool."
+
+**[ACTION: Select mBTC token, enter 10, click Deposit]**
+**[VISUAL: Transaction confirmation, then Merkle tree visualization - new leaf added to tree with 1,247 commitments]**
+
+> "My balance is now hidden in a Merkle tree with over 1,200 other commitments. No one knows how much I have."
+
+**[ACTION: Navigate to Transfer page, send 3 BTC to another address]**
+**[VISUAL: Proof generating (sped up 2x with overlay "Generating ZK proof..."), relayer selected, tx confirmed]**
+
+> "I send 3 Bitcoin to Alice. No amount visible. No sender visible. Just a proof that I can spend."
+
+**[VISUAL: Voyager explorer showing ShieldedPool transaction - nullifier spent, no details]**
+
+**[TEXT OVERLAY on explorer: "On-chain: Just a nullifier. That's it."]**
 
 ---
 
-## CLOSING (4:15 - 4:30)
+## ACT 4: DEMO — PRIVATE SWAP (1:10-1:35) 🎯 ANTI-MEV VALUE PROP
 
-**[VISUAL: Lisan landing page, fade to logo + tagline]**
+**[VISUAL: Navigate to Swap page, AMM interface showing BTC/STRK pool]**
 
-> Lisan — nine smart contracts deployed on Starknet Sepolia. A shielded pool, a private AMM, prediction markets, governance voting, a decentralized relayer network. All verifiable on-chain via Garaga.
->
-> Do anything on Starknet. No one knows it's you.
+**Narrator:**
+> "Now I want to swap 2 Bitcoin for STRK. Normally, MEV bots would front-run this. Watch what happens instead."
 
-**[END CARD: Lisan logo + "RE{DEFINE} Hackathon 2026" + GitHub link]**
+**[ACTION: Enter 2 BTC, show live quote]**
+**[VISUAL: Quote shows "You receive: 4,892 STRK" based on pool reserves]**
+
+> "I generate a proof locally. My secrets never leave the browser. I submit through a decentralized relayer."
+
+**[ACTION: Click Swap, proof generates (sped up), relayer submits, tx confirmed]**
+
+**[VISUAL: Split screen - left shows user's wallet (no public tx), right shows Voyager explorer]**
+
+> "On-chain, the ShieldedPool swapped with the AMM. But there's no trace back to my wallet. The AMM thinks the POOL is trading. It has no idea I'm behind it."
+
+**[TEXT OVERLAY: "Result: Zero front-running. Zero MEV. Zero surveillance."]**
+
+---
+
+## ACT 5: DEMO — PRIVATE EXECUTE (1:35-2:05) 🎯 KILLER DIFFERENTIATOR
+
+**[VISUAL: Navigate to Private Execute page - shows input fields for contract address + calldata]**
+
+**Narrator (excited, emphasis on "ANY"):**
+> "Here's the killer feature. Private Execute. I can call ANY Starknet contract using my shielded balance."
+
+**[ACTION: Enter external NFT contract address, mint function calldata]**
+
+> "I want to mint an NFT. I paste the contract address. The pool will call it on my behalf."
+
+**[ACTION: Generate proof, submit, tx confirmed]**
+**[VISUAL: NFT appears in a wallet, but explorer shows pool → NFT contract call]**
+
+> "The NFT contract thinks the POOL minted it. My wallet is never revealed."
+
+**[VISUAL: Text list appears showing other use cases]**
+- Lend on Aave (private positions)
+- Vote in any DAO (secret ballots)
+- Play blockchain games (anonymous players)
+- Supply liquidity (hidden LP positions)
+
+**[TEXT OVERLAY: "This works with ANY contract. ANY protocol. This is composability."]**
+
+---
+
+## ACT 6: THE ROADMAP BAIT (2:05-2:30) 🎯 AMBITION + INNOVATION THEFT
+
+**[VISUAL: Feature checklist - split into "Live Today" and "Coming Soon"]**
+
+**Narrator:**
+> "Lisan is deployed on Starknet Sepolia today. But we're not stopping."
+
+**[VISUAL: Left column (green checkmarks)]**
+
+✅ Multi-asset shielded pool (BTC, STRK, any ERC20)
+✅ Private transfers, swaps, predictions, voting
+✅ Private Execute (composability layer)
+✅ Decentralized relayer network
+✅ 75+ passing tests, live frontend, validated by Starknet leads
+
+**[VISUAL: Right column (yellow clock icons)]**
+
+⏳ **Privacy Scoring** — Quantified anonymity (0-100 score)
+⏳ **Halftime Trading** — Adjust prediction bets mid-event
+⏳ **AI Agent Escrow** — Autonomous private payments for the agentic economy
+
+**[TEXT OVERLAY: "We're building the privacy layer Starknet needs. Infrastructure, not apps."]**
+
+---
+
+## ACT 7: THE CALL TO ACTION (2:30-3:00) 🎯 PROOF + SOCIAL PROOF
+
+**[VISUAL: Contract addresses appear on screen with Voyager links]**
+
+**Narrator:**
+> "This isn't a prototype. Lisan is deployed. Tested. Working. Right now."
+
+**[VISUAL: Contract list with links]**
+- **ShieldedPool:** `0x0537...2cba` [Voyager ↗]
+- **ShieldedAMM:** `0x0247...68a1` [Voyager ↗]
+- **PredictionMarket:** `0x04de...e559` [Voyager ↗]
+
+**[VISUAL: Validator quotes appear as testimonials]**
+
+**Adrien (Bitcoin Lead):** "Worth building and needed in Starknet."
+
+**Teddy (Privacy Lead):** "Unified pool correct. Bullish on prediction markets."
+
+**Richard (Foundation):** "Relayers really really good idea. Extra point."
+
+**[VISUAL: GitHub repo, live demo link, documentation]**
+
+**Narrator (confident, final pitch):**
+> "Try it. Break it. Build on it. Lisan is the privacy primitive for Starknet's DeFi future."
+
+**[VISUAL: Fade to black, then Lisan logo with tagline]**
+
+**[TEXT OVERLAY: "Lisan: Every transaction. Always private. Forever unstoppable."]**
+
+**[END CARD]**
+- GitHub: github.com/[repo]
+- Live Demo: lisan.app (or Sepolia link)
+- RE{DEFINE} Hackathon 2026
+- Bitcoin Track | Privacy Track | Wildcard Track
 
 ---
 
 ## PRODUCTION NOTES
 
-### Recording
-- Screen record at 1080p 60fps (OBS or QuickTime)
-- Browser maximized, dark mode, bookmarks bar hidden
-- Pre-populate test data so there's no waiting for confirmations
-- Use Starkscan Sepolia explorer for on-chain verification
+### Pre-Recording Checklist
+- [ ] Pre-populate test data (deposit done, tokens in pool)
+- [ ] Clear browser cache, hide bookmarks bar
+- [ ] Set up Voyager explorer tabs (contracts ready to show)
+- [ ] Test all demo flows (no surprises during recording)
+- [ ] Prepare mempool visualization (can use Etherscan live or recording)
 
-### Editing
-- Speed up proof generation to 2x with an overlay ("Generating proof...")
-- Add captions for technical terms on first mention (Merkle tree, nullifier, Garaga)
-- Background music: subtle, copyright-free
-- Export 1080p H.264
+### Recording Setup
+- **Screen:** 1920x1080, 60fps (OBS Studio)
+- **Browser:** Dark mode, maximized, clean UI
+- **Audio:** External mic (not laptop), room echo minimized
+- **Backup:** Record 2-3 takes, pick best one
 
-### Cut Versions
-- **2-3 min:** Cut Demo 4 (voting), shorten Demo 3 (bet)
-- **30 sec teaser:** Opening line + one swap demo (sped up) + closing tagline
+### Visual Effects Needed
+1. **Mempool visualization (0:00-0:15):** Use Etherscan live pending txs or stock footage
+2. **Front-running animation (0:10):** Simple graphic showing bot copying user's trade
+3. **Merkle tree visualization (0:55):** Animated tree growing when deposit happens
+4. **Split screen (1:25):** User wallet + Explorer side-by-side
+5. **Text overlays:** Key phrases appear at emotional beats
+
+### Editing Checklist
+- [ ] Speed up proof generation to 2x (add "Generating ZK proof..." overlay)
+- [ ] Add captions for technical terms (first mention only):
+  - Merkle tree
+  - Nullifier
+  - ZK proof
+  - Relayer
+  - Garaga
+- [ ] Background music: Cyberpunk/electronic, subtle, royalty-free
+- [ ] Color grade: Slightly blue-tinted (tech/privacy vibe)
+- [ ] Export: 1080p H.264, <150MB for DoraHacks upload
+
+### Tone Guide for Voice Actor (or Self-Recording)
+- **Act 1 (0:00-0:25):** Urgent, slightly ominous. "This is a threat."
+- **Act 2 (0:25-0:45):** Confident, authoritative. "We solved it."
+- **Act 3-5 (0:45-2:05):** Clear, demo-focused. "Watch this."
+- **Act 6 (2:05-2:30):** Ambitious, forward-looking. "This is just the start."
+- **Act 7 (2:30-3:00):** Proud, inviting. "Join us."
+
+### Backup: 2-Minute Cut (If Needed)
+If DoraHacks requires <3min:
+- **Cut Act 6 entirely** (roadmap bait)
+- **Shorten Act 3** (just show deposit, skip transfer)
+- **Shorten Act 5** (just show Private Execute, skip use case list)
+- Final length: ~2:15
+
+### 30-Second Teaser (For Twitter/Discord)
+- 0:00-0:15: Act 1 (The Heist) - hook with fear
+- 0:15-0:25: Act 4 (Private Swap) - sped up to 10 sec
+- 0:25-0:30: Act 7 ending (logo + tagline)
+
+---
+
+## KEY MESSAGES (Must Land)
+
+1. **"Privacy layer, not privacy app"** — Lisan is infrastructure
+2. **"Any token, any contract"** — Composability is the differentiator
+3. **"Live today"** — Not a prototype, not a roadmap, deployed now
+4. **"Zero front-running, zero MEV, zero surveillance"** — Tangible benefits
+5. **"This is the privacy primitive Starknet needs"** — Chain narrative fit
+
+---
+
+## JUDGE PSYCHOLOGY
+
+**What judges are thinking:**
+
+| Timestamp | Judge's Question | How We Answer It |
+|-----------|------------------|------------------|
+| 0:10 | "Is this just another mixer?" | "No - you can DO things: swap, bet, vote, call any contract" |
+| 0:45 | "Does this actually work?" | "Yes - here are the demos, here are the contract addresses" |
+| 1:35 | "What's novel here?" | "Private Execute - first privacy layer with composability" |
+| 2:30 | "Is this production-ready?" | "Deployed, tested, validated by 3 Starknet leads" |
+| 2:55 | "Why should this win?" | "Infrastructure play - every DeFi app on Starknet could use this" |
+
+---
+
+## COMPETITIVE DIFFERENTIATION (Implied, Not Stated)
+
+While narrating, the video visually beats competitors without naming them:
+
+- **vs Rift:** They do one thing (Runes trading). We do everything (platform).
+- **vs ShadowNet:** They have "foundations". We have working code.
+- **vs StealthSwap:** They admitted "not generating proofs yet". We show proofs on-chain.
+- **vs ZKScore:** They have one feature (predictions). We have five + composability.
+- **vs zkCAREL:** They have a roadmap. We have contracts.
+
+**Judges will see the difference without us being explicitly competitive.**
+
+---
+
+## SUCCESS METRICS
+
+**Video succeeds if judges remember:**
+1. "Lisan = privacy layer" (platform positioning)
+2. "Private Execute = call any contract" (unique differentiator)
+3. "Already deployed" (production-ready)
+
+**Video fails if judges think:**
+1. "Just another Tornado Cash fork"
+2. "Only works for one use case"
+3. "Vaporware / not finished"
+
+**Every second of this script is designed to prevent the failure cases.**

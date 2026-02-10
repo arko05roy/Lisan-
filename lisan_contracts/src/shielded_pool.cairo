@@ -43,6 +43,7 @@ pub trait IShieldedPool<TContractState> {
     fn get_commitment_count(self: @TContractState) -> u64;
     fn get_token_balance(self: @TContractState, token_address: starknet::ContractAddress) -> u256;
     fn get_last_root(self: @TContractState) -> felt252;
+    fn get_privacy_score(self: @TContractState, commitment: felt252) -> u8;
 }
 
 #[starknet::contract]
@@ -70,6 +71,7 @@ pub mod ShieldedPool {
         token_balances: Map<ContractAddress, u256>,
         pending_withdrawals: Map<felt252, u256>,
         pending_token: Map<felt252, ContractAddress>,
+        commitment_timestamps: Map<felt252, u64>,
         #[substorage(v0)]
         tree: MerkleTreeComponent::Storage,
     }
@@ -164,6 +166,10 @@ pub mod ShieldedPool {
             self.commitment_count.write(self.commitment_count.read() + 1);
             let current_balance = self.token_balances.read(token_address);
             self.token_balances.write(token_address, current_balance + amount);
+
+            // Record deposit timestamp for privacy score calculation
+            let current_time = starknet::get_block_timestamp();
+            self.commitment_timestamps.write(commitment, current_time);
 
             self.emit(Deposit { depositor: caller, token_address, amount, commitment, leaf_index });
         }
@@ -379,6 +385,89 @@ pub mod ShieldedPool {
 
         fn get_last_root(self: @ContractState) -> felt252 {
             self.tree.get_last_root()
+        }
+
+        fn get_privacy_score(self: @ContractState, commitment: felt252) -> u8 {
+            // Get deposit timestamp for this commitment
+            let deposit_time = self.commitment_timestamps.read(commitment);
+
+            // If commitment doesn't exist (timestamp is 0), return 0 score
+            if deposit_time == 0 {
+                return 0;
+            }
+
+            // Get current anonymity set size (total commitments in tree)
+            let anonymity_set_size = self.commitment_count.read();
+
+            // Calculate time elapsed since deposit (in seconds)
+            let current_time = starknet::get_block_timestamp();
+            let time_elapsed = if current_time > deposit_time {
+                current_time - deposit_time
+            } else {
+                0
+            };
+
+            // Privacy score calculation (0-100):
+            // - Anonymity set size contributes 0-60 points
+            // - Time elapsed contributes 0-40 points
+
+            // Anonymity set scoring (0-60 points):
+            // < 100 commitments: 10 points
+            // 100-500: 20-35 points (linear)
+            // 500-1000: 35-50 points (linear)
+            // > 1000: 50-60 points (capped)
+            let anonymity_score: u8 = if anonymity_set_size < 100 {
+                10
+            } else if anonymity_set_size < 500 {
+                // Linear interpolation: 20 + (anonymity_set_size - 100) * 15 / 400
+                let progress = (anonymity_set_size - 100) * 15 / 400;
+                20 + progress.try_into().unwrap()
+            } else if anonymity_set_size < 1000 {
+                // Linear interpolation: 35 + (anonymity_set_size - 500) * 15 / 500
+                let progress = (anonymity_set_size - 500) * 15 / 500;
+                35 + progress.try_into().unwrap()
+            } else {
+                // Cap at 60 for very large sets
+                let progress = (anonymity_set_size - 1000) * 10 / 1000;
+                let bonus = progress.try_into().unwrap();
+                if bonus > 10 {
+                    60
+                } else {
+                    50 + bonus
+                }
+            };
+
+            // Time elapsed scoring (0-40 points):
+            // < 1 hour (3600 sec): 5 points
+            // 1-24 hours: 10-20 points (linear)
+            // 24-168 hours (1 week): 20-35 points (linear)
+            // > 1 week: 35-40 points (capped)
+            let time_score: u8 = if time_elapsed < 3600 {
+                5
+            } else if time_elapsed < 86400 {
+                // 1-24 hours: 10 + (time_elapsed - 3600) * 10 / 82800
+                let progress = (time_elapsed - 3600) * 10 / 82800;
+                10 + progress.try_into().unwrap()
+            } else if time_elapsed < 604800 {
+                // 1-7 days: 20 + (time_elapsed - 86400) * 15 / 518400
+                let progress = (time_elapsed - 86400) * 15 / 518400;
+                20 + progress.try_into().unwrap()
+            } else {
+                // > 7 days: 35 + min(5, (time_elapsed - 604800) / 604800 * 5)
+                let weeks_extra = (time_elapsed - 604800) / 604800;
+                let bonus = if weeks_extra > 1 { 5 } else { weeks_extra.try_into().unwrap() * 5 };
+                35 + bonus
+            };
+
+            // Total privacy score (0-100)
+            let total_score = anonymity_score + time_score;
+
+            // Ensure score doesn't exceed 100
+            if total_score > 100 {
+                100
+            } else {
+                total_score
+            }
         }
     }
 }

@@ -2239,7 +2239,6 @@ Report to Claude:
 3. **Engage on architecture.** If they ask "why X?" — answer technically.
 4. **Demonstrate working tech.** Live Sepolia demo > polished slides.
 5. **Use precise language.** Commitment schemes, nullifiers, Merkle proofs, SNARK verification.
-
 **This is GOOD NEWS for you:**
 - You ARE technical
 - You BUILT real implementation (not vaporware)
