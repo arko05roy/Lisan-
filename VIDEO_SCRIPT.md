@@ -4,7 +4,7 @@
 **Tone:** Urgent, confident, demo-heavy, fear-then-solution
 **Format:** Screen recording + voiceover + mempool visuals
 **Length:** 3:00 minutes (strict)
-**Goal:** Make judges remember "the privacy layer one" and "the composability one"
+**Goal:** Make judges remember "the Bitcoin DeFi one" and "the composability one"
 
 ---
 
@@ -36,7 +36,7 @@
 **[VISUAL: Lisan architecture diagram - animated, clean, modern]**
 
 **Narrator (confident, authoritative):**
-> "Lisan is the privacy layer for Starknet. One shielded pool. Any token. Any DeFi action. All private. All instant."
+> "Bitcoin on Starknet can transfer. That's it. Lisan makes Bitcoin productive — private swaps, private predictions, private votes, private execution of any contract. One shielded pool. All instant."
 
 **[VISUAL: Features appear as animated checkmarks]**
 
@@ -178,7 +178,7 @@
 - GitHub: github.com/[repo]
 - Live Demo: lisan.app (or Sepolia link)
 - RE{DEFINE} Hackathon 2026
-- Bitcoin Track | Privacy Track | Wildcard Track
+- Bitcoin Track | Open Track
 
 ---
 

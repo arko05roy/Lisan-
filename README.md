@@ -2,9 +2,9 @@
 
 # Lisan
 
-**The privacy layer for all of Starknet DeFi.**
+**Private Bitcoin DeFi on Starknet.**
 
-Swaps. Prediction markets. Governance votes. Transfers. Any contract call.<br/>
+Deposit BTC. Swap, bet, vote, call any contract — privately.<br/>
 One shielded pool. Any ERC20. Zero trace back to you.
 
 [![Starknet](https://img.shields.io/badge/Starknet-Sepolia-blue?style=flat-square)](https://sepolia.starkscan.co/) [![Cairo](https://img.shields.io/badge/Cairo-2.0-orange?style=flat-square)]() [![Contracts](https://img.shields.io/badge/Contracts-9-green?style=flat-square)]() [![ZK](https://img.shields.io/badge/ZK-Groth16%20%C3%97%20Garaga-purple?style=flat-square)]() [![License](https://img.shields.io/badge/License-MIT-white?style=flat-square)]()
@@ -15,11 +15,11 @@ One shielded pool. Any ERC20. Zero trace back to you.
 
 ---
 
-> *"Do anything on Starknet. No one knows it's you."*
+> *"Bitcoin on Starknet can transfer. Lisan makes it do everything else — privately."*
 
-Tornado Cash hid transfers. **Lisan hides everything.**
+Tornado Cash hid transfers. **Lisan makes Bitcoin productive.**
 
-Connect ArgentX or Braavos — the wallets you already use. Deposit any token. From there, every action is private and mempool-blind: swap without front-running, bet without copy-traders, vote without social pressure, call any contract without revealing your identity. The target contract only sees Lisan called it.
+Connect ArgentX or Braavos — the wallets you already use. Deposit BTC (or any ERC20) into a shielded pool. From there, every action is private and mempool-blind: swap without front-running, bet without copy-traders, vote without social pressure, call any contract without revealing your identity. The target contract only sees Lisan called it.
 
 Nine smart contracts. Five DeFi primitives. One unified anonymity set.
 
@@ -167,9 +167,9 @@ All contracts are live and verified on Sepolia testnet:
 | PrivateVoting | [`0x0567...f5b1`](https://sepolia.starkscan.co/contract/0x05670a0067833e25f39d0baec27ea0ce1dfb662126b469d28a4d768252f6b2b1) |
 | RelayerRegistry | [`0x012a...8e04`](https://sepolia.starkscan.co/contract/0x012a228eab2513f1f9a0ba5d337d67749afe995cc73fc6849717ea37dd7e8e04) |
 | RelayerCoordinator | [`0x06ca...10ca`](https://sepolia.starkscan.co/contract/0x06ca449638232ced7caf36d44793271f35750deb90490d14def66cb9d2eb10ca) |
-| MockBTC | [`0x03ff...ba8f`](https://sepolia.starkscan.co/contract/0x03ffc3ab1419ed9daa9cc49d0f000b13f23c47b42bb931d1cf1cbbb22639ba8f) |
-| MockSTRK | [`0x023d...d37f`](https://sepolia.starkscan.co/contract/0x023de67f0eaa413e33173e040bfbaa25c5e0a47d74c69e7acaecedd64afbd37f) |
-| MockPragmaOracle | [`0x07c5...d8ba`](https://sepolia.starkscan.co/contract/0x07c57f85bf5febfde9bfbef4444d1359b0fdadc87bacb4f2516ad9bc33f4d8ba) |
+| BTC | [`0x03ff...ba8f`](https://sepolia.starkscan.co/contract/0x03ffc3ab1419ed9daa9cc49d0f000b13f23c47b42bb931d1cf1cbbb22639ba8f) |
+| STRK | [`0x023d...d37f`](https://sepolia.starkscan.co/contract/0x023de67f0eaa413e33173e040bfbaa25c5e0a47d74c69e7acaecedd64afbd37f) |
+| PragmaOracle | [`0x07c5...d8ba`](https://sepolia.starkscan.co/contract/0x07c57f85bf5febfde9bfbef4444d1359b0fdadc87bacb4f2516ad9bc33f4d8ba) |
 
 ---
 
@@ -298,6 +298,6 @@ tally(proposal_id, revealed_votes[])                     → results + winner
 
 Built for [RE{DEFINE} Hackathon](https://redefine.starknet.io) 2026.
 
-*Every DeFi primitive leaks your intent. We made them all private.*
+*Bitcoin on Starknet can transfer. Lisan makes it do everything — privately.*
 
 </div>

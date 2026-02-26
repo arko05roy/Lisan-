@@ -112,7 +112,7 @@ Starknet is the only L2 where Bitcoin-native private DeFi is possible:
 ### ✅ Validated by Starknet Leadership:
 
 **Adrien Lacombe (Bitcoin Track Lead):**
-> "Worth building and needed in Starknet. Dual-track approved [Bitcoin + Privacy]."
+> "Worth building and needed in Starknet."
 
 **Teddy (@franklyteddy, Privacy Lead):**
 > "Unified pool correct. Bullish on prediction markets. Privacy must benefit protocol."
@@ -125,7 +125,7 @@ Starknet is the only L2 where Bitcoin-native private DeFi is possible:
 ## Try It Yourself (Live Demo)
 
 1. **Connect wallet** (ArgentX or Braavos on Sepolia)
-2. **Deposit testnet mBTC** (or STRK, or custom ERC20)
+2. **Deposit BTC** (or STRK, or any ERC20)
 3. **Swap privately** (BTC → STRK, zero front-running)
 4. **Bet on a prediction market** (hidden position, oracle-resolved)
 5. **Vote without revealing your choice** (secret ballot DAO)
