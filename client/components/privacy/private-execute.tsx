@@ -254,8 +254,8 @@ export function PrivateExecute({ relayer, useCoordinator = false, feeBps = 10 }:
     const formatWei = (wei: string) => (Number(BigInt(wei)) / 10 ** 18).toFixed(4);
 
     const getTokenLabel = (note: PoolNote) => {
-        if (note.tokenAddress === ADDRESSES.MOCK_BTC) return "mBTC";
-        if (note.tokenAddress === ADDRESSES.MOCK_STRK) return "mSTRK";
+        if (note.tokenAddress === ADDRESSES.MOCK_BTC) return "BTC";
+        if (note.tokenAddress === ADDRESSES.MOCK_STRK) return "STRK";
         if (note.tokenAddress === ADDRESSES.DEMO_TOKEN) return "DEMO";
         return note.tokenAddress.slice(0, 8) + "...";
     };

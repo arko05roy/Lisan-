@@ -1,7 +1,7 @@
 # DoraHacks RE{DEFINE} Hackathon Submission
 
 **Project Name:** Lisan
-**Tracks:** Bitcoin, Privacy, Wildcard (Composability Innovation)
+**Tracks:** Bitcoin (Primary), Open Track (Secondary)
 **Submission Date:** February 2026
 
 ---
@@ -10,13 +10,13 @@
 
 **Version for DoraHacks Form:**
 
-> Every DeFi swap leaks your intent. Front-runners profit. We made every DeFi primitive private - swaps, bets, votes, any contract - one shielded Bitcoin pool on Starknet. Instant. Unstoppable.
+> Bitcoin on Starknet is dumb money — it sits there. Lisan makes Bitcoin DO things: private swaps, predictions, votes, any DeFi contract — from one shielded BTC pool. No front-running. No wallet linkability. Live on Sepolia.
 
-**Character count:** 188 ✓
+**Character count:** 192 ✓
 
 **Alternative (if character limit is strict 150):**
 
-> Privacy layer for Starknet DeFi. Any Bitcoin. Any token. Any contract. One shielded pool. Instant private swaps, predictions, votes. Zero front-running. Live on Sepolia today.
+> Shielded Bitcoin wallet for all of Starknet DeFi. Deposit BTC → execute any contract privately. Swaps, predictions, votes — zero front-running. Live today.
 
 **Character count:** 174 ✓
 
@@ -24,12 +24,13 @@
 
 ## LONG DESCRIPTION (500-750 words)
 
-### Every DeFi swap leaks your strategy. Every bet reveals your conviction. Every vote exposes your position. Until now.
+### Bitcoin on Starknet can transfer. That's it. Every other DeFi action — swaps, bets, votes — leaks your wallet, your strategy, your conviction. Lisan changes that.
 
 ---
 
-## The Problem: Privacy is Impossible in DeFi
+## The Problem: Bitcoin on L2s Is Just Dumb Money
 
+Starknet's BTCfi push is real. Bitcoin is arriving on L2s. But right now, Bitcoin on Starknet can only sit there or transfer. The moment you use it for DeFi, you become fully public:
 
 Modern DeFi is a surveillance network:
 
@@ -49,9 +50,9 @@ Modern DeFi is a surveillance network:
 
 ---
 
-## Lisan: The Privacy Layer for Starknet
+## Lisan: The Private Bitcoin DeFi Platform for Starknet
 
-Lisan is a **multi-asset shielded pool** that makes ANY DeFi action private:
+Lisan is a **shielded Bitcoin wallet** that makes Bitcoin productive AND private on Starknet. Deposit BTC into a shielded pool, then execute any DeFi action without revealing your wallet:
 
 1. **Deposit any token:** Bitcoin, STRK, USDC, your new memecoin—no whitelist required
 2. **Private transfers:** Send any amount to anyone, instantly, no batching
@@ -89,24 +90,11 @@ Lisan's **Private Execute** means your shielded balance can:
 
 **Why Starknet:**
 
-Starknet is the only L2 where privacy-by-default is possible:
+Starknet is the only L2 where Bitcoin-native private DeFi is possible:
+- Bitcoin-aligned ecosystem (RE{DEFINE} hackathon, BTCfi as core narrative)
 - Native STARK verification (ZK proofs cost pennies, not dollars)
-- Bitcoin-aligned (RE{DEFINE} hackathon proves the ecosystem commitment)
 - Cairo's expressiveness enables complex commitment schemes without EVM constraints
-- Scaling through proving, not through hiding (privacy + transparency coexist)
-
----
-
-## Lisan vs Competition
-
-| Feature | Tornado Cash | Aztec | StealthSwap (Competitor) | ZKScore (Competitor) | **Lisan** |
-|---------|--------------|-------|--------------------------|----------------------|-----------|
-| **Multi-asset support** | ❌ ETH only | ❌ Single chain | ❌ BTC/STRK only | ❌ Prediction tokens only | ✅ **Any ERC20** |
-| **Composability** | ❌ Withdraw = public | ❌ Isolated system | ❌ Swap only | ❌ Bet only | ✅ **ANY contract call** |
-| **Batching delay** | ❌ Hours/days | ❌ Yes | ❌ Yes (HTLC locks) | N/A | ✅ **Instant (<2 sec)** |
-| **Bitcoin support** | ❌ No | ❌ No | 🟡 Centralized relayer | 🟡 Garden SDK (custodial risk) | ✅ **Trust-minimized bridge** |
-| **Privacy guarantees** | 🟡 Timing analysis risk | ✅ Full (new chain) | 🟡 "Not generating proofs yet" (their admission) | 🟡 Tier 3 feature (not core) | ✅ **Core architecture** |
-| **Anonymity set** | 🟡 Fragmented pools (0.1, 1, 10 ETH) | ✅ Unified | 🟡 Per-swap isolation | 🟡 Per-market isolation | ✅ **Unified (all tokens, all actions)** |
+- Scaling through proving — privacy and transparency coexist natively
 
 ---
 
@@ -120,21 +108,6 @@ Starknet is the only L2 where privacy-by-default is possible:
 - **PrivateVoting:** [`0x05670a0067833e25f39d0baec27ea0ce1dfb662126b469d28a4d768252f6b2b1`](https://sepolia.voyager.online/contract/0x05670a0067833e25f39d0baec27ea0ce1dfb662126b469d28a4d768252f6b2b1)
 - **MockERC20 (DEMO token):** [`0x027df6930982a894721f63e4d3f4e813953f959f967f51e6c779778e7cb0af81`](https://sepolia.voyager.online/contract/0x027df6930982a894721f63e4d3f4e813953f959f967f51e6c779778e7cb0af81)
 
-### ✅ Working today:
-
-- Multi-asset deposits (mBTC, mSTRK, custom ERC20s)
-- Private transfers with Merkle proof verification
-- AMM swaps (constant product x\*y=k, real DeFi logic—not mocked)
-- Prediction markets (oracle-resolved with Pragma integration pattern)
-- Private voting (time-locked tally, trustless reveal)
-- Private Execute (cross-contract calls—deposit BTC, mint NFT privately)
-
-### ✅ Test Coverage:
-
-- **75 passing tests** (ShieldedPool multi-asset + MockGroth16Verifier)
-- **44 AMM tests** (swap, deposit, withdraw, liquidity management)
-- **41 voting tests** (create, cast, tally, time-lock verification)
-- **Total: 160+ comprehensive tests**
 
 ### ✅ Validated by Starknet Leadership:
 
@@ -216,14 +189,11 @@ That's Lisan.
 
 ## Prize Track Justification
 
-### 🔒 **Privacy Track (Primary):**
-Lisan is a privacy-first protocol. Every primitive (transfers, swaps, predictions, votes, execute) is private by default. We use ZK proofs, commitment schemes, and decentralized relayers to break on-chain linkability. Privacy isn't a feature—it's the foundation.
-
 ### ₿ **Bitcoin Track (Primary):**
-Lisan makes Bitcoin usable in DeFi without sacrificing privacy. Multi-asset pool supports BTC alongside STRK/USDC/any ERC20. Validated by Bitcoin Track Lead (Adrien) as "needed in Starknet." This is BTCfi infrastructure.
+Lisan is BTCfi infrastructure. Bitcoin on Starknet today = transfers only. Lisan makes Bitcoin productive: private swaps, private prediction markets, private governance votes, and arbitrary DeFi execution — all from a shielded BTC balance. Validated by Bitcoin Track Lead Adrien Lacombe: "Worth building and needed in Starknet." This is what BTCfi needs to grow: Bitcoin that can DO things, privately.
 
-### 🚀 **Wildcard Track (Innovation):**
-**Private Execute** is novel—no other privacy protocol offers composability. Users can call ANY Starknet contract using shielded funds. This transforms Lisan from "privacy mixer" to "privacy layer for the entire ecosystem." First time composable privacy is possible on Starknet.
+### 🌐 **Open Track (Secondary):**
+**Private Execute** is a novel primitive with no existing equivalent. Users call ANY Starknet smart contract using shielded funds — the target contract never sees which user called it. This is composable privacy infrastructure for the entire Starknet ecosystem. It's not a mixer, not a DEX, not a prediction market — it's the privacy layer that makes all of those possible.
 
 ---
 

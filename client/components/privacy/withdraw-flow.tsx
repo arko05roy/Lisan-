@@ -56,9 +56,9 @@ export function WithdrawFlow({ note, isOpen, onOpenChange, relayer, onWithdrawCo
     const relayerUrl = relayer ? resolveRelayerBaseUrl(relayer) : "";
     const isAmm = "tokenType" in note;
     const tokenLabel = isAmm
-        ? ((note as AmmNote).tokenType === TOKEN_TYPE_BTC ? "mBTC" : "mSTRK")
-        : ((note as PoolNote).tokenAddress === ADDRESSES.MOCK_BTC ? "mBTC"
-            : (note as PoolNote).tokenAddress === ADDRESSES.MOCK_STRK ? "mSTRK"
+        ? ((note as AmmNote).tokenType === TOKEN_TYPE_BTC ? "BTC" : "STRK")
+        : ((note as PoolNote).tokenAddress === ADDRESSES.MOCK_BTC ? "BTC"
+            : (note as PoolNote).tokenAddress === ADDRESSES.MOCK_STRK ? "STRK"
             : (note as PoolNote).tokenAddress === ADDRESSES.DEMO_TOKEN ? "DEMO"
             : (note as PoolNote).tokenAddress.slice(0, 8) + "...");
 

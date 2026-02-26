@@ -63,17 +63,17 @@ export function MintTokens() {
             size="sm"
             variant="outline"
             disabled={loading}
-            onClick={() => mint(ADDRESSES.MOCK_BTC, "MockBTC")}
+            onClick={() => mint(ADDRESSES.MOCK_BTC, "BTC")}
           >
-            Mint mBTC
+            Mint BTC
           </Button>
           <Button
             size="sm"
             variant="outline"
             disabled={loading}
-            onClick={() => mint(ADDRESSES.MOCK_STRK, "MockSTRK")}
+            onClick={() => mint(ADDRESSES.MOCK_STRK, "STRK")}
           >
-            Mint mSTRK
+            Mint STRK
           </Button>
         </div>
       </CardContent>

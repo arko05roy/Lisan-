@@ -94,8 +94,8 @@ export default function DashboardPage() {
   }
 
   const getTokenLabel = (tokenAddress: string) => {
-    if (tokenAddress === ADDRESSES.MOCK_BTC) return "mBTC";
-    if (tokenAddress === ADDRESSES.MOCK_STRK) return "mSTRK";
+    if (tokenAddress === ADDRESSES.MOCK_BTC) return "BTC";
+    if (tokenAddress === ADDRESSES.MOCK_STRK) return "STRK";
     if (tokenAddress === ADDRESSES.DEMO_TOKEN) return "DEMO";
     return tokenAddress.slice(0, 8) + "...";
   };
@@ -250,8 +250,8 @@ export default function DashboardPage() {
                 <span className="text-sm font-bold text-[#F7931A]">₿</span>
               </div>
               <div>
-                <div className="text-[13px] font-semibold text-white">mBTC</div>
-                <div className="text-[11px] text-white/30">Mock Bitcoin</div>
+                <div className="text-[13px] font-semibold text-white">BTC</div>
+                <div className="text-[11px] text-white/30">Bitcoin</div>
               </div>
             </div>
             <div className="text-right">
@@ -271,8 +271,8 @@ export default function DashboardPage() {
                 <span className="text-sm font-bold text-[#8B8CFF]">S</span>
               </div>
               <div>
-                <div className="text-[13px] font-semibold text-white">mSTRK</div>
-                <div className="text-[11px] text-white/30">Mock Starknet</div>
+                <div className="text-[13px] font-semibold text-white">STRK</div>
+                <div className="text-[11px] text-white/30">Starknet</div>
               </div>
             </div>
             <div className="text-right">

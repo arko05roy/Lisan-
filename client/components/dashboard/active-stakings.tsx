@@ -20,7 +20,7 @@ export function ActiveStakings({ btcBalance, strkBalance }: ActiveStakingProps) 
                                     Last Update - Just now <RefreshCw className="h-3 w-3 animate-spin duration-3000" />
                                 </div>
                                 <h3 className="text-xl font-bold flex items-center gap-2">
-                                    Stake mocked-BTC <span className="px-2 py-0.5 rounded bg-[#F7931A]/20 text-[#F7931A] text-xs">BTC</span>
+                                    Stake BTC <span className="px-2 py-0.5 rounded bg-[#F7931A]/20 text-[#F7931A] text-xs">BTC</span>
                                 </h3>
                             </div>
                             <div className="flex gap-2">

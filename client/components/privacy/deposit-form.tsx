@@ -19,8 +19,8 @@ type AssetChoice = "BTC" | "STRK" | "DEMO" | "CUSTOM";
 type StrategyType = "POOL" | "AMM";
 
 const PRESET_TOKENS: { id: AssetChoice; label: string; fullName: string; color: string }[] = [
-    { id: "BTC", label: "mBTC", fullName: "Mock Bitcoin", color: "bg-orange-500/20 text-orange-500" },
-    { id: "STRK", label: "mSTRK", fullName: "Mock Starknet", color: "bg-blue-500/20 text-blue-500" },
+    { id: "BTC", label: "BTC", fullName: "Bitcoin", color: "bg-orange-500/20 text-orange-500" },
+    { id: "STRK", label: "STRK", fullName: "Starknet", color: "bg-blue-500/20 text-blue-500" },
     { id: "DEMO", label: "DEMO", fullName: "Demo Token", color: "bg-green-500/20 text-green-500" },
     { id: "CUSTOM", label: "ERC20", fullName: "Custom Address", color: "bg-purple-500/20 text-purple-500" },
 ];

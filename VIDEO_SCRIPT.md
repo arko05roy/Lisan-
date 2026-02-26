@@ -65,9 +65,8 @@
 **[ACTION: Navigate to Transfer page, send 3 BTC to another address]**
 **[VISUAL: Proof generating (sped up 2x with overlay "Generating ZK proof..."), relayer selected, tx confirmed]**
 
-> "I send 3 Bitcoin to Alice. No amount visible. No sender visible. Just a proof that I can spend."
-
-**[VISUAL: Voyager explorer showing ShieldedPool transaction - nullifier spent, no details]**
+> "I send
+ spent, no details]**
 
 **[TEXT OVERLAY on explorer: "On-chain: Just a nullifier. That's it."]**
 

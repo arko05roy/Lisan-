@@ -144,9 +144,9 @@ export function WithdrawManager() {
                         {allNotes.map((note) => {
                             const isAmm = "_source" in note && note._source === "amm";
                             const tokenLabel = isAmm
-                                ? ((note as AmmNote).tokenType === TOKEN_TYPE_BTC ? "mBTC" : "mSTRK")
-                                : ((note as PoolNote).tokenAddress === ADDRESSES.MOCK_BTC ? "mBTC"
-                                    : (note as PoolNote).tokenAddress === ADDRESSES.MOCK_STRK ? "mSTRK"
+                                ? ((note as AmmNote).tokenType === TOKEN_TYPE_BTC ? "BTC" : "STRK")
+                                : ((note as PoolNote).tokenAddress === ADDRESSES.MOCK_BTC ? "BTC"
+                                    : (note as PoolNote).tokenAddress === ADDRESSES.MOCK_STRK ? "STRK"
                                     : (note as PoolNote).tokenAddress === ADDRESSES.DEMO_TOKEN ? "DEMO"
                                     : (note as PoolNote).tokenAddress.slice(0, 8) + "...");
                             const amountDisplay = (BigInt(note.amount) / 10n ** 18n).toString();

@@ -82,8 +82,8 @@ export default function TransferPage() {
   const relayerDisabled = !selectedRelayer || selectedRelayer.status === "offline";
 
   const getTokenLabel = (tokenAddress: string) => {
-    if (tokenAddress === ADDRESSES.MOCK_BTC) return "mBTC";
-    if (tokenAddress === ADDRESSES.MOCK_STRK) return "mSTRK";
+    if (tokenAddress === ADDRESSES.MOCK_BTC) return "BTC";
+    if (tokenAddress === ADDRESSES.MOCK_STRK) return "STRK";
     if (tokenAddress === ADDRESSES.DEMO_TOKEN) return "DEMO";
     return tokenAddress.slice(0, 8) + "...";
   };

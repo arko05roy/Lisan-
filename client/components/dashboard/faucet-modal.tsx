@@ -107,18 +107,18 @@ export function FaucetModal({ externalOpen, onExternalOpenChange }: FaucetModalP
           <div className="flex flex-col gap-2 pt-1">
             <Button
               disabled={loading}
-              onClick={() => mint(ADDRESSES.MOCK_BTC, "MockBTC")}
+              onClick={() => mint(ADDRESSES.MOCK_BTC, "BTC")}
               className="bg-[#8B8CFF] hover:bg-[#6F73FF] text-white rounded-xl h-10 font-medium"
             >
-              Mint mBTC
+              Mint BTC
             </Button>
             <Button
               variant="secondary"
               disabled={loading}
-              onClick={() => mint(ADDRESSES.MOCK_STRK, "MockSTRK")}
+              onClick={() => mint(ADDRESSES.MOCK_STRK, "STRK")}
               className="bg-white/[0.06] hover:bg-white/[0.1] text-white/70 border border-white/[0.06] rounded-xl h-10"
             >
-              Mint mSTRK
+              Mint STRK
             </Button>
           </div>
           <p className="text-[10px] text-white/20 text-center">
